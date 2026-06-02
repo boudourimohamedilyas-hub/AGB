@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner — AGB Production</title>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #0f172a; --bg-card: #1e293b; --bg-hover: #334155;
+            --accent: #f97316; --text-main: #f8fafc; --text-muted: #94a3b8;
+            --success: #22c55e; --danger: #ef4444;
+            --day-color: #fbbf24; --night-color: #60a5fa;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Urbanist', sans-serif; }
+        body { background: var(--bg-dark); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; user-select: none; }
+
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 40px; background: var(--bg-card);
+            border-bottom: 3px solid var(--accent); flex-shrink: 0;
+        }
+        .logo h1 { font-size: 26px; font-weight: 900; color: var(--accent); }
+        .logo span { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; }
+
+        .shift-btn {
+            padding: 14px 28px; border: 2px solid; border-radius: 10px;
+            font-size: 20px; font-weight: 900; cursor: pointer; background: transparent;
+            transition: all 0.2s; display: flex; align-items: center; gap: 10px;
+            letter-spacing: 1px;
+        }
+        .shift-btn.day { border-color: var(--day-color); color: var(--day-color); }
+        .shift-btn.night { border-color: var(--night-color); color: var(--night-color); }
+
+        .scanner-zone {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 20px;
+            padding: 40px;
+        }
+
+        .space-hint {
+            background: #1e293b; border: 1px solid #334155;
+            padding: 8px 20px; border-radius: 20px; font-size: 14px; color: var(--text-muted);
+        }
+        .space-hint kbd {
+            background: #475569; color: white; padding: 3px 10px;
+            border-radius: 5px; font-weight: bold; font-family: monospace;
+        }
+
+        .focus-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: bold;
+            background: #0f2a1a; border: 1px solid #22c55e; color: #22c55e;
+            transition: all 0.3s;
+        }
+        .focus-dot { width: 10px; height: 10px; border-radius: 50%; background: #22c55e; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+
+        /* Champ invisible — le vrai récepteur des scans */
+        #ghostInput {
+            position: fixed; left: -9999px; top: -9999px;
+            opacity: 0; pointer-events: none;
+            width: 1px; height: 1px;
+        }
+
+        .scan-display {
+            font-size: 52px; font-weight: 900; color: var(--success);
+            background: #000; border: 4px solid var(--accent);
+            border-radius: 20px; padding: 40px 80px; text-align: center;
+            min-width: 600px; max-width: 90vw; min-height: 160px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+            box-shadow: 0 0 60px rgba(249,115,22,0.15);
+        }
+        .scan-display .step-label { font-size: 16px; color: var(--text-muted); font-weight: 600; letter-spacing: 2px; text-transform: uppercase; }
+        .scan-display .step-value { font-size: 36px; color: white; font-weight: 700; }
+        .scan-display .step-sub { font-size: 18px; color: var(--text-muted); }
+
+        .scan-display.success { border-color: var(--success); box-shadow: 0 0 60px rgba(34,197,94,0.3); }
+        .scan-display.error { border-color: var(--danger); box-shadow: 0 0 60px rgba(239,68,68,0.3); }
+        .scan-display.wait { border-color: #334155; }
+
+        .reset-btn {
+            background: #334155; color: white; border: none; padding: 12px 28px;
+            border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; transition: background 0.2s;
+        }
+        .reset-btn:hover { background: var(--danger); }
+
+        #toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: var(--danger); color: white; padding: 16px 32px;
+            border-radius: 10px; font-size: 18px; font-weight: bold;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100;
+        }
+        #toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<!-- Champ fantôme : reçoit TOUS les scans, focus permanent -->
+<input id="ghostInput" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+
+<header>
+    <div class="logo">
+        <h1>AGB PRODUCTION</h1>
+        <span>Poste Scanner Principal</span>
+    </div>
+    <button id="shiftBtn" class="shift-btn day" tabindex="-1">
+        <i class="fa-solid fa-sun"></i> Équipe de Jour
+    </button>
+</header>
+
+<div class="scanner-zone">
+    <div class="space-hint"><i class="fa-solid fa-keyboard"></i> Appuyez sur <kbd>ESPACE</kbd> pour changer Jour / Nuit</div>
+    <div class="focus-badge"><span class="focus-dot"></span> Douchette toujours active</div>
+
+    <div class="scan-display wait" id="scanDisplay">
+        <span class="step-label">Étape 1</span>
+        <span class="step-value">Scannez un employé</span>
+    </div>
+
+    <button class="reset-btn" id="resetBtn" tabindex="-1">
+        <i class="fa-solid fa-rotate-left"></i> Réinitialiser
+    </button>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBIMKqWupvITWp9in6Tpjjwu6YnKPIHIqk",
+        authDomain: "ilyas-a9305.firebaseapp.com",
+        databaseURL: "https://ilyas-a9305-default-rtdb.firebaseio.com",
+        projectId: "ilyas-a9305",
+        storageBucket: "ilyas-a9305.firebasestorage.app",
+        messagingSenderId: "235632469385",
+        appId: "1:235632469385:web:e2e8cb4d06038fa02dad58"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let localDB = null;
+    let currentState = { step: 1, session: {} };
+
+    const ghost = document.getElementById('ghostInput');
+    const display = document.getElementById('scanDisplay');
+    const shiftBtn = document.getElementById('shiftBtn');
+
+    // ── FOCUS ABSOLUMENT VERROUILLÉ ────────────────────────────────────────
+    // Toute tentative de focus ailleurs → retour immédiat sur ghost
+    document.addEventListener('focusin', () => {
+        if (document.activeElement !== ghost) {
+            ghost.focus({ preventScroll: true });
+        }
+    });
+    // Clic partout → ghost
+    document.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        ghost.focus({ preventScroll: true });
+    });
+    // Perte de focus → retour
+    ghost.addEventListener('blur', () => {
+        requestAnimationFrame(() => ghost.focus({ preventScroll: true }));
+    });
+    // Focus initial
+    ghost.focus({ preventScroll: true });
+
+    // ── LECTURE FIREBASE ────────────────────────────────────────────────────
+    onValue(ref(db, 'agb_db'), (snap) => {
+        if (snap.exists()) {
+            localDB = snap.val();
+            if (!localDB.employees) localDB.employees = [];
+            if (!localDB.tables) localDB.tables = [];
+            if (!localDB.operations) localDB.operations = [];
+            updateShiftUI();
+        }
+    });
+
+    onValue(ref(db, 'agb_state'), (snap) => {
+        if (snap.exists()) {
+            currentState = snap.val();
+            if (!currentState.session) currentState.session = {};
+            updateDisplay();
+        }
+    });
+
+    // ── AFFICHAGE ────────────────────────────────────────────────────────────
+    function updateDisplay() {
+        const s = currentState;
+        display.className = 'scan-display';
+
+        if (s.step === 1) {
+            display.className += ' wait';
+            display.innerHTML = `<span class="step-label">Étape 1</span><span class="step-value">Scannez un employé</span>`;
+        } else if (s.step === 2 && s.session.emp) {
+            display.className += ' success';
+            display.innerHTML = `
+                <span class="step-label">Étape 2</span>
+                <span class="step-value">${s.session.emp.name}</span>
+                <span class="step-sub">Scannez la table</span>`;
+        } else if (s.step === 3 && s.session.table) {
+            display.className += ' success';
+            display.innerHTML = `
+                <span class="step-label">Étape 3</span>
+                <span class="step-value">${s.session.table.name}</span>
+                <span class="step-sub">Scannez l'opération</span>`;
+        } else if (s.step === 4) {
+            display.className += ' success';
+            display.innerHTML = `
+                <span class="step-value">✅ Enregistré !</span>
+                <span class="step-sub">${s.session?.op?.name || ''}</span>`;
+        }
+    }
+
+    function updateShiftUI() {
+        if (!localDB) return;
+        if (localDB.shift === 'jour') {
+            shiftBtn.innerHTML = '<i class="fa-solid fa-sun"></i> Équipe de Jour';
+            shiftBtn.className = 'shift-btn day';
+        } else {
+            shiftBtn.innerHTML = '<i class="fa-solid fa-moon"></i> Équipe de Nuit';
+            shiftBtn.className = 'shift-btn night';
+        }
+    }
+
+    // ── DÉTECTION SCAN vs CLAVIER HUMAIN ─────────────────────────────────────
+    // Un pistolet envoie tous les caractères en < 80ms (très rapide)
+    // Un humain tape lentement (> 80ms entre les touches)
+    // On mesure le temps entre chaque frappe pour savoir qui écrit.
+
+    let lastKeyTime = 0;          // Timestamp de la dernière touche
+    let keyIntervals = [];         // Délais entre les touches (fenêtre glissante)
+    const SCAN_THRESHOLD_MS = 80;  // En dessous = pistolet, au-dessus = humain
+    const INTERVALS_WINDOW = 4;    // Nombre d'intervalles à analyser
+
+    function isLikelyScan() {
+        if (keyIntervals.length === 0) return false;
+        const recent = keyIntervals.slice(-INTERVALS_WINDOW);
+        const avg = recent.reduce((a, b) => a + b, 0) / recent.length;
+        return avg < SCAN_THRESHOLD_MS;
+    }
+
+    ghost.addEventListener('keydown', (e) => {
+        const now = Date.now();
+        if (lastKeyTime > 0) {
+            keyIntervals.push(now - lastKeyTime);
+            if (keyIntervals.length > 10) keyIntervals.shift(); // Garder les 10 derniers
+        }
+        lastKeyTime = now;
+
+        // ESPACE : switcher seulement si c'est un humain qui tape (pas un scan)
+        if (e.code === 'Space' || e.key === ' ') {
+            if (!isLikelyScan()) {
+                // Frappe humaine → switcher l'équipe
+                e.preventDefault();
+                toggleShift();
+                keyIntervals = []; // Reset
+                return;
+            }
+            // Sinon c'est un scan → laisser l'espace passer dans le champ
+        }
+
+        if (e.key === 'Enter') {
+            clearTimeout(ghost._timer);
+            const code = ghost.value.trim().toUpperCase();
+            ghost.value = '';
+            keyIntervals = []; // Reset après scan complet
+            lastKeyTime = 0;
+            if (code.length >= 2) processScan(code);
+        }
+    });
+
+    ghost.addEventListener('input', () => {
+        clearTimeout(ghost._timer);
+        ghost._timer = setTimeout(() => {
+            const code = ghost.value.trim().toUpperCase();
+            ghost.value = '';
+            keyIntervals = []; // Reset après timeout
+            lastKeyTime = 0;
+            if (code.length >= 2) processScan(code);
+        }, 120);
+    });
+
+    function processScan(code) {
+        if (!localDB) return;
+        let ns = JSON.parse(JSON.stringify(currentState));
+        if (!ns.session) ns.session = {};
+        let found = false;
+
+        if (currentState.step === 1) {
+            const emp = localDB.employees.find(e => e.code && e.code.toUpperCase() === code);
+            if (emp) {
+                if (emp.shift !== localDB.shift) { showToast("⚠️ Employé du quart " + emp.shift); return; }
+                ns.session.emp = emp; ns.step = 2; found = true;
+            }
+        } else if (currentState.step === 2) {
+            const table = localDB.tables.find(t => t.code && t.code.toUpperCase() === code);
+            if (table) { ns.session.table = table; ns.step = 3; found = true; }
+        } else if (currentState.step === 3) {
+            const op = localDB.operations.find(o => o.code && o.code.toUpperCase() === code);
+            if (op) { ns.session.op = op; ns.step = 4; found = true; setTimeout(resetWorkflow, 3000); }
+        }
+
+        if (found) set(ref(db, 'agb_state'), ns);
+        else showToast("Code inconnu : " + code);
+    }
+
+    function resetWorkflow() {
+        set(ref(db, 'agb_state'), { step: 1, session: { emp: null, table: null, op: null } });
+    }
+
+    function toggleShift() {
+        if (!localDB) return;
+        localDB.shift = localDB.shift === 'jour' ? 'nuit' : 'jour';
+        set(ref(db, 'agb_db/shift'), localDB.shift);
+        // Feedback visuel rapide
+        shiftBtn.style.transform = 'scale(0.9)';
+        setTimeout(() => { shiftBtn.style.transform = 'scale(1)'; updateShiftUI(); }, 150);
+    }
+
+    document.getElementById('resetBtn').addEventListener('mousedown', (e) => {
+        e.preventDefault(); resetWorkflow();
+    });
+    shiftBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault(); toggleShift();
+    });
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg; t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+</script>
+</body>
+</html>
