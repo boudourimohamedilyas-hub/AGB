@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — AGB Production</title>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root {
+            --bg-dark: #0f172a; --bg-card: #1e293b; --bg-hover: #334155;
+            --accent: #f97316; --text-main: #f8fafc; --text-muted: #94a3b8;
+            --success: #22c55e; --danger: #ef4444;
+            --day-color: #fbbf24; --night-color: #60a5fa;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Urbanist', sans-serif; }
+        body { background: var(--bg-dark); color: var(--text-main); padding-bottom: 60px; }
+
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 18px 40px; background: var(--bg-card);
+            border-bottom: 3px solid var(--accent); position: sticky; top: 0; z-index: 50;
+        }
+        .logo h1 { font-size: 26px; font-weight: 900; color: var(--accent); }
+        .logo span { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; }
+
+        .header-right { display: flex; align-items: center; gap: 16px; }
+
+        .shift-badge {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 22px; border-radius: 10px; border: 2px solid;
+            font-size: 16px; font-weight: bold; cursor: pointer; background: transparent;
+            transition: all 0.2s;
+        }
+        .shift-badge.day { border-color: var(--day-color); color: var(--day-color); }
+        .shift-badge.night { border-color: var(--night-color); color: var(--night-color); }
+
+        .live-badge {
+            display: flex; align-items: center; gap: 8px;
+            background: #0f2a1a; border: 1px solid #22c55e; color: #22c55e;
+            padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: bold;
+        }
+        .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        main { max-width: 1500px; margin: 0 auto; padding: 40px; }
+
+        /* Statut scanner en direct */
+        .scanner-live {
+            background: #000; border: 3px solid var(--accent); border-radius: 14px;
+            padding: 24px 40px; margin-bottom: 36px; display: flex;
+            align-items: center; gap: 30px;
+        }
+        .scanner-live .step-info { flex: 1; }
+        .scanner-live h3 { font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
+        .scanner-live .step-val { font-size: 28px; font-weight: 900; color: var(--success); }
+
+        section {
+            background: var(--bg-card); border-radius: 14px; padding: 30px;
+            margin-bottom: 28px;
+        }
+        section h2 {
+            font-size: 20px; color: var(--accent); margin-bottom: 20px;
+            border-bottom: 1px solid #334155; padding-bottom: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .add-btn {
+            background: var(--success); color: white; border: none;
+            padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: bold;
+            cursor: pointer; display: flex; align-items: center; gap: 6px;
+        }
+        .add-btn:hover { background: #16a34a; }
+
+        /* Grille tables */
+        .table-header {
+            display: grid; grid-template-columns: 100px 1fr 1.5fr 1.5fr 1.5fr;
+            gap: 12px; color: var(--text-muted); font-size: 13px; font-weight: bold;
+            padding: 0 16px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .table-row {
+            display: grid; grid-template-columns: 100px 1fr 1.5fr 1.5fr 1.5fr;
+            gap: 12px; align-items: start;
+            background: var(--bg-hover); padding: 14px 16px; border-radius: 10px; margin-bottom: 10px;
+        }
+        .table-name { font-size: 18px; font-weight: 900; color: white; align-self: center; }
+
+        /* Grille employés */
+        .emp-header {
+            display: grid; grid-template-columns: 70px 1.5fr 1.7fr 120px 44px;
+            gap: 12px; color: var(--text-muted); font-size: 13px; font-weight: bold;
+            padding: 0 16px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .emp-row {
+            display: grid; grid-template-columns: 70px 1.5fr 1.7fr 120px 44px;
+            gap: 12px; align-items: center;
+            background: var(--bg-hover); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px;
+        }
+
+        /* Grille opérations */
+        .op-header {
+            display: grid; grid-template-columns: 1.5fr 1.7fr 100px 44px;
+            gap: 12px; color: var(--text-muted); font-size: 13px; font-weight: bold;
+            padding: 0 16px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .op-row {
+            display: grid; grid-template-columns: 1.5fr 1.7fr 100px 44px;
+            gap: 12px; align-items: center;
+            background: var(--bg-hover); padding: 12px 16px; border-radius: 10px; margin-bottom: 8px;
+        }
+
+        input[type="text"], select {
+            width: 100%; padding: 10px 14px; background: var(--bg-dark);
+            border: 1px solid #475569; color: white; border-radius: 8px; font-size: 15px;
+            font-family: 'Urbanist', sans-serif;
+        }
+        input[type="text"]:focus, select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 8px rgba(249,115,22,0.25); }
+        .code-input { font-family: monospace; color: var(--success); font-weight: bold; }
+
+        .extract-group { display: flex; gap: 6px; }
+        .extract-group input { flex: 1; }
+        .cam-btn {
+            background: var(--bg-dark); color: var(--text-main); border: 1px solid var(--accent);
+            padding: 0 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center;
+            gap: 6px; font-size: 13px; font-weight: bold; white-space: nowrap;
+            transition: background 0.2s;
+        }
+        .cam-btn:hover { background: var(--accent); color: white; }
+
+        .team-box {
+            background: var(--bg-dark); border: 1px solid #475569; border-radius: 8px;
+            padding: 10px; max-height: 120px; overflow-y: auto; font-size: 13px;
+        }
+        .team-box label { display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 5px; }
+
+        .del-btn {
+            background: var(--danger); color: white; border: none;
+            width: 44px; height: 44px; border-radius: 8px; cursor: pointer; font-size: 16px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .del-btn:hover { background: #b91c1c; }
+
+        .emp-id { font-size: 14px; color: var(--accent); font-weight: bold; align-self: center; }
+
+        .save-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: var(--bg-card); border-top: 2px solid var(--accent);
+            padding: 14px 40px; display: flex; align-items: center; gap: 20px; z-index: 100;
+        }
+        .save-bar button {
+            background: var(--success); color: white; border: none; padding: 14px 36px;
+            border-radius: 10px; font-size: 18px; font-weight: 900; cursor: pointer;
+            display: flex; align-items: center; gap: 10px; transition: background 0.2s;
+        }
+        .save-bar button:hover { background: #16a34a; }
+        .unsaved-label { font-size: 14px; color: var(--text-muted); }
+        .unsaved-dot { color: var(--accent); font-size: 20px; display: none; }
+        .unsaved-dot.visible { display: inline; }
+
+        #toast {
+            position: fixed; top: 30px; left: 50%; transform: translateX(-50%);
+            background: var(--success); color: #000; padding: 14px 32px;
+            border-radius: 10px; font-size: 16px; font-weight: bold;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s;
+            pointer-events: none; z-index: 200;
+        }
+        #toast.error { background: var(--danger); color: white; }
+        #toast.show { opacity: 1; }
+
+        .icon-select-wrapper { position: relative; }
+        .icon-preview { font-size: 18px; margin-right: 6px; }
+    </style>
+</head>
+<body>
+
+<div id="hidden-reader" style="display:none;"></div>
+
+<header>
+    <div class="logo">
+        <h1>AGB PRODUCTION</h1>
+        <span>Console Admin — Mode Superviseur</span>
+    </div>
+    <div class="header-right">
+        <div class="live-badge"><span class="live-dot"></span> Synchronisé en direct</div>
+        <button id="shiftBtn" class="shift-badge day" onclick="toggleShift()">
+            <i class="fa-solid fa-sun"></i> Équipe de Jour
+        </button>
+    </div>
+</header>
+
+<main>
+
+    <!-- Statut scanner en direct -->
+    <div class="scanner-live">
+        <i class="fa-solid fa-barcode" style="font-size:32px; color:var(--accent);"></i>
+        <div class="step-info">
+            <h3>Statut Scanner (en direct)</h3>
+            <div class="step-val" id="liveStatus">En attente...</div>
+        </div>
+    </div>
+
+    <!-- TABLES -->
+    <section>
+        <h2>
+            <span><i class="fa-solid fa-industry"></i> Tables & Projets</span>
+        </h2>
+        <div class="table-header">
+            <div>Table</div><div>Projet</div><div>Code-barres</div>
+            <div>Équipe JOUR ☀️</div><div>Équipe NUIT 🌙</div>
+        </div>
+        <div id="tableContainer">Chargement...</div>
+    </section>
+
+    <!-- EMPLOYÉS -->
+    <section>
+        <h2>
+            <span><i class="fa-solid fa-users"></i> Employés</span>
+            <button class="add-btn" onclick="addEmployee()"><i class="fa-solid fa-plus"></i> Ajouter</button>
+        </h2>
+        <div class="emp-header">
+            <div>ID</div><div>Nom</div><div>Code-barres</div><div>Quart</div><div></div>
+        </div>
+        <div id="empContainer">Chargement...</div>
+    </section>
+
+    <!-- OPÉRATIONS -->
+    <section>
+        <h2>
+            <span><i class="fa-solid fa-list-check"></i> Opérations</span>
+            <button class="add-btn" onclick="addOperation()"><i class="fa-solid fa-plus"></i> Ajouter</button>
+        </h2>
+        <div class="op-header">
+            <div>Nom</div><div>Code-barres</div><div>Icône</div><div></div>
+        </div>
+        <div id="opContainer">Chargement...</div>
+    </section>
+
+</main>
+
+<div class="save-bar">
+    <button onclick="saveAll()"><i class="fa-solid fa-cloud-arrow-up"></i> Sauvegarder</button>
+    <span class="unsaved-label"><span class="unsaved-dot" id="unsavedDot">●</span> Modifications non sauvegardées</span>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBIMKqWupvITWp9in6Tpjjwu6YnKPIHIqk",
+        authDomain: "ilyas-a9305.firebaseapp.com",
+        databaseURL: "https://ilyas-a9305-default-rtdb.firebaseio.com",
+        projectId: "ilyas-a9305",
+        storageBucket: "ilyas-a9305.firebasestorage.app",
+        messagingSenderId: "235632469385",
+        appId: "1:235632469385:web:e2e8cb4d06038fa02dad58"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let localDB = null;
+    let unsaved = false;
+
+    const ICONS = [
+        { label: 'Feu', val: 'fa-fire' },
+        { label: 'Outil', val: 'fa-screwdriver-wrench' },
+        { label: 'Test', val: 'fa-vial' },
+        { label: 'Quitter', val: 'fa-power-off' },
+        { label: 'Boîte', val: 'fa-box' },
+        { label: 'Étoile', val: 'fa-star' },
+        { label: 'Check', val: 'fa-check' },
+        { label: 'Clé', val: 'fa-key' },
+        { label: 'Camion', val: 'fa-truck' },
+        { label: 'Carte', val: 'fa-map' },
+    ];
+
+    function markUnsaved() {
+        unsaved = true;
+        document.getElementById('unsavedDot').classList.add('visible');
+    }
+
+    // ── FIREBASE READS ─────────────────────────────────────────────────────
+    onValue(ref(db, 'agb_db'), (snap) => {
+        if (snap.exists()) {
+            localDB = snap.val();
+            if (!localDB.employees) localDB.employees = [];
+            if (!localDB.tables) localDB.tables = [];
+            if (!localDB.operations) localDB.operations = [];
+            localDB.employees.forEach(e => { if (!e.shift) e.shift = 'jour'; if (!e.code) e.code = ''; });
+            localDB.tables.forEach(t => { if (!t.code) t.code = ''; if (!t.teamJour) t.teamJour = []; if (!t.teamNuit) t.teamNuit = []; });
+            localDB.operations.forEach(o => { if (!o.code) o.code = ''; if (!o.icon) o.icon = 'fa-check'; });
+            updateShiftUI();
+            renderAll();
+        }
+    });
+
+    onValue(ref(db, 'agb_state'), (snap) => {
+        if (snap.exists()) {
+            const st = snap.val();
+            updateLiveStatus(st);
+        }
+    });
+
+    function updateLiveStatus(st) {
+        const el = document.getElementById('liveStatus');
+        if (!st || st.step === 1) { el.textContent = 'Étape 1 — Attente scan employé'; el.style.color = 'var(--text-muted)'; return; }
+        if (st.step === 2 && st.session?.emp) { el.textContent = `Étape 2 — ${st.session.emp.name} → scan table`; el.style.color = 'var(--day-color)'; return; }
+        if (st.step === 3 && st.session?.table) { el.textContent = `Étape 3 — ${st.session.table.name} → scan opération`; el.style.color = 'var(--accent)'; return; }
+        if (st.step === 4) { el.textContent = '✅ Enregistré !'; el.style.color = 'var(--success)'; return; }
+    }
+
+    // ── RENDER ──────────────────────────────────────────────────────────────
+    function renderAll() {
+        if (!localDB) return;
+        renderTables();
+        renderEmployees();
+        renderOperations();
+    }
+
+    function renderTables() {
+        const c = document.getElementById('tableContainer');
+        c.innerHTML = localDB.tables.map((t, i) => {
+            const jouCbs = localDB.employees.filter(e => e.shift === 'jour').map(e =>
+                `<label><input type="checkbox" name="tj_${t.id}" value="${e.id}" ${t.teamJour.includes(e.id) ? 'checked' : ''}> ${e.name}</label>`
+            ).join('');
+            const nuitCbs = localDB.employees.filter(e => e.shift === 'nuit').map(e =>
+                `<label><input type="checkbox" name="tn_${t.id}" value="${e.id}" ${t.teamNuit.includes(e.id) ? 'checked' : ''}> ${e.name}</label>`
+            ).join('');
+
+            return `<div class="table-row">
+                <div class="table-name">${t.name}</div>
+                <input type="text" id="proj_${i}" value="${t.project}" oninput="markUnsaved()">
+                <div class="extract-group">
+                    <input type="text" class="code-input" id="tc_${i}" value="${t.code}" oninput="markUnsaved()">
+                    <label class="cam-btn"><i class="fa-solid fa-camera"></i>
+                        <input type="file" accept="image/*" style="display:none" onchange="extractCode(this,'tc_${i}')">
+                    </label>
+                </div>
+                <div class="team-box">${jouCbs || '<span style="color:var(--text-muted);font-size:12px">Aucun employé jour</span>'}</div>
+                <div class="team-box">${nuitCbs || '<span style="color:var(--text-muted);font-size:12px">Aucun employé nuit</span>'}</div>
+            </div>`;
+        }).join('');
+        // Mark changes on checkbox
+        c.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', markUnsaved));
+    }
+
+    function renderEmployees() {
+        const c = document.getElementById('empContainer');
+        c.innerHTML = localDB.employees.map((e, i) => `
+            <div class="emp-row">
+                <div class="emp-id">${e.id}</div>
+                <input type="text" id="en_${i}" value="${e.name}" oninput="markUnsaved()">
+                <div class="extract-group">
+                    <input type="text" class="code-input" id="ec_${i}" value="${e.code}" oninput="markUnsaved()">
+                    <label class="cam-btn"><i class="fa-solid fa-camera"></i>
+                        <input type="file" accept="image/*" style="display:none" onchange="extractCode(this,'ec_${i}')">
+                    </label>
+                </div>
+                <select id="es_${i}" onchange="markUnsaved()">
+                    <option value="jour" ${e.shift==='jour'?'selected':''}>☀️ Jour</option>
+                    <option value="nuit" ${e.shift==='nuit'?'selected':''}>🌙 Nuit</option>
+                </select>
+                <button class="del-btn" onclick="deleteEmployee(${i})"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        `).join('');
+    }
+
+    function renderOperations() {
+        const c = document.getElementById('opContainer');
+        c.innerHTML = localDB.operations.map((o, i) => `
+            <div class="op-row">
+                <input type="text" id="on_${i}" value="${o.name}" oninput="markUnsaved()">
+                <div class="extract-group">
+                    <input type="text" class="code-input" id="oc_${i}" value="${o.code}" oninput="markUnsaved()">
+                    <label class="cam-btn"><i class="fa-solid fa-camera"></i>
+                        <input type="file" accept="image/*" style="display:none" onchange="extractCode(this,'oc_${i}')">
+                    </label>
+                </div>
+                <select id="oi_${i}" onchange="markUnsaved()">
+                    ${ICONS.map(ic => `<option value="${ic.val}" ${o.icon===ic.val?'selected':''}>${ic.label}</option>`).join('')}
+                </select>
+                <button class="del-btn" onclick="deleteOperation(${i})"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        `).join('');
+    }
+
+    // ── ACTIONS ─────────────────────────────────────────────────────────────
+    window.markUnsaved = markUnsaved;
+
+    window.addEmployee = function() {
+        let max = 0;
+        localDB.employees.forEach(e => { const n = parseInt(e.id.replace('E','')); if(n>max) max=n; });
+        localDB.employees.push({ id: 'E'+String(max+1).padStart(2,'0'), name: 'Nouvel Employé', shift: 'jour', code: '' });
+        renderEmployees(); renderTables(); markUnsaved();
+    };
+
+    window.deleteEmployee = function(i) {
+        if (confirm('Supprimer cet employé ?')) {
+            const id = localDB.employees[i].id;
+            localDB.employees.splice(i, 1);
+            localDB.tables.forEach(t => {
+                t.teamJour = t.teamJour.filter(x => x !== id);
+                t.teamNuit = t.teamNuit.filter(x => x !== id);
+            });
+            renderAll(); markUnsaved();
+        }
+    };
+
+    window.addOperation = function() {
+        localDB.operations.push({ name: 'Nouvelle Op.', code: '', icon: 'fa-check' });
+        renderOperations(); markUnsaved();
+    };
+
+    window.deleteOperation = function(i) {
+        if (confirm('Supprimer cette opération ?')) {
+            localDB.operations.splice(i, 1);
+            renderOperations(); markUnsaved();
+        }
+    };
+
+    window.extractCode = function(fileInput, targetId) {
+        if (!fileInput.files.length) return;
+        const qr = new Html5Qrcode('hidden-reader');
+        qr.scanFile(fileInput.files[0], true)
+            .then(text => {
+                document.getElementById(targetId).value = text;
+                markUnsaved();
+                showToast('✅ Code extrait : ' + text);
+            })
+            .catch(() => showToast('❌ Impossible de lire ce code.', true));
+        fileInput.value = '';
+    };
+
+    window.saveAll = function() {
+        if (!localDB) return;
+
+        // Récupérer valeurs des tables
+        localDB.tables.forEach((t, i) => {
+            t.project = document.getElementById(`proj_${i}`).value;
+            t.code = (document.getElementById(`tc_${i}`).value || '').trim().toUpperCase();
+            t.teamJour = Array.from(document.querySelectorAll(`input[name="tj_${t.id}"]:checked`)).map(cb => cb.value);
+            t.teamNuit = Array.from(document.querySelectorAll(`input[name="tn_${t.id}"]:checked`)).map(cb => cb.value);
+        });
+
+        // Employés
+        localDB.employees.forEach((e, i) => {
+            e.name = document.getElementById(`en_${i}`).value;
+            e.code = (document.getElementById(`ec_${i}`).value || '').trim().toUpperCase();
+            e.shift = document.getElementById(`es_${i}`).value;
+        });
+
+        // Opérations
+        localDB.operations.forEach((o, i) => {
+            o.name = document.getElementById(`on_${i}`).value;
+            o.code = (document.getElementById(`oc_${i}`).value || '').trim().toUpperCase();
+            o.icon = document.getElementById(`oi_${i}`).value;
+        });
+
+        set(ref(db, 'agb_db'), localDB)
+            .then(() => {
+                unsaved = false;
+                document.getElementById('unsavedDot').classList.remove('visible');
+                showToast('✅ Sauvegardé dans le Cloud !');
+            })
+            .catch(() => showToast('❌ Erreur de sauvegarde.', true));
+    };
+
+    window.toggleShift = function() {
+        if (!localDB) return;
+        localDB.shift = localDB.shift === 'jour' ? 'nuit' : 'jour';
+        set(ref(db, 'agb_db/shift'), localDB.shift);
+        updateShiftUI();
+    };
+
+    function updateShiftUI() {
+        if (!localDB) return;
+        const btn = document.getElementById('shiftBtn');
+        if (localDB.shift === 'jour') {
+            btn.innerHTML = '<i class="fa-solid fa-sun"></i> Équipe de Jour';
+            btn.className = 'shift-badge day';
+        } else {
+            btn.innerHTML = '<i class="fa-solid fa-moon"></i> Équipe de Nuit';
+            btn.className = 'shift-badge night';
+        }
+    }
+
+    function showToast(msg, isErr = false) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = isErr ? 'error show' : 'show';
+        setTimeout(() => t.className = '', 3000);
+    }
+
+    // Avertir si l'on ferme sans sauvegarder
+    window.addEventListener('beforeunload', (e) => {
+        if (unsaved) { e.preventDefault(); e.returnValue = ''; }
+    });
+</script>
+</body>
+</html>
