@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV - AGB Production</title>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a; --bg-card: #1e293b; --accent: #f97316;
+            --text-main: #f8fafc; --text-muted: #94a3b8; --success: #22c55e;
+            --day-color: #fbbf24; --night-color: #60a5fa;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Urbanist', sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); overflow-x: hidden; }
+
+        header { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; background-color: var(--bg-card); border-bottom: 2px solid var(--accent); }
+        .logo-area h1 { font-size: 28px; font-weight: 900; color: var(--accent); letter-spacing: 1px; }
+        .logo-area span { font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px;}
+        
+        .shift-badge { padding: 12px 24px; border-radius: 8px; font-size: 18px; font-weight: bold; border: 2px solid transparent; }
+        .shift-badge.day { border-color: var(--day-color); color: var(--day-color); }
+        .shift-badge.night { border-color: var(--night-color); color: var(--night-color); }
+
+        main { padding: 40px; max-width: 1600px; margin: 0 auto; min-height: calc(100vh - 100px); }
+
+        .slide { display: none; animation: fadeIn 0.4s ease-in-out; }
+        .slide.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .slide-header { text-align: center; margin-bottom: 40px; }
+        .slide-header h2 { font-size: 48px; margin-bottom: 15px; }
+        .slide-header p { font-size: 24px; color: var(--text-muted); }
+
+        .grid-container { display: grid; gap: 20px; }
+        .grid-emp { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+        .grid-table { grid-template-columns: repeat(3, 1fr); }
+        .grid-op { grid-template-columns: repeat(4, 1fr); }
+
+        .card { background: var(--bg-card); padding: 20px; border-radius: 12px; text-align: center; }
+        .card h3 { font-size: 24px; margin-bottom: 15px; }
+        .table-card { border-top: 5px solid var(--accent); padding: 30px;}
+        .table-card h2 { font-size: 36px; margin-bottom: 10px; }
+        .table-card .project { font-size: 24px; color: var(--accent); font-weight: bold; margin-bottom: 15px; background: rgba(249, 115, 22, 0.1); padding: 10px; border-radius: 8px;}
+        
+        .barcode-container { background: white; padding: 10px; border-radius: 8px; display: inline-block; margin: 15px 0; width: 100%; }
+        .barcode-container svg { width: 100%; height: auto; max-height: 100px; }
+
+        .session-banner { background: rgba(249, 115, 22, 0.1); border: 1px solid var(--accent); padding: 15px 30px; border-radius: 10px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; font-size: 20px; font-weight: bold; }
+        
+        .success-screen { text-align: center; padding-top: 100px; }
+        .success-screen i { font-size: 120px; color: var(--success); margin-bottom: 30px; }
+        .success-screen h1 { font-size: 48px; margin-bottom: 20px; }
+        .success-screen p { font-size: 24px; color: var(--text-muted); }
+
+        /* Sync Indicator */
+        .sync-status { display: flex; align-items: center; gap: 10px; color: var(--success); font-weight: bold; }
+        .sync-dot { width: 12px; height: 12px; background-color: var(--success); border-radius: 50%; animation: blink 1.5s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        /* Bouton flottant Jour/Nuit */
+        #floatingShiftBtn {
+            position: fixed; bottom: 36px; left: 50%; transform: translateX(-50%);
+            z-index: 999;
+            padding: 20px 56px;
+            border-radius: 60px;
+            font-size: 26px; font-weight: 900; letter-spacing: 1px;
+            cursor: pointer; border: 3px solid;
+            display: flex; align-items: center; gap: 14px;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+            transition: transform 0.15s, box-shadow 0.15s, border-color 0.3s, color 0.3s;
+            user-select: none;
+        }
+        #floatingShiftBtn:hover {
+            transform: translateX(-50%) scale(1.06);
+            box-shadow: 0 12px 50px rgba(0,0,0,0.6);
+        }
+        #floatingShiftBtn:active { transform: translateX(-50%) scale(0.96); }
+        #floatingShiftBtn.day   { border-color: var(--day-color);   color: var(--day-color); }
+        #floatingShiftBtn.night { border-color: var(--night-color); color: var(--night-color); }
+        .shift-label {
+            position: fixed; bottom: 108px; left: 50%; transform: translateX(-50%);
+            font-size: 13px; font-weight: 600; letter-spacing: 2px;
+            color: var(--text-muted); text-transform: uppercase; white-space: nowrap;
+            z-index: 999; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+
+
+            <h1>AGB PRODUCTION</h1>
+            <span>Écran Principal TV</span>
+        </div>
+        <div style="display: flex; gap: 20px; align-items: center;">
+            <div class="sync-status"><div class="sync-dot"></div> Connecté au Cloud</div>
+            <div id="shiftBadge" class="shift-badge day"><i class="fa-solid fa-sun"></i> Équipe de Jour</div>
+        </div>
+    </header>
+
+    <!-- Label au-dessus du bouton flottant -->
+    <div class="shift-label">Changer d'équipe</div>
+
+    <!-- Bouton flottant Jour / Nuit -->
+    <button id="floatingShiftBtn" class="day">
+        <i class="fa-solid fa-sun"></i>
+        <span id="floatingShiftText">Passer en Nuit</span>
+    </button>
+
+    <main>
+        <div id="sessionBanner" class="session-banner" style="display: none;">
+            <div id="bannerEmp"><i class="fa-solid fa-user"></i> Employé: <span></span></div>
+            <div id="bannerTable" style="display: none;"><i class="fa-solid fa-industry"></i> Table: <span></span></div>
+        </div>
+
+        <section id="slide1" class="slide active">
+            <div class="slide-header">
+                <h2 id="slide1-title">SLIDE 1 : Employés</h2>
+                <p>En attente du scan de l'employé sur l'ordinateur principal...</p>
+            </div>
+            <div class="grid-container grid-emp" id="tvEmployeeGrid">Chargement depuis le cloud...</div>
+        </section>
+
+        <section id="slide2" class="slide">
+            <div class="slide-header">
+                <h2>SLIDE 2 : Votre Affectation</h2>
+                <p>En attente du scan de la table de travail...</p>
+            </div>
+            <div class="grid-container grid-table" id="tvTableGrid"></div>
+        </section>
+
+        <section id="slide3" class="slide">
+            <div class="slide-header">
+                <h2>SLIDE 3 : Opérations</h2>
+                <p>En attente du scan de l'opération finale...</p>
+            </div>
+            <div class="grid-container grid-op" id="tvOpGrid"></div>
+        </section>
+
+        <section id="slideSuccess" class="slide success-screen">
+            <i class="fa-solid fa-circle-check"></i>
+            <h1>Opération Enregistrée !</h1>
+            <p id="successMessage">Bon travail...</p>
+        </section>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBIMKqWupvITWp9in6Tpjjwu6YnKPIHIqk",
+            authDomain: "ilyas-a9305.firebaseapp.com",
+            databaseURL: "https://ilyas-a9305-default-rtdb.firebaseio.com",
+            projectId: "ilyas-a9305",
+            storageBucket: "ilyas-a9305.firebasestorage.app",
+            messagingSenderId: "235632469385",
+            appId: "1:235632469385:web:e2e8cb4d06038fa02dad58",
+            measurementId: "G-S61Z0SFJXL"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let currentDB = null;
+        let currentState = { step: 1, session: { emp: null, table: null, op: null } };
+
+        onValue(ref(db, 'agb_db'), (snapshot) => {
+            if (snapshot.exists()) {
+                currentDB = snapshot.val();
+                updateShiftUI();
+                renderUI();
+                applyState();
+            }
+        });
+
+        onValue(ref(db, 'agb_state'), (snapshot) => {
+            if (snapshot.exists()) {
+                currentState = snapshot.val();
+                if (!currentState.session) currentState.session = {}; // Correction de sécurité
+                applyState();
+            }
+        });
+
+        function applyState() {
+            if (!currentDB) return;
+            const step = currentState.step;
+            const session = currentState.session || {}; // Correction de sécurité
+
+            document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+            const banner = document.getElementById('sessionBanner');
+            const bannerEmp = document.getElementById('bannerEmp');
+            const bannerTable = document.getElementById('bannerTable');
+
+            if (step === 1) {
+                document.getElementById('slide1').classList.add('active');
+                banner.style.display = 'none';
+            } 
+            else if (step === 2 && session.emp) {
+                document.getElementById('slide2').classList.add('active');
+                banner.style.display = 'flex';
+                bannerEmp.querySelector('span').innerText = session.emp.name;
+                bannerTable.style.display = 'none';
+                renderPersonalizedTables(session.emp);
+            } 
+            else if (step === 3 && session.table) {
+                document.getElementById('slide3').classList.add('active');
+                bannerTable.style.display = 'block';
+                bannerTable.querySelector('span').innerText = session.table.name + " (" + session.table.project + ")";
+            }
+            else if (step === 4) {
+                document.getElementById('slideSuccess').classList.add('active');
+                banner.style.display = 'none';
+                document.getElementById('successMessage').innerHTML = 
+                    `<b>${session.emp.name}</b> a démarré <b>${session.op.name}</b><br>sur <b>${session.table.name} (${session.table.project})</b>`;
+            }
+
+            renderGeneratedBarcodes();
+        }
+
+        function updateShiftUI() {
+            if(!currentDB) return;
+            const badge = document.getElementById('shiftBadge');
+            const title1 = document.getElementById('slide1-title');
+            const floatBtn = document.getElementById('floatingShiftBtn');
+            const floatText = document.getElementById('floatingShiftText');
+            if (currentDB.shift === 'jour') {
+                badge.innerHTML = '<i class="fa-solid fa-sun"></i> Équipe de Jour';
+                badge.className = 'shift-badge day';
+                title1.innerHTML = 'SLIDE 1 : Employés <span style="color:var(--day-color)">(Équipe de Jour)</span>';
+                floatBtn.className = 'day';
+                floatBtn.innerHTML = '<i class="fa-solid fa-moon"></i><span id="floatingShiftText">Passer en Nuit</span>';
+            } else {
+                badge.innerHTML = '<i class="fa-solid fa-moon"></i> Équipe de Nuit';
+                badge.className = 'shift-badge night';
+                title1.innerHTML = 'SLIDE 1 : Employés <span style="color:var(--night-color)">(Équipe de Nuit)</span>';
+                floatBtn.className = 'night';
+                floatBtn.innerHTML = '<i class="fa-solid fa-sun"></i><span id="floatingShiftText">Passer en Jour</span>';
+            }
+        }
+
+        // ── BOUTON FLOTTANT : switcher l'équipe ──────────────────────────────
+        document.getElementById('floatingShiftBtn').addEventListener('click', () => {
+            if (!currentDB) return;
+            const newShift = currentDB.shift === 'jour' ? 'nuit' : 'jour';
+            set(ref(db, 'agb_db/shift'), newShift);
+        });
+
+        function renderUI() {
+            if(!currentDB || currentState.step !== 1) return;
+
+            const visibleEmployees = currentDB.employees ? currentDB.employees.filter(e => e.shift === currentDB.shift) : [];
+            document.getElementById('tvEmployeeGrid').innerHTML = visibleEmployees.map(e => `
+                <div class="card">
+                    <h3>${e.name}</h3>
+                    <div class="barcode-container">
+                        ${e.code ? `<svg class="jsbarcode" data-value="${e.code}"></svg>` : `<p style="color:#000">Aucun code</p>`}
+                    </div>
+                </div>
+            `).join('');
+
+            const ops = currentDB.operations || [];
+            document.getElementById('tvOpGrid').innerHTML = ops.map(o => `
+                <div class="card">
+                    <i class="fa-solid ${o.icon}" style="font-size: 50px; color: var(--text-muted); margin-bottom:15px;"></i>
+                    <h3>${o.name}</h3>
+                    <div class="barcode-container">
+                        <svg class="jsbarcode" data-value="${o.code}"></svg>
+                    </div>
+                </div>
+            `).join('');
+
+            renderGeneratedBarcodes();
+        }
+
+        function renderPersonalizedTables(emp) {
+            const allTables = currentDB.tables || [];
+            const assignedTables = allTables.filter(t => {
+                const teamArr = currentDB.shift === 'jour' ? (t.teamJour || []) : (t.teamNuit || []);
+                return teamArr.includes(emp.id);
+            });
+
+            const grid = document.getElementById('tvTableGrid');
+            if (assignedTables.length === 0) {
+                grid.innerHTML = `<div style="grid-column: 1 / -1; background: var(--bg-card); padding: 40px; border-radius: 15px; text-align: center; border: 2px solid var(--danger);">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 50px; color: var(--danger); margin-bottom: 20px;"></i>
+                    <h3 style="font-size: 24px;">Aucune assignation</h3>
+                    <p style="color: var(--text-muted);">Vous n'êtes assigné à aucune table pour ce quart.</p>
+                </div>`;
+                return;
+            }
+
+            grid.innerHTML = assignedTables.map(t => {
+                const currentTeamIds = currentDB.shift === 'jour' ? (t.teamJour || []) : (t.teamNuit || []);
+                const teamNames = currentTeamIds.map(id => {
+                    const teamEmp = currentDB.employees.find(e => e.id === id);
+                    return teamEmp ? (teamEmp.id === emp.id ? `<span style="color: var(--success); font-weight: bold;">${teamEmp.name} (Vous)</span>` : teamEmp.name) : 'Inconnu';
+                }).join('<br>');
+
+                return `
+                <div class="card table-card">
+                    <h2>${t.name}</h2>
+                    <div class="project">${t.project}</div>
+                    <div class="barcode-container">
+                        ${t.code ? `<svg class="jsbarcode" data-value="${t.code}"></svg>` : `<p style="color:#000">Aucun code</p>`}
+                    </div>
+                    <div style="background: var(--bg-dark); padding: 15px; border-radius: 8px; margin-top: 15px; text-align:left;">
+                        <strong style="color: var(--text-main); display:block; margin-bottom:8px;">Votre équipe:</strong>
+                        ${teamNames}
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function renderGeneratedBarcodes() {
+            document.querySelectorAll('.jsbarcode').forEach(svg => {
+                const value = svg.getAttribute('data-value');
+                if(value) {
+                    try {
+                        JsBarcode(svg, value, { format: "CODE128", lineColor: "#000", background: "#fff", width: 2, height: 60, displayValue: true, fontSize: 16, margin: 10 });
+                    } catch(e) {}
+                }
+            });
+        }
+    </script>
+</body>
+</html>
