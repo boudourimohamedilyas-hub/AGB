@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGB — Tableau de Bord Qualité PSDQDC</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --surface: #ffffff;
+    --surface2: #e8edf3;
+    --border: rgba(0,0,0,0.10);
+    --accent: #2d8cf0;
+    --accent2: #00d4a0;
+    --warn: #f0a030;
+    --danger: #e8404a;
+    --success: #3ec870;
+    --text: #1a1e2a;
+    --muted: #7a8399;
+    --font-head: 'Barlow Condensed', sans-serif;
+    --font-body: 'Barlow', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow: hidden; }
+
+  /* ── SCANLINES OVERLAY ── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none; z-index: 9999;
+  }
+
+  .dash {
+    display: grid;
+    grid-template-rows: 56px 36px 100px 1fr 28px;
+    grid-template-columns: 1fr;
+    height: 100vh;
+    gap: 0;
+    padding: 12px 16px 8px;
+    gap: 8px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+  .logo {
+    font-family: var(--font-head);
+    font-size: 28px; font-weight: 700; letter-spacing: 0.12em;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
+  .logo .sub { font-size: 13px; font-weight: 400; color: var(--muted); letter-spacing: 0.25em; display: block; margin-top: -4px; }
+  .header-right { text-align: right; }
+  .clock { font-family: var(--font-head); font-size: 26px; font-weight: 600; color: var(--accent); letter-spacing: 0.08em; }
+  .date-str { font-size: 12px; color: var(--muted); letter-spacing: 0.15em; }
+
+  /* ── TICKER ── */
+  .ticker {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
+  .ticker-label {
+    font-family: var(--font-head);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.2em;
+    color: #fff; background: var(--accent);
+    padding: 0 12px; height: 100%; display: flex; align-items: center;
+    white-space: nowrap; flex-shrink: 0; z-index: 2;
+  }
+  .ticker-track { flex: 1; overflow: hidden; height: 100%; }
+  @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+  .ticker-inner {
+    display: inline-flex; align-items: center; gap: 40px;
+    animation: ticker 30s linear infinite;
+    font-size: 13px; color: var(--muted); white-space: nowrap; height: 100%;
+    padding-left: 24px;
+  }
+  .ticker-inner .ok { color: var(--success); }
+  .ticker-inner .warn { color: var(--warn); }
+  .ticker-inner .bad { color: var(--danger); }
+  .t-sep { color: var(--border); }
+
+  /* ── KPI ROW ── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(12px);
+    animation: fadeUp 0.5s forwards;
+  }
+  .kpi::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  }
+  .kpi.blue::before { background: var(--accent); }
+  .kpi.green::before { background: var(--success); }
+  .kpi.amber::before { background: var(--warn); }
+  .kpi.red::before { background: var(--danger); }
+  .kpi:nth-child(1){animation-delay:.1s}.kpi:nth-child(2){animation-delay:.2s}.kpi:nth-child(3){animation-delay:.3s}.kpi:nth-child(4){animation-delay:.4s}
+  @keyframes fadeUp { to { opacity:1; transform:translateY(0); } }
+  .kpi-label { font-size: 10px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 4px; }
+  .kpi-value { font-family: var(--font-head); font-size: 30px; font-weight: 700; line-height: 1; }
+  .kpi.blue .kpi-value { color: var(--accent); }
+  .kpi.green .kpi-value { color: var(--success); }
+  .kpi.amber .kpi-value { color: var(--warn); }
+  .kpi.red .kpi-value { color: var(--danger); }
+  .kpi-trend { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 8px;
+    min-height: 0;
+  }
+
+  /* ── TABLE ── */
+  .table-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 6px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 0.5px solid var(--border);
+    flex-shrink: 0;
+  }
+  .card-title { font-family: var(--font-head); font-size: 14px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+  .count-pill { font-family: var(--font-head); font-size: 11px; font-weight: 700; background: var(--accent); color: #fff; border-radius: 20px; padding: 2px 10px; letter-spacing: 0.1em; }
+
+  .tbl-wrap { flex: 1; overflow-y: auto; }
+  .tbl-wrap::-webkit-scrollbar { width: 4px; }
+  .tbl-wrap::-webkit-scrollbar-track { background: transparent; }
+  .tbl-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    font-family: var(--font-head);
+    font-size: 10px; font-weight: 600; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--muted);
+    padding: 8px 12px; text-align: left;
+    border-bottom: 0.5px solid var(--border);
+    position: sticky; top: 0;
+    background: var(--surface); z-index: 1;
+  }
+  tbody tr {
+    border-bottom: 0.5px solid var(--border);
+    transition: background 0.2s;
+    opacity: 0; animation: fadeUp 0.4s forwards;
+  }
+  tbody tr:hover { background: rgba(45,140,240,0.05); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:nth-child(1){animation-delay:.2s}
+  tbody tr:nth-child(2){animation-delay:.3s}
+  tbody tr:nth-child(3){animation-delay:.35s}
+  tbody tr:nth-child(4){animation-delay:.4s}
+  tbody tr:nth-child(5){animation-delay:.45s}
+  tbody tr:nth-child(6){animation-delay:.5s}
+
+  td { padding: 9px 12px; font-size: 13px; vertical-align: middle; }
+  .proj-name { font-family: var(--font-head); font-size: 15px; font-weight: 600; letter-spacing: 0.05em; }
+  .proj-num { font-size: 10px; color: var(--muted); }
+
+  .badge {
+    font-family: var(--font-head); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 3px; display: inline-block;
+  }
+  .s-green { background: rgba(62,200,112,0.15); color: var(--success); border: 0.5px solid rgba(62,200,112,0.4); }
+  .s-amber { background: rgba(240,160,48,0.15); color: var(--warn); border: 0.5px solid rgba(240,160,48,0.4); }
+  .s-red   { background: rgba(232,64,74,0.15);  color: var(--danger); border: 0.5px solid rgba(232,64,74,0.4); }
+  .s-blue  { background: rgba(45,140,240,0.15); color: var(--accent); border: 0.5px solid rgba(45,140,240,0.4); }
+  .s-teal  { background: rgba(0,212,160,0.15);  color: var(--accent2); border: 0.5px solid rgba(0,212,160,0.4); }
+
+  .prog-wrap { display: flex; align-items: center; gap: 8px; }
+  .prog-bg { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; min-width: 80px; }
+  .prog-bar { height: 100%; border-radius: 2px; width: 0; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+  .prog-pct { font-family: var(--font-head); font-size: 12px; color: var(--muted); min-width: 28px; text-align: right; }
+
+  .resp { font-size: 12px; color: var(--muted); }
+  .date-cell { font-size: 12px; color: var(--muted); font-family: var(--font-head); letter-spacing: 0.05em; }
+  .date-cell.late { color: var(--danger); }
+
+  /* ── NC + NEWS COLUMN ── */
+  .right-col { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+
+  .nc-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    flex-shrink: 0;
+  }
+  .nc-title { font-family: var(--font-head); font-size: 11px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .nc-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
+  .nc-label { font-size: 12px; color: var(--text); }
+  .nc-bar-wrap { display: flex; align-items: center; gap: 6px; flex: 1; margin: 0 10px; }
+  .nc-bg { flex:1; height:3px; background: rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; }
+  .nc-fill { height:100%; border-radius:2px; width:0; transition: width 1.4s cubic-bezier(.4,0,.2,1); }
+  .nc-count { font-family: var(--font-head); font-size: 14px; font-weight: 700; min-width: 18px; text-align: right; }
+
+  .news-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 6px;
+    flex: 1; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .news-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .news-list::-webkit-scrollbar { width: 3px; }
+  .news-list::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .news-item {
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: var(--surface2);
+    border-left: 2px solid var(--accent);
+    opacity: 0; animation: fadeUp 0.5s forwards;
+  }
+  .news-item.warn { border-left-color: var(--warn); }
+  .news-item.ok   { border-left-color: var(--success); }
+  .news-item.bad  { border-left-color: var(--danger); }
+  .news-item:nth-child(1){animation-delay:.3s}.news-item:nth-child(2){animation-delay:.45s}.news-item:nth-child(3){animation-delay:.6s}.news-item:nth-child(4){animation-delay:.75s}.news-item:nth-child(5){animation-delay:.9s}
+  .news-date { font-family: var(--font-head); font-size: 10px; color: var(--muted); letter-spacing: 0.15em; margin-bottom: 3px; }
+  .news-text { font-size: 12px; line-height: 1.4; color: var(--text); }
+
+  /* ── FOOTER ── */
+  .footer {
+    display: flex; align-items: center; justify-content: space-between;
+    border-top: 0.5px solid var(--border);
+    padding-top: 6px;
+    font-family: var(--font-head); font-size: 10px; letter-spacing: 0.15em; color: var(--muted);
+  }
+  .pulse-dot {
+    display: inline-block; width: 6px; height: 6px;
+    background: var(--success); border-radius: 50%; margin-right: 6px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
+
+  /* ── HIGHLIGHT ROW (active) ── */
+  @keyframes rowGlow {
+    0%,100%{box-shadow:inset 0 0 0 0 transparent}
+    50%{box-shadow:inset 3px 0 0 0 var(--warn)}
+  }
+  .row-warn { animation: rowGlow 3s ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div class="dash">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      AGB <span>|</span> Qualité
+      <span class="sub">PLAN DE SURVEILLANCE ET DE DÉVELOPPEMENT — CONTRÔLE QUALITÉ</span>
+    </div>
+    <div class="header-right">
+      <div class="clock" id="clock">--:--</div>
+      <div class="date-str" id="datestr">---</div>
+    </div>
+  </div>
+
+  <!-- TICKER -->
+  <div class="ticker">
+    <div class="ticker-label">INFOS</div>
+    <div class="ticker-track">
+      <div class="ticker-inner" id="ticker-inner">
+        <span>📌 Réunion PSDQDC — Vendredi 9h00 — Salle B204</span>
+        <span class="t-sep">◆</span>
+        <span class="ok">✔ Projet TABL 6 livré avec succès le 1er juin</span>
+        <span class="t-sep">◆</span>
+        <span class="warn">⚠ Projet TABL 4 : retard de 3 jours — suivi requis</span>
+        <span class="t-sep">◆</span>
+        <span>📋 Audit interne qualité — Semaine 24</span>
+        <span class="t-sep">◆</span>
+        <span class="ok">✔ Taux qualité T2 atteint : 94% — Félicitations !</span>
+        <span class="t-sep">◆</span>
+        <span class="bad">⛔ Projet TABL 5 : blocage en cours — réunion d'urgence</span>
+        <span class="t-sep">◆</span>
+        <span>🏭 Mise à jour système ERP prévue le 10 juin — 22h à 2h</span>
+        <span class="t-sep">◆</span>
+        <span>📌 Réunion PSDQDC — Vendredi 9h00 — Salle B204</span>
+        <span class="t-sep">◆</span>
+        <span class="ok">✔ Projet TABL 6 livré avec succès le 1er juin</span>
+        <span class="t-sep">◆</span>
+        <span class="warn">⚠ Projet TABL 4 : retard de 3 jours — suivi requis</span>
+        <span class="t-sep">◆</span>
+        <span>📋 Audit interne qualité — Semaine 24</span>
+        <span class="t-sep">◆</span>
+        <span class="ok">✔ Taux qualité T2 atteint : 94% — Félicitations !</span>
+        <span class="t-sep">◆</span>
+        <span class="bad">⛔ Projet TABL 5 : blocage en cours — réunion d'urgence</span>
+        <span class="t-sep">◆</span>
+        <span>🏭 Mise à jour système ERP prévue le 10 juin — 22h à 2h</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi blue">
+      <div class="kpi-label">Projets actifs</div>
+      <div class="kpi-value" id="kpi1">0</div>
+      <div class="kpi-trend">Sur 6 projets au total</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Taux qualité global</div>
+      <div class="kpi-value" id="kpi2">0%</div>
+      <div class="kpi-trend">↑ +2% vs mois dernier</div>
+    </div>
+    <div class="kpi amber">
+      <div class="kpi-label">Non-conformités ouvertes</div>
+      <div class="kpi-value" id="kpi3">0</div>
+      <div class="kpi-trend">À traiter cette semaine</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">Délais respectés</div>
+      <div class="kpi-value" id="kpi4">0%</div>
+      <div class="kpi-trend">↓ Objectif : 90%</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- TABLE PROJETS -->
+    <div class="table-card">
+      <div class="card-header">
+        <span class="card-title">État des projets PSDQDC</span>
+        <span class="count-pill">6 PROJETS</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Projet</th>
+              <th>Responsable</th>
+              <th>Statut</th>
+              <th>Progression</th>
+              <th>Échéance</th>
+              <th>Priorité</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="proj-num">P-001</td>
+              <td><span class="proj-name">TABL 1</span></td>
+              <td class="resp">M. Tremblay</td>
+              <td><span class="badge s-green">En cours</span></td>
+              <td>
+                <div class="prog-wrap">
+                  <div class="prog-bg"><div class="prog-bar" data-val="80" style="background:var(--success)"></div></div>
+                  <span class="prog-pct">80%</span>
+                </div>
+              </td>
+              <td class="date-cell">15 juin 2026</td>
+              <td><span class="badge s-green">Haute</span></td>
+            </tr>
+            <tr>
+              <td class="proj-num">P-002</td>
+              <td><span class="proj-name">TABL 2</span></td>
+              <td class="resp">L. Côté</td>
+              <td><span class="badge s-green">En cours</span></td>
+              <td>
+                <div class="prog-wrap">
+                  <div class="prog-bg"><div class="prog-bar" data-val="55" style="background:var(--success)"></div></div>
+                  <span class="prog-pct">55%</span>
+                </div>
+              </td>
+              <td class="date-cell">30 juin 2026</td>
+              <td><span class="badge s-blue">Normale</span></td>
+            </tr>
+            <tr>
+              <td class="proj-num">P-003</td>
+              <td><span class="proj-name">TABL 3</span></td>
+              <td class="resp">S. Bouchard</td>
+              <td><span class="badge s-blue">Planifié</span></td>
+              <td>
+                <div class="prog-wrap">
+                  <div class="prog-bg"><div class="prog-bar" data-val="20" style="background:var(--accent)"></div></div>
+                  <span class="prog-pct">20%</span>
+                </div>
+              </td>
+              <td class="date-cell">31 juil. 2026</td>
+              <td><span class="badge s-blue">Normale</span></td>
+            </tr>
+            <tr class="row-warn">
+              <td class="proj-num">P-004</td>
+              <td><span class="proj-name">TABL 4</span></td>
+              <td class="resp">P. Gagnon</td>
+              <td><span class="badge s-amber">Retard</span></td>
+              <td>
+                <div class="prog-wrap">
+                  <div class="prog-bg"><div class="prog-bar" data-val="65" style="background:var(--warn)"></div></div>
+                  <span class="prog-pct">65%</span>
+                </div>
+              </td>
+              <td class="date-cell late">10 juin 2026</td>
+              <td><span class="badge s-amber">Haute</span></td>
+            </tr>
+            <tr>
+              <td class="proj-num">P-005</td>
+              <td><span class="proj-name">TABL 5</span></td>
+              <td class="resp">A. Roy</td>
+              <td><span class="badge s-red">Bloqué</span></td>
+              <td>
+                <div class="prog-wrap">
+                  <div class="prog-bg"><div class="prog-bar" data-val="40" style="background:var(--danger)"></div></div>
+                  <span class="prog-pct">40%</span>
+                </div>
+              </td>
+              <td class="date-cell late">20 juin 2026</td>
+              <td><span class="badge s-red">Critique</span></td>
+            </tr>
+            <tr>
+              <td class="proj-num">P-006</td>
+              <td><span class="proj-name">TABL 6</span></td>
+              <td class="resp">F. Lavoie</td>
+              <td><span class="badge s-teal">Terminé</span></td>
+              <td>
+                <div class="prog-wrap">
+                  <div class="prog-bg"><div class="prog-bar" data-val="100" style="background:var(--accent2)"></div></div>
+                  <span class="prog-pct">100%</span>
+                </div>
+              </td>
+              <td class="date-cell">01 juin 2026</td>
+              <td><span class="badge s-teal">Basse</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DROITE -->
+    <div class="right-col">
+      <!-- NC -->
+      <div class="nc-card">
+        <div class="nc-title">Non-conformités par type</div>
+        <div class="nc-row">
+          <span class="nc-label">Procédure</span>
+          <div class="nc-bar-wrap"><div class="nc-bg"><div class="nc-fill" data-val="60" style="background:var(--danger)"></div></div></div>
+          <span class="nc-count" style="color:var(--danger)">3</span>
+        </div>
+        <div class="nc-row">
+          <span class="nc-label">Documentation</span>
+          <div class="nc-bar-wrap"><div class="nc-bg"><div class="nc-fill" data-val="40" style="background:var(--warn)"></div></div></div>
+          <span class="nc-count" style="color:var(--warn)">2</span>
+        </div>
+        <div class="nc-row">
+          <span class="nc-label">Matériel</span>
+          <div class="nc-bar-wrap"><div class="nc-bg"><div class="nc-fill" data-val="20" style="background:var(--accent)"></div></div></div>
+          <span class="nc-count" style="color:var(--accent)">1</span>
+        </div>
+        <div class="nc-row" style="margin-bottom:0">
+          <span class="nc-label">Livraison</span>
+          <div class="nc-bar-wrap"><div class="nc-bg"><div class="nc-fill" data-val="20" style="background:var(--muted)"></div></div></div>
+          <span class="nc-count" style="color:var(--muted)">1</span>
+        </div>
+      </div>
+
+      <!-- NEWS -->
+      <div class="news-card">
+        <div class="card-header">
+          <span class="card-title">Actualités & annonces</span>
+        </div>
+        <div class="news-list">
+          <div class="news-item ok">
+            <div class="news-date">04 JUIN 2026</div>
+            <div class="news-text">TABL 6 — Travaux complétés et inspectés, clôture officielle confirmée</div>
+          </div>
+          <div class="news-item ok">
+            <div class="news-date">04 JUIN 2026</div>
+            <div class="news-text">TABL 1 — Progression à 80%, objectif de livraison maintenu pour le 15 juin</div>
+          </div>
+          <div class="news-item warn">
+            <div class="news-date">03 JUIN 2026</div>
+            <div class="news-text">TABL 4 — Suivi requis cette semaine, réunion planifiée vendredi matin</div>
+          </div>
+          <div class="news-item bad">
+            <div class="news-date">03 JUIN 2026</div>
+            <div class="news-text">TABL 5 — Travaux bloqués, intervention du directeur qualité nécessaire</div>
+          </div>
+          <div class="news-item">
+            <div class="news-date">02 JUIN 2026</div>
+            <div class="news-text">TABL 2 & TABL 3 — Inspection intermédiaire réussie, aucune non-conformité</div>
+          </div>
+          <div class="news-item">
+            <div class="news-date">02 JUIN 2026</div>
+            <div class="news-text">Audit interne qualité — semaine 24, tous les responsables de tables convoqués</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <span><span class="pulse-dot"></span>SYSTÈME EN LIGNE — Mise à jour automatique toutes les 60 s</span>
+    <span>AGB — DÉPARTEMENT QUALITÉ</span>
+    <span id="footer-date">---</span>
+  </div>
+</div>
+
+<script>
+  // ── Horloge ──
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').textContent =
+      now.toLocaleTimeString('fr-CA', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    document.getElementById('datestr').textContent =
+      now.toLocaleDateString('fr-CA', {weekday:'long', year:'numeric', month:'long', day:'numeric'}).toUpperCase();
+    document.getElementById('footer-date').textContent =
+      now.toLocaleDateString('fr-CA') + ' — ' + now.toLocaleTimeString('fr-CA', {hour:'2-digit', minute:'2-digit'});
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ── Compteurs animés KPIs ──
+  function animCount(id, target, suffix, duration) {
+    const el = document.getElementById(id);
+    let start = null;
+    function step(ts) {
+      if (!start) start = ts;
+      const prog = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - prog, 3);
+      el.textContent = Math.round(eased * target) + suffix;
+      if (prog < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  setTimeout(() => {
+    animCount('kpi1', 5, '', 1200);
+    animCount('kpi2', 94, '%', 1600);
+    animCount('kpi3', 3, '', 1000);
+    animCount('kpi4', 87, '%', 1400);
+  }, 400);
+
+  // ── Barres de progression ──
+  setTimeout(() => {
+    document.querySelectorAll('.prog-bar').forEach(bar => {
+      bar.style.width = bar.dataset.val + '%';
+    });
+    document.querySelectorAll('.nc-fill').forEach(bar => {
+      bar.style.width = bar.dataset.val + '%';
+    });
+  }, 600);
+</script>
+</body>
+</html>
