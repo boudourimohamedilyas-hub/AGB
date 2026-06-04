@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+.w{font-family:'Inter',sans-serif;background:#f0f2f5;min-height:100vh;padding:14px 14px 0;}
+.hdr{display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:14px;padding:12px 20px;margin-bottom:12px;border:0.5px solid #e0e0e0;}
+.brand{font-size:22px;font-weight:900;color:#111;letter-spacing:-0.02em;}
+.brand span{color:#1a6ef7;}
+.hdr-right{text-align:right;}
+.clk{font-size:26px;font-weight:900;color:#111;}
+.dt{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.08em;}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+.kpi{background:#fff;border-radius:14px;padding:14px 16px;border:0.5px solid #e0e0e0;display:flex;align-items:center;gap:12px;}
+.kpi-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.kpi-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin-bottom:3px;}
+.kpi-val{font-size:22px;font-weight:900;line-height:1;}
+.kpi-sub{font-size:11px;margin-top:2px;}
+.tables-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
+.tcard{border-radius:16px;padding:18px 14px 14px;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;overflow:hidden;transition:transform 0.15s;}
+.tcard:hover{transform:translateY(-2px);}
+.tcard-name{font-size:12px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.8);}
+.tcard-emoji{font-size:52px;line-height:1;z-index:1;}
+.tcard-status{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;padding:4px 16px;border-radius:30px;background:rgba(0,0,0,0.15);color:#fff;text-align:center;width:100%;}
+.tcard-bar-wrap{width:100%;height:9px;background:rgba(0,0,0,0.18);border-radius:20px;overflow:hidden;margin-top:2px;}
+.tcard-bar{height:100%;background:rgba(255,255,255,0.85);border-radius:20px;width:0;transition:width 1.2s cubic-bezier(.4,0,.2,1);}
+.tcard-pct{font-size:12px;font-weight:700;color:rgba(255,255,255,0.8);}
+.tcard-num{font-size:68px;font-weight:900;color:rgba(255,255,255,0.1);position:absolute;bottom:-10px;right:6px;line-height:1;letter-spacing:-0.05em;user-select:none;}
+.sg{background:#00b861;} .sr{background:#1a6ef7;} .so{background:#e07c00;} .sred{background:#d42020;} .sd{background:#8a8a8a;}
+.sred{animation:pr 2.2s ease-in-out infinite;} .so{animation:po 2.8s ease-in-out infinite;}
+@keyframes pr{0%,100%{box-shadow:0 4px 16px rgba(212,32,32,0.25)}50%{box-shadow:0 4px 32px rgba(212,32,32,0.6),0 0 0 6px rgba(212,32,32,0.12)}}
+@keyframes po{0%,100%{box-shadow:0 4px 16px rgba(224,124,0,0.2)}50%{box-shadow:0 4px 28px rgba(224,124,0,0.5),0 0 0 5px rgba(224,124,0,0.1)}}
+.bottom-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:0;}
+.bcard{background:#fff;border-radius:14px;padding:16px 18px;border:0.5px solid #e0e0e0;}
+.bcard-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.bcard-icon{font-size:24px;}
+.bcard-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#888;}
+.days-num{font-size:56px;font-weight:900;color:#00b861;line-height:1;text-align:center;margin:4px 0;}
+.days-lbl{font-size:13px;font-weight:700;text-align:center;color:#27500a;}
+.days-sub{font-size:11px;text-align:center;color:#888;margin-top:3px;}
+.motiv-msg{font-size:16px;font-weight:700;color:#111;line-height:1.4;margin-bottom:8px;}
+.annonce{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:0.5px solid #f0f0f0;}
+.annonce:last-child{border-bottom:none;padding-bottom:0;}
+.ann-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.ann-text{font-size:13px;font-weight:500;color:#111;line-height:1.35;}
+.ann-time{font-size:10px;color:#aaa;margin-top:2px;}
+.ticker-wrap{background:#111;display:flex;align-items:center;height:30px;margin-top:12px;border-radius:10px 10px 0 0;}
+.ticker-badge{background:#1a6ef7;color:#fff;font-size:10px;font-weight:700;letter-spacing:0.15em;padding:0 14px;height:100%;display:flex;align-items:center;flex-shrink:0;border-radius:10px 0 0 0;}
+.ticker-inner{overflow:hidden;flex:1;height:100%;display:flex;align-items:center;}
+.ticker-scroll{display:inline-flex;gap:40px;animation:tick 32s linear infinite;font-size:12px;color:#aaa;white-space:nowrap;padding-left:24px;font-weight:500;}
+.tok{color:#00b861;} .tow{color:#e07c00;} .tob{color:#d42020;} .sep{color:#444;}
+@keyframes tick{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.lang-badge{display:inline-flex;align-items:center;gap:6px;background:#f0f2f5;border:1.5px solid #e0e0e0;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;letter-spacing:0.1em;color:#555;cursor:pointer;transition:all 0.2s;user-select:none;}
+.lang-badge:hover{background:#e6edfd;border-color:#1a6ef7;color:#1a6ef7;}
+.lang-badge .flag{font-size:15px;}
+.lang-fade{transition:opacity 0.35s ease;}
+.lang-fade.fading{opacity:0;}
+</style>
+</head>
+<body>
+<div class="w">
+  <div class="hdr">
+    <div class="brand">AGB <span>|</span> <span data-i="brand">QUALITÉ</span></div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;" class="lang-fade" id="legend">
+        <span style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;background:#00b861;border-radius:50%"></span><span data-i="leg1">En cours</span></span>
+        <span style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;background:#1a6ef7;border-radius:50%"></span><span data-i="leg2">Avance rapide 🚀</span></span>
+        <span style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;background:#e07c00;border-radius:50%"></span><span data-i="leg3">En retard 🐢</span></span>
+        <span style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;background:#d42020;border-radius:50%"></span><span data-i="leg4">Bloqué 🔥</span></span>
+        <span style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;background:#8a8a8a;border-radius:50%"></span><span data-i="leg5">Terminé 🏁</span></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="lang-badge" id="lang-btn" onclick="toggleLang()">
+          <span class="flag" id="lang-flag">🇬🇧</span>
+          <span id="lang-label">EN</span>
+        </div>
+        <div class="hdr-right">
+          <div class="clk" id="clk">--:--</div>
+          <div class="dt" id="dt">---</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-row lang-fade" id="kpi-row">
+    <div class="kpi"><div class="kpi-icon" style="background:#eaf3de;">✅</div><div><div class="kpi-lbl" data-i="kpi1lbl">Taux qualité</div><div class="kpi-val" id="disp-kpi1" style="color:#00b861;">94%</div><div class="kpi-sub" style="color:#3b6d11;" data-i="kpi1sub">▲ +2% vs semaine passée</div></div></div>
+    <div class="kpi"><div class="kpi-icon" style="background:#faeeda;">🔁</div><div><div class="kpi-lbl" data-i="kpi2lbl">Taux de retouche</div><div class="kpi-val" id="disp-kpi2" style="color:#e07c00;">6%</div><div class="kpi-sub" style="color:#854f0b;" data-i="kpi2sub">▼ Objectif : &lt; 5%</div></div></div>
+    <div class="kpi"><div class="kpi-icon" style="background:#ffeaea;">⚠️</div><div><div class="kpi-lbl" data-i="kpi3lbl">Non-conformités</div><div class="kpi-val" id="disp-kpi3" style="color:#d42020;">3</div><div class="kpi-sub" style="color:#a32d2d;" data-i="kpi3sub">Dernières 24h</div></div></div>
+    <div class="kpi"><div class="kpi-icon" style="background:#e6f1fb;">🎯</div><div><div class="kpi-lbl" data-i="kpi4lbl">1er passage (FPP)</div><div class="kpi-val" id="disp-kpi4" style="color:#1a6ef7;">88%</div><div class="kpi-sub" style="color:#185fa5;" data-i="kpi4sub">Objectif : 90%</div></div></div>
+  </div>
+
+  <div class="tables-grid lang-fade" id="tables-grid">
+    <div class="tcard sg" id="card-t1"><div class="tcard-name">TABLE 1</div><div class="tcard-emoji" id="emj-t1">✅</div><div class="tcard-status" data-i="t1status">En cours</div><div class="tcard-bar-wrap"><div class="tcard-bar" id="bar-t1" style="width:80%"></div></div><div class="tcard-pct" id="pct-t1">80%</div><div class="tcard-num">1</div></div>
+    <div class="tcard sr" id="card-t2"><div class="tcard-name">TABLE 2</div><div class="tcard-emoji" id="emj-t2">🚀</div><div class="tcard-status" data-i="t2status">Avance rapide</div><div class="tcard-bar-wrap"><div class="tcard-bar" id="bar-t2" style="width:90%"></div></div><div class="tcard-pct" id="pct-t2">90%</div><div class="tcard-num">2</div></div>
+    <div class="tcard sg" id="card-t3"><div class="tcard-name">TABLE 3</div><div class="tcard-emoji" id="emj-t3">✅</div><div class="tcard-status" data-i="t3status">En cours</div><div class="tcard-bar-wrap"><div class="tcard-bar" id="bar-t3" style="width:55%"></div></div><div class="tcard-pct" id="pct-t3">55%</div><div class="tcard-num">3</div></div>
+    <div class="tcard so" id="card-t4"><div class="tcard-name">TABLE 4</div><div class="tcard-emoji" id="emj-t4">🐢</div><div class="tcard-status" data-i="t4status">En retard</div><div class="tcard-bar-wrap"><div class="tcard-bar" id="bar-t4" style="width:40%"></div></div><div class="tcard-pct" id="pct-t4">40%</div><div class="tcard-num">4</div></div>
+    <div class="tcard sred" id="card-t5"><div class="tcard-name">TABLE 5</div><div class="tcard-emoji" id="emj-t5">🔥</div><div class="tcard-status" data-i="t5status">BLOQUÉ</div><div class="tcard-bar-wrap"><div class="tcard-bar" id="bar-t5" style="width:25%"></div></div><div class="tcard-pct" id="pct-t5">25%</div><div class="tcard-num">5</div></div>
+    <div class="tcard sd" id="card-t6"><div class="tcard-name">TABLE 6</div><div class="tcard-emoji" id="emj-t6">🏁</div><div class="tcard-status" data-i="t6status">Terminé</div><div class="tcard-bar-wrap"><div class="tcard-bar" id="bar-t6" style="width:100%"></div></div><div class="tcard-pct" id="pct-t6">100%</div><div class="tcard-num">6</div></div>
+  </div>
+
+  <div class="bottom-row lang-fade" id="bottom-row">
+    <div class="bcard">
+      <div class="bcard-hdr"><div class="bcard-icon">🛡️</div><div class="bcard-title" data-i="bc1title">Jours sans incident</div></div>
+      <div class="days-num" id="disp-jsi">18</div>
+      <div class="days-lbl" data-i="bc1lbl">jours sans incident</div>
+      <div class="days-sub" data-i="bc1sub">Record : 34 jours — On continue !</div>
+      <div style="margin-top:10px;background:#eaf3de;border-radius:10px;padding:8px 12px;text-align:center;">
+        <span style="font-size:12px;font-weight:700;color:#27500a;" data-i="bc1obj">Objectif 30 jours 🎯 — Encore 12 jours !</span>
+      </div>
+    </div>
+    <div class="bcard">
+      <div class="bcard-hdr"><div class="bcard-icon">⭐</div><div class="bcard-title" data-i="bc2title">Message de la semaine</div></div>
+      <div class="motiv-msg" id="motiv-msg">"La qualité n'est pas un acte, c'est une habitude."</div>
+      <div style="background:#faeeda;border-radius:10px;padding:10px 14px; margin-top:15px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#854f0b;margin-bottom:4px;" data-i="bc2week">Objectif semaine 24</div>
+        <div style="font-size:13px;font-weight:700;color:#412402;" data-i="bc2goal">Réduire le taux de retouche de 6% à 5%</div>
+        <div style="margin-top:8px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#854f0b;margin-bottom:4px;"><span data-i="bc2prog">Progression</span><span>6% → 5%</span></div>
+          <div style="height:7px;background:rgba(0,0,0,0.1);border-radius:20px;overflow:hidden;"><div style="height:100%;width:60%;background:#e07c00;border-radius:20px;transition:width 1.4s" id="obj-prog"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="bcard">
+      <div class="bcard-hdr"><div class="bcard-icon">📢</div><div class="bcard-title" data-i="bc3title">Annonces internes</div></div>
+      <div class="annonce"><div class="ann-dot" id="dot-a1" style="background:#d42020;"></div><div><div class="ann-text" data-i="ann1">TABLE 5 — Réunion d'urgence vendredi 9h</div><div class="ann-time" data-i="ann1t">Aujourd'hui</div></div></div>
+      <div class="annonce"><div class="ann-dot" id="dot-a2" style="background:#e07c00;"></div><div><div class="ann-text" data-i="ann2">Audit qualité interne — Mercredi matin</div><div class="ann-time" data-i="ann2t">Cette semaine</div></div></div>
+      <div class="annonce"><div class="ann-dot" id="dot-a3" style="background:#1a6ef7;"></div><div><div class="ann-text" data-i="ann3">Formation sécurité obligatoire — 12 juin</div><div class="ann-time" data-i="ann3t">Semaine prochaine</div></div></div>
+    </div>
+  </div>
+
+  <div class="ticker-wrap">
+    <div class="ticker-badge">LIVE</div>
+    <div class="ticker-inner">
+      <div class="ticker-scroll" id="ticker-scroll">
+        </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── LOGIQUE DE TRADUCTION ET D'AUTO-SWITCH ──────────────────────────────────
+let currentLang = 'fr';
+
+const T = {
+  fr: {
+    brand: "QUALITÉ", leg1: "En cours", leg2: "Avance rapide 🚀", leg3: "En retard 🐢", leg4: "Bloqué 🔥", leg5: "Terminé 🏁",
+    kpi1lbl: "Taux qualité", kpi1sub: "▲ +2% vs semaine passée", kpi2lbl: "Taux de retouche", kpi2sub: "▼ Objectif : < 5%",
+    kpi3lbl: "Non-conformités", kpi3sub: "Dernières 24h", kpi4lbl: "1er passage (FPP)", kpi4sub: "Objectif : 90%",
+    t1status: "En cours", t2status: "Avance rapide", t3status: "En cours", t4status: "En retard", t5status: "BLOQUÉ", t6status: "Terminé",
+    bc1title: "Jours sans incident", bc1lbl: "jours sans incident", bc1sub: "Record : 34 jours — On continue !", bc1obj: "Objectif 30 jours 🎯 — Encore 12 jours !",
+    bc2title: "Message de la semaine", bc2week: "Objectif semaine 24", bc2goal: "Réduire le taux de retouche de 6% à 5%", bc2prog: "Progression",
+    bc3title: "Annonces internes", 
+    ann1: "TABLE 5 — Réunion d'urgence vendredi 9h", ann1t: "Aujourd'hui", 
+    ann2: "Audit qualité interne — Mercredi matin", ann2t: "Cette semaine", 
+    ann3: "Formation sécurité obligatoire — 12 juin", ann3t: "Semaine prochaine",
+    motiv: '"La qualité n\'est pas un acte, c\'est une habitude."',
+    ticker: [['tok', '✔ Connexion en cours...']]
+  },
+  en: {
+    brand: "QUALITY", leg1: "In progress", leg2: "Fast forward 🚀", leg3: "Behind 🐢", leg4: "Blocked 🔥", leg5: "Done 🏁",
+    kpi1lbl: "Quality rate", kpi1sub: "▲ +2% vs last week", kpi2lbl: "Rework rate", kpi2sub: "▼ Target: < 5%",
+    kpi3lbl: "Non-conformities", kpi3sub: "Last 24h", kpi4lbl: "First pass (FPY)", kpi4sub: "Target: 90%",
+    t1status: "In progress", t2status: "Fast forward", t3status: "In progress", t4status: "Behind", t5status: "BLOCKED", t6status: "Done",
+    bc1title: "Days without incident", bc1lbl: "days without incident", bc1sub: "Record: 34 days — Keep it up!", bc1obj: "Target 30 days 🎯 — 12 days to go!",
+    bc2title: "Message of the week", bc2week: "Week 24 goal", bc2goal: "Reduce rework rate from 6% to 5%", bc2prog: "Progress",
+    bc3title: "Internal announcements", 
+    ann1: "TABLE 5 — Emergency meeting Friday 9am", ann1t: "Today", 
+    ann2: "Internal quality audit — Wed morning", ann2t: "This week", 
+    ann3: "Mandatory safety training — June 12", ann3t: "Next week",
+    motiv: '"Quality is not an act, it is a habit."',
+    ticker: [['tok', '✔ Connecting...']]
+  }
+};
+
+function tick(){
+  const n = new Date();
+  const locale = currentLang === 'fr' ? 'fr-CA' : 'en-CA';
+  document.getElementById('clk').textContent = n.toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('dt').textContent = n.toLocaleDateString(locale,{weekday:'long',day:'numeric',month:'long'}).toUpperCase();
+}
+tick(); setInterval(tick,1000);
+
+function applyLang(lang) {
+  const t = T[lang];
+  
+  // Appliquer toutes les traductions simples (y compris les statuts des tables)
+  document.querySelectorAll('[data-i]').forEach(el => {
+    const key = el.getAttribute('data-i');
+    if (t[key] !== undefined) el.textContent = t[key];
+  });
+  
+  // Textes spécifiques
+  document.getElementById('motiv-msg').textContent = t.motiv;
+  
+  // Bandeau défilant (Recréation HTML à la volée)
+  const ticker = document.getElementById('ticker-scroll');
+  if(t.ticker) {
+    const items = [...t.ticker, ...t.ticker, ...t.ticker]; 
+    ticker.innerHTML = items.map(([cls, text]) => `<span${cls ? ' class="'+cls+'"' : ''}>${text}</span>`).join('');
+  }
+
+  // Changer le bouton FR/EN
+  document.getElementById('lang-flag').textContent = lang === 'fr' ? '🇬🇧' : '🇫🇷';
+  document.getElementById('lang-label').textContent = lang === 'fr' ? 'EN' : 'FR';
+  tick();
+}
+
+function switchLang(lang, manual) {
+  const fadeEls = document.querySelectorAll('.lang-fade');
+  fadeEls.forEach(el => el.classList.add('fading'));
+  setTimeout(() => {
+    currentLang = lang;
+    applyLang(lang);
+    fadeEls.forEach(el => el.classList.remove('fading'));
+  }, 320);
+  if (manual) {
+    clearInterval(autoInterval);
+    autoInterval = setInterval(autoSwitch, 5000);
+  }
+}
+
+function toggleLang() { switchLang(currentLang === 'fr' ? 'en' : 'fr', true); }
+function autoSwitch() { switchLang(currentLang === 'fr' ? 'en' : 'fr', false); }
+
+let autoInterval = setInterval(autoSwitch, 5000);
+applyLang(currentLang);
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBZkmAglZh1HmfVYKgy0EGfw8kuIRHOR6Q",
+    authDomain: "agb-product.firebaseapp.com",
+    databaseURL: "https://agb-product-default-rtdb.firebaseio.com",
+    projectId: "agb-product",
+    storageBucket: "agb-product.firebasestorage.app",
+    messagingSenderId: "1067586214794",
+    appId: "1:1067586214794:web:6f8309a3b017841a118673"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  db.ref('dashboardData').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      
+      // 1. MISE À JOUR KPIs
+      if(data.kpis) {
+        if(data.kpis.qualite !== undefined) document.getElementById('disp-kpi1').textContent = data.kpis.qualite + '%';
+        if(data.kpis.retouche !== undefined) document.getElementById('disp-kpi2').textContent = data.kpis.retouche + '%';
+        if(data.kpis.nc !== undefined) document.getElementById('disp-kpi3').textContent = data.kpis.nc;
+        if(data.kpis.fpp !== undefined) document.getElementById('disp-kpi4').textContent = data.kpis.fpp + '%';
+        if(data.kpis.jsi !== undefined) document.getElementById('disp-jsi').textContent = data.kpis.jsi;
+      }
+      
+      // 2. MISE À JOUR DES TABLES
+      if(data.tables) {
+        const stateMap = {
+           'sg':   { emoji: '✅', fr: 'En cours', en: 'In progress' },
+           'sr':   { emoji: '🚀', fr: 'Avance rapide', en: 'Fast forward' },
+           'so':   { emoji: '🐢', fr: 'En retard', en: 'Behind' },
+           'sred': { emoji: '🔥', fr: 'BLOQUÉ', en: 'BLOCKED' },
+           'sd':   { emoji: '🏁', fr: 'Terminé', en: 'Done' }
+        };
+
+        for(let i = 1; i <= 6; i++) {
+          const tableData = data.tables['t'+i];
+          if(tableData) {
+            // Modification des pourcentages instantanée
+            if(tableData.pct !== undefined && tableData.pct !== "") {
+              document.getElementById('bar-t' + i).style.width = tableData.pct + '%';
+              document.getElementById('pct-t' + i).textContent = tableData.pct + '%';
+            }
+            // Modification des couleurs et traduction des statuts
+            if(tableData.state && stateMap[tableData.state]) {
+              const card = document.getElementById('card-t' + i);
+              card.className = 'tcard ' + tableData.state; 
+              document.getElementById('emj-t' + i).textContent = stateMap[tableData.state].emoji; 
+              
+              T.fr['t'+i+'status'] = stateMap[tableData.state].fr;
+              T.en['t'+i+'status'] = stateMap[tableData.state].en;
+            }
+          }
+        }
+      }
+
+      // 3. MISE À JOUR DES MESSAGES ET ANNONCES
+      if(data.messages) {
+        // Message de la semaine
+        if(data.messages.motiv) {
+           T.fr.motiv = data.messages.motiv.fr || T.fr.motiv;
+           T.en.motiv = data.messages.motiv.en || T.en.motiv;
+        }
+        
+        // Bandeau défilant (Ticker)
+        if(data.messages.ticker) {
+           const tData = data.messages.ticker;
+           const buildTicker = (lang) => {
+              let arr = [];
+              if(tData.m1fr || tData.m1en) { arr.push([tData.m1type, lang==='fr'?tData.m1fr:tData.m1en]); arr.push(['sep', '◆']); }
+              if(tData.m2fr || tData.m2en) { arr.push([tData.m2type, lang==='fr'?tData.m2fr:tData.m2en]); arr.push(['sep', '◆']); }
+              if(tData.m3fr || tData.m3en) { arr.push([tData.m3type, lang==='fr'?tData.m3fr:tData.m3en]); arr.push(['sep', '◆']); }
+              return arr;
+           };
+           T.fr.ticker = buildTicker('fr');
+           T.en.ticker = buildTicker('en');
+        }
+
+        // Annonces Internes
+        if(data.messages.annonces) {
+           const aData = data.messages.annonces;
+           
+           // Annonce 1
+           T.fr.ann1 = aData.a1fr || T.fr.ann1; T.en.ann1 = aData.a1en || T.en.ann1;
+           T.fr.ann1t = aData.a1t_fr || T.fr.ann1t; T.en.ann1t = aData.a1t_en || T.en.ann1t;
+           if(aData.a1color) document.getElementById('dot-a1').style.background = aData.a1color;
+           
+           // Annonce 2
+           T.fr.ann2 = aData.a2fr || T.fr.ann2; T.en.ann2 = aData.a2en || T.en.ann2;
+           T.fr.ann2t = aData.a2t_fr || T.fr.ann2t; T.en.ann2t = aData.a2t_en || T.en.ann2t;
+           if(aData.a2color) document.getElementById('dot-a2').style.background = aData.a2color;
+
+           // Annonce 3
+           T.fr.ann3 = aData.a3fr || T.fr.ann3; T.en.ann3 = aData.a3en || T.en.ann3;
+           T.fr.ann3t = aData.a3t_fr || T.fr.ann3t; T.en.ann3t = aData.a3t_en || T.en.ann3t;
+           if(aData.a3color) document.getElementById('dot-a3').style.background = aData.a3color;
+        }
+      }
+
+      // Applique immédiatement les nouvelles traductions à l'écran sans attendre les 5 secondes
+      applyLang(currentLang);
+    }
+  });
+</script>
+</body>
+</html>
