@@ -1,0 +1,302 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+.w{font-family:'Inter',sans-serif;background:#f0f2f5;min-height:100vh;padding:14px 14px 0;}
+.hdr{display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:14px;padding:12px 20px;margin-bottom:12px;border:0.5px solid #e0e0e0;}
+.brand{font-size:22px;font-weight:900;color:#111;letter-spacing:-0.02em;}
+.brand span{color:#1a6ef7;}
+.hdr-right{text-align:right;}
+.clk{font-size:26px;font-weight:900;color:#111;}
+.dt{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.08em;}
+
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+.kpi{background:#fff;border-radius:14px;padding:14px 16px;border:0.5px solid #e0e0e0;display:flex;align-items:center;gap:12px;}
+.kpi-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.kpi-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin-bottom:3px;}
+.kpi-val{font-size:22px;font-weight:900;line-height:1;}
+.kpi-sub{font-size:11px;margin-top:2px;}
+
+.tables-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
+.tcard{border-radius:16px;padding:18px 14px 14px;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;overflow:hidden;transition:transform 0.15s;}
+.tcard:hover{transform:translateY(-2px);}
+.tcard-name{font-size:12px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.8);}
+.tcard-emoji{font-size:52px;line-height:1;z-index:1;}
+.tcard-status{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;padding:4px 16px;border-radius:30px;background:rgba(0,0,0,0.15);color:#fff;}
+.cause-tag{font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);background:rgba(0,0,0,0.2);border-radius:20px;padding:3px 12px;letter-spacing:0.05em;}
+.tcard-bar-wrap{width:100%;height:9px;background:rgba(0,0,0,0.18);border-radius:20px;overflow:hidden;margin-top:2px;}
+.tcard-bar{height:100%;background:rgba(255,255,255,0.85);border-radius:20px;width:0;transition:width 1.2s cubic-bezier(.4,0,.2,1);}
+.tcard-pct{font-size:12px;font-weight:700;color:rgba(255,255,255,0.8);}
+.tcard-num{font-size:68px;font-weight:900;color:rgba(255,255,255,0.1);position:absolute;bottom:-10px;right:6px;line-height:1;letter-spacing:-0.05em;user-select:none;}
+.sg{background:#00b861;}
+.sr{background:#1a6ef7;}
+.so{background:#e07c00;}
+.sred{background:#d42020;}
+.sd{background:#8a8a8a;}
+.sred{animation:pr 2.2s ease-in-out infinite;}
+.so{animation:po 2.8s ease-in-out infinite;}
+@keyframes pr{0%,100%{box-shadow:0 4px 16px rgba(212,32,32,0.25)}50%{box-shadow:0 4px 32px rgba(212,32,32,0.6),0 0 0 6px rgba(212,32,32,0.12)}}
+@keyframes po{0%,100%{box-shadow:0 4px 16px rgba(224,124,0,0.2)}50%{box-shadow:0 4px 28px rgba(224,124,0,0.5),0 0 0 5px rgba(224,124,0,0.1)}}
+
+.bottom-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:0;}
+.bcard{background:#fff;border-radius:14px;padding:16px 18px;border:0.5px solid #e0e0e0;}
+.bcard-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.bcard-icon{font-size:24px;}
+.bcard-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#888;}
+
+.days-num{font-size:56px;font-weight:900;color:#00b861;line-height:1;text-align:center;margin:4px 0;}
+.days-lbl{font-size:13px;font-weight:700;text-align:center;color:#27500a;}
+.days-sub{font-size:11px;text-align:center;color:#888;margin-top:3px;}
+
+.motiv-msg{font-size:16px;font-weight:700;color:#111;line-height:1.4;margin-bottom:8px;}
+.motiv-star{color:#e07c00;font-size:18px;}
+
+.annonce{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:0.5px solid #f0f0f0;}
+.annonce:last-child{border-bottom:none;padding-bottom:0;}
+.ann-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.ann-text{font-size:13px;font-weight:500;color:#111;line-height:1.35;}
+.ann-time{font-size:10px;color:#aaa;margin-top:2px;}
+
+.obj-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:0.5px solid #f0f0f0;}
+.obj-item:last-child{border-bottom:none;padding-bottom:0;}
+.obj-bar-wrap{flex:1;height:7px;background:#f0f0f0;border-radius:20px;overflow:hidden;}
+.obj-bar{height:100%;border-radius:20px;transition:width 1.4s cubic-bezier(.4,0,.2,1);}
+.obj-name{font-size:12px;font-weight:700;color:#444;min-width:60px;}
+.obj-pct{font-size:12px;font-weight:700;min-width:34px;text-align:right;}
+
+.ticker-wrap{background:#111;display:flex;align-items:center;height:30px;margin-top:12px;border-radius:10px 10px 0 0;}
+.ticker-badge{background:#1a6ef7;color:#fff;font-size:10px;font-weight:700;letter-spacing:0.15em;padding:0 14px;height:100%;display:flex;align-items:center;flex-shrink:0;border-radius:10px 0 0 0;}
+.ticker-inner{overflow:hidden;flex:1;height:100%;display:flex;align-items:center;}
+.ticker-scroll{display:inline-flex;gap:40px;animation:tick 32s linear infinite;font-size:12px;color:#aaa;white-space:nowrap;padding-left:24px;font-weight:500;}
+.tok{color:#00b861;} .tow{color:#e07c00;} .tob{color:#d42020;} .sep{color:#444;}
+@keyframes tick{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.tcard{opacity:0;animation:fu 0.45s forwards;}
+.tcard:nth-child(1){animation-delay:.05s}.tcard:nth-child(2){animation-delay:.12s}.tcard:nth-child(3){animation-delay:.18s}
+.tcard:nth-child(4){animation-delay:.24s}.tcard:nth-child(5){animation-delay:.30s}.tcard:nth-child(6){animation-delay:.36s}
+.kpi{opacity:0;animation:fu 0.45s forwards;}
+.kpi:nth-child(1){animation-delay:.04s}.kpi:nth-child(2){animation-delay:.1s}.kpi:nth-child(3){animation-delay:.16s}.kpi:nth-child(4){animation-delay:.22s}
+.bcard{opacity:0;animation:fu 0.5s forwards;}
+.bcard:nth-child(1){animation-delay:.45s}.bcard:nth-child(2){animation-delay:.52s}.bcard:nth-child(3){animation-delay:.59s}
+</style>
+
+<div class="w">
+
+  <div class="hdr">
+    <div class="brand">AGB <span>|</span> QUALITÉ</div>
+    <div style="display:flex;align-items:center;gap:24px;">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <span style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;background:#00b861;border-radius:50%"></span>En cours</span>
+        <span style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;background:#1a6ef7;border-radius:50%"></span>Avance rapide 🚀</span>
+        <span style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;background:#e07c00;border-radius:50%"></span>En retard 🐢</span>
+        <span style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;background:#d42020;border-radius:50%"></span>Bloqué 🔥</span>
+        <span style="font-size:12px;color:#555;display:flex;align-items:center;gap:5px;"><span style="display:inline-block;width:10px;height:10px;background:#8a8a8a;border-radius:50%"></span>Terminé 🏁</span>
+      </div>
+      <div class="hdr-right">
+        <div class="clk" id="clk">--:--</div>
+        <div class="dt" id="dt">---</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-icon" style="background:#eaf3de;">✅</div>
+      <div>
+        <div class="kpi-lbl">Taux qualité</div>
+        <div class="kpi-val" style="color:#00b861;">94%</div>
+        <div class="kpi-sub" style="color:#3b6d11;">▲ +2% vs semaine passée</div>
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:#faeeda;">🔁</div>
+      <div>
+        <div class="kpi-lbl">Taux de retouche</div>
+        <div class="kpi-val" style="color:#e07c00;">6%</div>
+        <div class="kpi-sub" style="color:#854f0b;">▼ Objectif : &lt; 5%</div>
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:#ffeaea;">⚠️</div>
+      <div>
+        <div class="kpi-lbl">Non-conformités</div>
+        <div class="kpi-val" style="color:#d42020;">3</div>
+        <div class="kpi-sub" style="color:#a32d2d;">Tables 4 et 5 concernées</div>
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:#e6f1fb;">🎯</div>
+      <div>
+        <div class="kpi-lbl">1er passage (FPP)</div>
+        <div class="kpi-val" style="color:#1a6ef7;">88%</div>
+        <div class="kpi-sub" style="color:#185fa5;">Objectif : 90%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tables-grid">
+    <div class="tcard sg">
+      <div class="tcard-name">TABLE 1</div>
+      <div class="tcard-emoji">✅</div>
+      <div class="tcard-status">En cours</div>
+      <div class="tcard-bar-wrap"><div class="tcard-bar" data-val="80"></div></div>
+      <div class="tcard-pct">80%</div>
+      <div class="tcard-num">1</div>
+    </div>
+    <div class="tcard sr">
+      <div class="tcard-name">TABLE 2</div>
+      <div class="tcard-emoji">🚀</div>
+      <div class="tcard-status">Avance rapide</div>
+      <div class="tcard-bar-wrap"><div class="tcard-bar" data-val="90"></div></div>
+      <div class="tcard-pct">90%</div>
+      <div class="tcard-num">2</div>
+    </div>
+    <div class="tcard sg">
+      <div class="tcard-name">TABLE 3</div>
+      <div class="tcard-emoji">✅</div>
+      <div class="tcard-status">En cours</div>
+      <div class="tcard-bar-wrap"><div class="tcard-bar" data-val="55"></div></div>
+      <div class="tcard-pct">55%</div>
+      <div class="tcard-num">3</div>
+    </div>
+    <div class="tcard so">
+      <div class="tcard-name">TABLE 4</div>
+      <div class="tcard-emoji">🐢</div>
+      <div class="tcard-status">En retard</div>
+      <div class="cause-tag">📋 Retard séquence de test</div>
+      <div class="tcard-bar-wrap"><div class="tcard-bar" data-val="40"></div></div>
+      <div class="tcard-pct">40%</div>
+      <div class="tcard-num">4</div>
+    </div>
+    <div class="tcard sred">
+      <div class="tcard-name">TABLE 5</div>
+      <div class="tcard-emoji">🔥</div>
+      <div class="tcard-status">BLOQUÉ</div>
+      <div class="cause-tag">🔁 Retouche requise</div>
+      <div class="tcard-bar-wrap"><div class="tcard-bar" data-val="25"></div></div>
+      <div class="tcard-pct">25%</div>
+      <div class="tcard-num">5</div>
+    </div>
+    <div class="tcard sd">
+      <div class="tcard-name">TABLE 6</div>
+      <div class="tcard-emoji">🏁</div>
+      <div class="tcard-status">Terminé</div>
+      <div class="tcard-bar-wrap"><div class="tcard-bar" data-val="100"></div></div>
+      <div class="tcard-pct">100%</div>
+      <div class="tcard-num">6</div>
+    </div>
+  </div>
+
+  <div class="bottom-row">
+    <div class="bcard">
+      <div class="bcard-hdr">
+        <div class="bcard-icon">🛡️</div>
+        <div class="bcard-title">Jours sans incident</div>
+      </div>
+      <div class="days-num" id="jsi">18</div>
+      <div class="days-lbl">jours sans incident</div>
+      <div class="days-sub">Record : 34 jours — On continue !</div>
+      <div style="margin-top:10px;background:#eaf3de;border-radius:10px;padding:8px 12px;text-align:center;">
+        <span style="font-size:12px;font-weight:700;color:#27500a;">Objectif 30 jours 🎯 — Encore 12 jours !</span>
+      </div>
+    </div>
+
+    <div class="bcard">
+      <div class="bcard-hdr">
+        <div class="bcard-icon">⭐</div>
+        <div class="bcard-title">Message de la semaine</div>
+      </div>
+      <div class="motiv-msg" id="motiv-msg">"La qualité n'est pas un acte, c'est une habitude."</div>
+      <div style="font-size:12px;color:#888;margin-bottom:12px;">— Aristote</div>
+      <div style="background:#faeeda;border-radius:10px;padding:10px 14px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#854f0b;margin-bottom:4px;">Objectif semaine 24</div>
+        <div style="font-size:13px;font-weight:700;color:#412402;">Réduire le taux de retouche de 6% à 5%</div>
+        <div style="margin-top:8px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:#854f0b;margin-bottom:4px;"><span>Progression</span><span>6% → 5%</span></div>
+          <div style="height:7px;background:rgba(0,0,0,0.1);border-radius:20px;overflow:hidden;"><div style="height:100%;width:0;background:#e07c00;border-radius:20px;transition:width 1.4s" id="obj-prog"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bcard">
+      <div class="bcard-hdr">
+        <div class="bcard-icon">📢</div>
+        <div class="bcard-title">Annonces internes</div>
+      </div>
+      <div class="annonce">
+        <div class="ann-dot" style="background:#d42020;"></div>
+        <div>
+          <div class="ann-text">TABLE 5 — Réunion d'urgence vendredi 9h, salle B204</div>
+          <div class="ann-time">Aujourd'hui</div>
+        </div>
+      </div>
+      <div class="annonce">
+        <div class="ann-dot" style="background:#e07c00;"></div>
+        <div>
+          <div class="ann-text">Audit qualité interne — Semaine 24, mercredi matin</div>
+          <div class="ann-time">Cette semaine</div>
+        </div>
+      </div>
+      <div class="annonce">
+        <div class="ann-dot" style="background:#1a6ef7;"></div>
+        <div>
+          <div class="ann-text">Formation sécurité obligatoire — 12 juin, 13h30</div>
+          <div class="ann-time">Semaine prochaine</div>
+        </div>
+      </div>
+      <div class="annonce">
+        <div class="ann-dot" style="background:#00b861;"></div>
+        <div>
+          <div class="ann-text">Bravo à l'équipe TABLE 6 — travaux complétés !</div>
+          <div class="ann-time">1er juin</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ticker-wrap">
+    <div class="ticker-badge">LIVE</div>
+    <div class="ticker-inner">
+      <div class="ticker-scroll">
+        <span class="tok">✔ Taux qualité global : 94% — Excellent !</span>
+        <span class="sep">◆</span>
+        <span class="tow">🐢 TABLE 4 — Retard séquence de test — Réunion ven. 9h</span>
+        <span class="sep">◆</span>
+        <span class="tob">🔥 TABLE 5 — Retouche requise — Intervention directeur qualité</span>
+        <span class="sep">◆</span>
+        <span>🛡️ 18 jours sans incident — Objectif : 30 jours</span>
+        <span class="sep">◆</span>
+        <span class="tok">🚀 TABLE 2 — En avance, inspection réussie, aucune NC</span>
+        <span class="sep">◆</span>
+        <span>📋 Audit interne qualité — Semaine 24</span>
+        <span class="sep">◆</span>
+        <span class="tok">✔ Taux qualité global : 94% — Excellent !</span>
+        <span class="sep">◆</span>
+        <span class="tow">🐢 TABLE 4 — Retard séquence de test — Réunion ven. 9h</span>
+        <span class="sep">◆</span>
+        <span class="tob">🔥 TABLE 5 — Retouche requise — Intervention directeur qualité</span>
+        <span class="sep">◆</span>
+        <span>🛡️ 18 jours sans incident — Objectif : 30 jours</span>
+        <span class="sep">◆</span>
+        <span class="tok">🚀 TABLE 2 — En avance, inspection réussie, aucune NC</span>
+        <span class="sep">◆</span>
+        <span>📋 Audit interne qualité — Semaine 24</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function tick(){
+  const n=new Date();
+  document.getElementById('clk').textContent=n.toLocaleTimeString('fr-CA',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('dt').textContent=n.toLocaleDateString('fr-CA',{weekday:'long',day:'numeric',month:'long'}).toUpperCase();
+}
+tick();setInterval(tick,1000);
+setTimeout(()=>{
+  document.querySelectorAll('.tcard-bar').forEach(b=>{b.style.width=b.dataset.val+'%';});
+  const op=document.getElementById('obj-prog');
+  if(op)op.style.width='60%';
+},700);
+</script>
