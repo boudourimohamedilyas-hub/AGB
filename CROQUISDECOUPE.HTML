@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Croquis de Classement - Coupe</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 28px;
+            text-transform: uppercase;
+        }
+        .header p {
+            font-size: 16px;
+            color: #7f8c8d;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .alert {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-left: 6px solid #ffeeba;
+            border-radius: 4px;
+            margin-bottom: 30px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        .sequence-card {
+            background: #fdfdfd;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .seq-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2980b9;
+            margin-bottom: 15px;
+            width: 100%;
+            text-align: center;
+            border-bottom: 1px dashed #ccc;
+            padding-bottom: 10px;
+        }
+        .stack-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .piece-top {
+            background-color: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .piece-fond {
+            background-color: #e2e3e5;
+            border: 2px dashed #6c757d;
+            color: #383d41;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            border-radius: 4px;
+        }
+        .arrow {
+            text-align: center;
+            font-size: 24px;
+            color: #bdc3c7;
+            margin: -5px 0;
+        }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 14px;
+            color: #95a5a6;
+            border-top: 1px solid #ecf0f1;
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>🛠️ Standard Visuel d'Empilement : Coupe</h1>
+        <p>Modèles applicables : ATLANTA R | ATLANTA L | TITUS R</p>
+    </div>
+
+    <div class="alert">
+        ⚠️ RÈGLE DE CLASSEMENT : La séquence FOND doit toujours être placée EN PREMIER à la base. La séquence TOP (commençant par 03) doit toujours sceller la pile SUR LE DESSUS.
+    </div>
+
+    <div class="grid">
+        <div class="sequence-card">
+            <div class="seq-title">SÉQUENCE 1</div>
+            <div class="stack-container">
+                <div class="piece-top">TOP : 03107</div>
+                <div class="arrow">⬆️</div>
+                <div class="piece-fond">FOND : 01107 / 05108</div>
+            </div>
+        </div>
+
+        <div class="sequence-card">
+            <div class="seq-title">SÉQUENCE 2</div>
+            <div class="stack-container">
+                <div class="piece-top">TOP : 03109</div>
+                <div class="arrow">⬆️</div>
+                <div class="piece-fond">FOND : 01109 / 05107</div>
+            </div>
+        </div>
+
+        <div class="sequence-card">
+            <div class="seq-title">SÉQUENCE 3</div>
+            <div class="stack-container">
+                <div class="piece-top">TOP : 03108</div>
+                <div class="arrow">⬆️</div>
+                <div class="piece-fond">FOND : 05106 / 01108</div>
+            </div>
+        </div>
+
+        <div class="sequence-card">
+            <div class="seq-title">SÉQUENCE 4</div>
+            <div class="stack-container">
+                <div class="piece-top">TOP : 03101</div>
+                <div class="arrow">⬆️</div>
+                <div class="piece-fond">FOND : 01102 / 05105</div>
+            </div>
+        </div>
+
+        <div class="sequence-card">
+            <div class="seq-title">SÉQUENCE 5</div>
+            <div class="stack-container">
+                <div class="piece-top">TOP : 03103</div>
+                <div class="arrow">⬆️</div>
+                <div class="piece-fond">FOND : 01103 / 05102</div>
+            </div>
+        </div>
+
+        <div class="sequence-card">
+            <div class="seq-title">SÉQUENCE 6</div>
+            <div class="stack-container">
+                <div class="piece-top">TOP : 03102</div>
+                <div class="arrow">⬆️</div>
+                <div class="piece-fond">FOND : 01101 / 05103</div>
+            </div>
+        </div>
+
+        <div class="sequence-card">
+            <div class="seq-title">SÉQUENCE 7</div>
+            <div class="stack-container">
+                <div class="piece-top">TOP : 03104</div>
+                <div class="arrow">⬆️</div>
+                <div class="piece-fond">FOND : 01104 / 05104</div>
+            </div>
+        </div>
+
+        <div class="sequence-card">
+            <div class="seq-title">SÉQUENCE 8</div>
+            <div class="stack-container">
+                <div class="piece-top">TOP : 03106</div>
+                <div class="arrow">⬆️</div>
+                <div class="piece-fond">FOND : 01106 / 05102</div>
+            </div>
+        </div>
+
+        <div class="sequence-card">
+            <div class="seq-title">SÉQUENCE 9</div>
+            <div class="stack-container">
+                <div class="piece-top">TOP : 03105</div>
+                <div class="arrow">⬆️</div>
+                <div class="piece-fond">FOND : 01105 / 05101</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Document de standardisation visuelle. À afficher au poste de travail ou à vérifier lors de la supervision de la coupe.
+    </div>
+</div>
+
+</body>
+</html>
