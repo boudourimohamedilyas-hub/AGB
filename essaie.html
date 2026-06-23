@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Validation Express - Suivi des Plaques</title>
+    <style>
+        :root {
+            --bg-color: #121824;
+            --card-bg: #1c2434;
+            --text-color: #ffffff;
+            --text-muted: #8a99ad;
+            --primary: #3c50e0;
+            --danger: #e13d3d;
+            --success: #10b981;
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none; /* Évite les sélections de texte accidentelles sur tablette */
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        header {
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        /* Étape 1 : Sélection du Job */
+        .section-title {
+            font-size: 14px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .job-selector {
+            margin-bottom: 25px;
+        }
+
+        /* Boutons de Jobs Rapides (Gain de temps massif) */
+        .quick-jobs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn-job {
+            background: #2c374e;
+            border: 2px solid transparent;
+            color: white;
+            padding: 15px 10px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-job.active {
+            border-color: var(--primary);
+            background: rgba(60, 80, 224, 0.2);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: #2c374e;
+            border: 1px solid #3d4d6c;
+            color: white;
+            padding: 15px;
+            font-size: 18px;
+            border-radius: var(--border-radius);
+            text-align: center;
+        }
+
+        /* Étape 2 : Les Gros Boutons d'Action */
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 30px 20px;
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: transform 0.1s ease, opacity 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .btn-action:active {
+            transform: scale(0.98);
+        }
+
+        .btn-take {
+            background-color: var(--danger);
+        }
+
+        .btn-return {
+            background-color: #4b5563; /* Couleur plus neutre pour le retour */
+            font-size: 18px;
+            padding: 20px;
+        }
+
+        /* Écran de confirmation plein écran (Flash de 1.5s) */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--success);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .overlay-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+
+        .overlay-text {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        /* Historique Local (Pour rassurer l'opérateur) */
+        .history-section {
+            border-top: 1px solid #2c374e;
+            padding-top: 20px;
+            text-align: left;
+        }
+
+        .history-list {
+            list-style: none;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: #1e293b;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid var(--primary);
+        }
+
+        .history-item.take {
+            border-left-color: var(--danger);
+        }
+
+        .history-item.return {
+            border-left-color: var(--success);
+        }
+
+        .time {
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>CONTRÔLE DES PLAQUES</h1>
+            <p class="subtitle">Enregistrement instantané sur le plancher</p>
+        </header>
+
+        <!-- ÉTAPE 1 : CHOIX DU JOB -->
+        <div class="job-selector">
+            <div class="section-title">1. Sélectionner le Job</div>
+            <div class="quick-jobs">
+                <button class="btn-job active" onclick="selectJob('JOB-2026-A')">JOB A</button>
+                <button class="btn-job" onclick="selectJob('JOB-2026-B')">JOB B</button>
+                <button class="btn-job" onclick="selectJob('MAINTENANCE')">MAINT.</button>
+            </div>
+            <div class="input-group">
+                <input type="text" id="jobInput" value="JOB-2026-A" placeholder="Autre N° de Job..." onclick="this.select();">
+            </div>
+        </div>
+
+        <!-- ÉTAPE 2 : ACTION DIRECTE -->
+        <div class="section-title">2. Mouvement Matériau</div>
+        <div class="action-buttons">
+            <button class="btn-action btn-take" onclick="registerMovement('SORTIE', -1)">
+                <span>➔ RETIRER 1 PLAQUE</span>
+            </button>
+            <button class="btn-action btn-return" onclick="registerMovement('RETOUR', 1)">
+                <span>↩ Retour / Chute (+1)</span>
+            </button>
+        </div>
+
+        <!-- HISTORIQUE DES DERNIERS MOUVEMENTS -->
+        <div class="history-section">
+            <div class="section-title">Dernières actions (Aujourd'hui)</div>
+            <ul class="history-list" id="historyList">
+                <!-- Les éléments s'ajouteront ici dynamiquement -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- ÉCRAN FLASH DE CONFIRMATION -->
+    <div class="overlay" id="successOverlay">
+        <div class="overlay-icon">✔️</div>
+        <div class="overlay-text" id="overlayText">ENREGISTRÉ !</div>
+    </div>
+
+    <script>
+        // Fonction pour basculer rapidement entre les boutons de Job existants
+        function selectJob(jobName) {
+            document.getElementById('jobInput').value = jobName;
+            
+            // Gestion visuelle de la sélection active
+            const buttons = document.querySelectorAll('.btn-job');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            // Ajoute la classe active au bouton cliqué
+            event.target.classList.add('active');
+        }
+
+        // Fonction principale de validation (Prend moins de 2 secondes)
+        function registerMovement(type, quantite) {
+            const jobName = document.getElementById('jobInput').value.trim();
+            
+            if (!jobName) {
+                alert("Veuillez entrer ou sélectionner un numéro de Job.");
+                return;
+            }
+
+            const maintenant = new Date();
+            const heureTexte = maintenant.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            // Structure de la donnée prête à être envoyée à votre base de données (ex: Firebase)
+            const donneesMouvement = {
+                job: jobName,
+                action: type,
+                quantite: quantite,
+                timestamp: maintenant.toISOString()
+            };
+
+            // =========================================================================
+            // ZONE DE SYNCHRONISATION (Ici vous connecteriez votre base de données Cloud)
+            // Exemple : db.collection('mouvements_plaques').add(donneesMouvement);
+            console.log("Donnée envoyée au système :", donneesMouvement);
+            // =========================================================================
+
+            // 1. Déclencher le flash visuel vert immédiatement (Zéro attente pour l'opérateur)
+            const overlay = document.getElementById('successOverlay');
+            const overlayText = document.getElementById('overlayText');
+            
+            overlayText.innerText = `${type} CONFIRMÉE 
+ (${quantite > 0 ? '+' : ''}${quantite} Plaque)`;
+            overlay.classList.add('show');
+
+            // 2. Mettre à jour l'historique sur l'écran localement
+            ajouterAHistoriqueLocal(jobName, type, quantite, heureTexte);
+
+            // 3. Masquer automatiquement le flash après 1.2 seconde pour libérer l'écran pour le suivant
+            setTimeout(() => {
+                overlay.classList.remove('show');
+            }, 1200);
+        }
+
+        function ajouterAHistoriqueLocal(job, type, quantite, heure) {
+            const liste = document.getElementById('historyList');
+            const item = document.createElement('li');
+            item.className = `history-item ${type === 'SORTIE' ? 'take' : 'return'}`;
+            
+            item.innerHTML = `
+                <div>
+                    <strong>${type}</strong> - ${job} 
+                    <br><span class="time">${heure}</span>
+                </div>
+                <div style="font-size: 18px; font-weight: bold;">
+                    ${quantite > 0 ? '+' : ''}${quantite}
+                </div>
+            `;
+            
+            // Insérer en haut de la liste
+            liste.insertBefore(item, liste.firstChild);
+        }
+
+        // Charger quelques faux mouvements au démarrage pour simulation
+        window.onload = function() {
+            ajouterAHistoriqueLocal('JOB-2026-A', 'SORTIE', -1, '14:22:15');
+            ajouterAHistoriqueLocal('JOB-2026-B', 'SORTIE', -1, '11:05:40');
+            ajouterAHistoriqueLocal('MAINTENANCE', 'RETOUR', 1, '08:14:02');
+        };
+    </script>
+</body>
+</html
