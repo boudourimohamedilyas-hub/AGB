@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin AGB Qualité</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --blue: #1a6ef7; --blue-light: #e8f0fe; --green: #00b861; --green-light: #eaf3de;
+      --orange: #e07c00; --orange-light: #faeeda; --red: #d42020; --red-light: #ffeaea;
+      --gray: #8a8a8a; --gray-light: #f5f5f5; --border: #e8e8e8;
+      --text: #111; --text-sub: #555; --text-muted: #999;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f0f2f5; min-height: 100vh; }
+
+    /* ── LOGIN OVERLAY ── */
+    #login-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; backdrop-filter: blur(4px); }
+    .login-box { background: #fff; padding: 32px; border-radius: 16px; width: 100%; max-width: 360px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 16px; }
+    .login-box h2 { font-size: 20px; text-align: center; margin-bottom: 8px; color: var(--text); font-weight: 900;}
+    .login-box input { padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-family: 'Inter'; outline: none; transition: 0.2s;}
+    .login-box input:focus { border-color: var(--blue); }
+    .login-box button { background: var(--blue); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; transition: 0.2s; }
+    .login-box button:hover { background: #0f52ba; }
+    #logout-btn { background: #f5f5f5; color: #555; border: 1px solid #ddd; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+    #logout-btn:hover { background: #eee; color: #111; }
+
+    /* ── TOP BAR ── */
+    .topbar { background: #fff; border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; }
+    .topbar-brand { font-weight: 900; font-size: 18px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+    .topbar-brand .badge { background: var(--blue); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.1em; }
+    .publish-btn { background: var(--blue); color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.15s; }
+    .publish-btn:hover { background: #0f52ba; transform: translateY(-1px); }
+    .publish-btn:active { transform: translateY(0); }
+    .status-toast { position: fixed; bottom: 24px; right: 24px; background: var(--green); color: #fff; font-weight: 700; padding: 14px 22px; border-radius: 10px; font-size: 14px; display: none; z-index: 999; box-shadow: 0 4px 20px rgba(0,184,97,0.3); animation: slidein 0.3s ease; }
+    @keyframes slidein { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* ── LAYOUT ── */
+    .page { max-width: 1100px; margin: 0 auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 12px; }
+
+    /* ── SECTION CARD ── */
+    .sec { background: #fff; border-radius: 14px; border: 1px solid var(--border); overflow: hidden; }
+    .sec-header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; transition: 0.15s; }
+    .sec-header:hover { background: #fafafa; }
+    .sec-header.open { border-bottom-color: var(--border); }
+    .sec-icon { font-size: 18px; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .sec-title { font-weight: 700; font-size: 15px; color: var(--text); flex: 1; }
+    .sec-desc { font-size: 12px; color: var(--text-muted); }
+    .sec-chevron { font-size: 12px; color: var(--text-muted); transition: transform 0.25s; }
+    .sec-chevron.open { transform: rotate(180deg); }
+    .sec-body { padding: 20px; display: none; flex-direction: column; gap: 16px; }
+    .sec-body.open { display: flex; }
+
+    /* ── FIELD GROUPS ── */
+    .fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .fields-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+    .fields-grid.cols1 { grid-template-columns: 1fr; }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 11px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.08em; }
+    .field input, .field select, .field textarea {
+      padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: 'Inter'; font-size: 13px; font-weight: 600; color: var(--text);
+      background: #fafafa; transition: 0.15s; outline: none;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(26,110,247,0.08); }
+    .field textarea { resize: vertical; min-height: 56px; }
+    .field-hint { font-size: 11px; color: var(--text-muted); }
+
+    /* ── TABLE ROWS ── */
+    .table-block { background: var(--gray-light); border-radius: 10px; padding: 14px; border: 1px solid var(--border); }
+    .table-block-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .table-num { width: 32px; height: 32px; border-radius: 8px; background: var(--blue); color: #fff; font-size: 13px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .table-name-display { font-weight: 700; font-size: 14px; color: var(--text); }
+
+    /* ── ANNONCE BLOCK ── */
+    .ann-block { background: var(--gray-light); border-radius: 10px; padding: 14px; border: 1px solid var(--border); }
+    .ann-block-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .ann-num { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
+
+    /* ── COLOR PICKER ── */
+    .color-row { display: flex; gap: 8px; align-items: center; }
+    .color-opt { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: 0.15s; flex-shrink: 0; }
+    .color-opt.selected { border-color: #111; transform: scale(1.15); }
+
+    /* ── TICKER BLOCK ── */
+    .ticker-block { background: var(--gray-light); border-radius: 10px; padding: 14px; border: 1px solid var(--border); }
+    .ticker-type-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .type-opt { padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; cursor: pointer; border: 2px solid transparent; transition: 0.15s; }
+    .type-opt.selected { border-color: #111; transform: scale(1.05); }
+    .type-white { background: #eee; color: #555; }
+    .type-green { background: var(--green-light); color: var(--green); }
+    .type-orange { background: var(--orange-light); color: var(--orange); }
+    .type-red { background: var(--red-light); color: var(--red); }
+
+    /* ── STATE PILLS ── */
+    .state-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .state-pill { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; border: 2px solid transparent; transition: 0.15s; opacity: 0.6; }
+    .state-pill.selected { opacity: 1; border-color: #111; }
+    .pill-sg { background: var(--green-light); color: var(--green); }
+    .pill-sr { background: var(--blue-light); color: var(--blue); }
+    .pill-so { background: var(--orange-light); color: var(--orange); }
+    .pill-sred { background: var(--red-light); color: var(--red); }
+    .pill-sd { background: #eee; color: var(--gray); }
+
+    /* ── SECTION COLORS ── */
+    .icon-kpi { background: var(--blue-light); }
+    .icon-tables { background: #f0f0f0; }
+    .icon-incident { background: var(--green-light); }
+    .icon-motiv { background: #fff8e1; }
+    .icon-annonces { background: var(--orange-light); }
+    .icon-ticker { background: #f3e8ff; }
+
+    /* ── DIVIDER ── */
+    .divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      .fields-grid { grid-template-columns: 1fr; }
+      .fields-grid.cols3 { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- OVERLAY DE CONNEXION -->
+<div id="login-overlay">
+  <div class="login-box">
+    <h2>🔒 Accès Administrateur</h2>
+    <input type="email" id="admin-email" placeholder="Adresse e-mail">
+    <input type="password" id="admin-pwd" placeholder="Mot de passe">
+    <button onclick="loginAdmin()">Se connecter</button>
+    <div id="login-error" style="color: #ef4444; font-size: 13px; text-align: center; display: none; font-weight: 600; line-height: 1.4; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;"></div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    AGB <span class="badge">ADMIN</span>
+  </div>
+  <div style="display:flex; gap: 15px; align-items: center;">
+    <button id="logout-btn" onclick="logoutAdmin()">Déconnexion</button>
+    <button class="publish-btn" id="btn-update">
+      📡 Publier sur l'affichage
+    </button>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ═══════════════════════════════════════════
+       1. INDICATEURS KPI
+  ════════════════════════════════════════════ -->
+  <div class="sec">
+    <div class="sec-header open" onclick="toggleSec(this)">
+      <div class="sec-icon icon-kpi">📊</div>
+      <div>
+        <div class="sec-title">Indicateurs KPI</div>
+        <div class="sec-desc">Taux qualité, retouche, non-conformités, 1er passage</div>
+      </div>
+      <div class="sec-chevron open">▼</div>
+    </div>
+    <div class="sec-body open">
+      <div class="fields-grid cols3">
+        <div class="field">
+          <label>Taux Qualité (%)</label>
+          <input type="number" id="val-kpi1" value="94" min="0" max="100">
+        </div>
+        <div class="field">
+          <label>Taux de Retouche (%)</label>
+          <input type="number" id="val-kpi2" value="6" min="0" max="100">
+        </div>
+        <div class="field">
+          <label>Non-conformités (24h)</label>
+          <input type="number" id="val-kpi3" value="3" min="0">
+        </div>
+        <div class="field">
+          <label>1er Passage / FPP (%)</label>
+          <input type="number" id="val-kpi4" value="88" min="0" max="100">
+        </div>
+        <div class="field">
+          <label>Objectif FPP (%)</label>
+          <input type="number" id="val-kpi4target" value="90" min="0" max="100">
+          <div class="field-hint">Affiché sous le KPI</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">Sous-titres KPI</div>
+      <div class="fields-grid">
+        <div class="field">
+          <label>Sous-titre Taux Qualité (FR)</label>
+          <input type="text" id="kpi1sub-fr" value="▲ +2% vs semaine passée">
+        </div>
+        <div class="field">
+          <label>Sous-titre Taux Qualité (EN)</label>
+          <input type="text" id="kpi1sub-en" value="▲ +2% vs last week">
+        </div>
+        <div class="field">
+          <label>Sous-titre Retouche (FR)</label>
+          <input type="text" id="kpi2sub-fr" value="▼ Objectif : < 5%">
+        </div>
+        <div class="field">
+          <label>Sous-titre Retouche (EN)</label>
+          <input type="text" id="kpi2sub-en" value="▼ Target: < 5%">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       2. TABLES DE PRODUCTION
+  ════════════════════════════════════════════ -->
+  <div class="sec">
+    <div class="sec-header open" onclick="toggleSec(this)">
+      <div class="sec-icon icon-tables">🏭</div>
+      <div>
+        <div class="sec-title">Tables de production</div>
+        <div class="sec-desc">Nom, statut, progression de chaque table</div>
+      </div>
+      <div class="sec-chevron open">▼</div>
+    </div>
+    <div class="sec-body open" id="tables-container" style="gap:10px;">
+      <!-- Généré par JS -->
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       3. JOURS SANS INCIDENT
+  ════════════════════════════════════════════ -->
+  <div class="sec">
+    <div class="sec-header open" onclick="toggleSec(this)">
+      <div class="sec-icon icon-incident">🛡️</div>
+      <div>
+        <div class="sec-title">Jours sans incident</div>
+        <div class="sec-desc">Compteur, record, objectif</div>
+      </div>
+      <div class="sec-chevron open">▼</div>
+    </div>
+    <div class="sec-body open">
+      <div class="fields-grid cols3">
+        <div class="field">
+          <label>Jours sans incident (actuel)</label>
+          <input type="number" id="val-jsi" value="18" min="0">
+        </div>
+        <div class="field">
+          <label>Record (jours)</label>
+          <input type="number" id="val-jsi-record" value="34" min="0">
+        </div>
+        <div class="field">
+          <label>Objectif (jours)</label>
+          <input type="number" id="val-jsi-target" value="30" min="0">
+        </div>
+      </div>
+      <div class="fields-grid">
+        <div class="field">
+          <label>Texte sous le record (FR)</label>
+          <input type="text" id="jsi-sub-fr" value="On continue !">
+        </div>
+        <div class="field">
+          <label>Texte sous le record (EN)</label>
+          <input type="text" id="jsi-sub-en" value="Keep it up!">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       4. MESSAGE & OBJECTIF DE LA SEMAINE
+  ════════════════════════════════════════════ -->
+  <div class="sec">
+    <div class="sec-header open" onclick="toggleSec(this)">
+      <div class="sec-icon icon-motiv">⭐</div>
+      <div>
+        <div class="sec-title">Message & Objectif de la semaine</div>
+        <div class="sec-desc">Citation, numéro de semaine, objectif, barre de progression</div>
+      </div>
+      <div class="sec-chevron open">▼</div>
+    </div>
+    <div class="sec-body open">
+      <div class="fields-grid">
+        <div class="field">
+          <label>Citation (FR)</label>
+          <textarea id="msg-motiv-fr">"La qualité n'est pas un acte, c'est une habitude."</textarea>
+        </div>
+        <div class="field">
+          <label>Citation (EN)</label>
+          <textarea id="msg-motiv-en">"Quality is not an act, it is a habit."</textarea>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="fields-grid cols3">
+        <div class="field">
+          <label>Numéro de semaine</label>
+          <input type="number" id="week-num" value="24" min="1" max="53">
+        </div>
+        <div class="field">
+          <label>Objectif semaine (FR)</label>
+          <input type="text" id="week-goal-fr" value="Réduire le taux de retouche de 6% à 5%">
+        </div>
+        <div class="field">
+          <label>Objectif semaine (EN)</label>
+          <input type="text" id="week-goal-en" value="Reduce rework rate from 6% to 5%">
+        </div>
+        <div class="field">
+          <label>Progression objectif (%)</label>
+          <input type="number" id="week-prog" value="60" min="0" max="100">
+          <div class="field-hint">Largeur de la barre de progression</div>
+        </div>
+        <div class="field">
+          <label>Label barre (FR)</label>
+          <input type="text" id="week-prog-label-fr" value="6% → 5%">
+        </div>
+        <div class="field">
+          <label>Label barre (EN)</label>
+          <input type="text" id="week-prog-label-en" value="6% → 5%">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       5. ANNONCES INTERNES
+  ════════════════════════════════════════════ -->
+  <div class="sec">
+    <div class="sec-header open" onclick="toggleSec(this)">
+      <div class="sec-icon icon-annonces">📢</div>
+      <div>
+        <div class="sec-title">Annonces internes</div>
+        <div class="sec-desc">Titre de la section + 3 annonces bilingues</div>
+      </div>
+      <div class="sec-chevron open">▼</div>
+    </div>
+    <div class="sec-body open">
+      <div id="annonces-container">
+        <!-- Généré par JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       6. BANDEAU DÉFILANT
+  ════════════════════════════════════════════ -->
+  <div class="sec">
+    <div class="sec-header open" onclick="toggleSec(this)">
+      <div class="sec-icon icon-ticker">📺</div>
+      <div>
+        <div class="sec-title">Bandeau défilant (bas de l'écran)</div>
+        <div class="sec-desc">3 messages avec couleur et texte bilingue</div>
+      </div>
+      <div class="sec-chevron open">▼</div>
+    </div>
+    <div class="sec-body open" id="ticker-container">
+      <!-- Généré par JS -->
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<div class="status-toast" id="status">✅ Publié sur l'affichage !</div>
+
+<!-- Ajout du module Firebase Auth -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+
+<script>
+/* ─── TOGGLE SECTIONS ─────────────────────────── */
+function toggleSec(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.sec-chevron');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  header.classList.toggle('open', !isOpen);
+  chevron.classList.toggle('open', !isOpen);
+}
+
+/* ─── TABLES ──────────────────────────────────── */
+const defaultPcts = [80, 90, 55, 40, 25, 100];
+const defaultStates = ['sg', 'sr', 'sg', 'so', 'sred', 'sd'];
+const defaultNames = ['TABLE 1', 'TABLE 2', 'TABLE 3', 'TABLE 4', 'TABLE 5', 'TABLE 6'];
+
+const stateOptions = [
+  { val: 'sg',   label: '✅ En cours',       pill: 'pill-sg' },
+  { val: 'sr',   label: '🚀 Avance rapide',  pill: 'pill-sr' },
+  { val: 'so',   label: '🐢 En retard',      pill: 'pill-so' },
+  { val: 'sred', label: '🔥 Bloqué',         pill: 'pill-sred' },
+  { val: 'sd',   label: '🏁 Terminé',        pill: 'pill-sd' },
+];
+
+const tablesContainer = document.getElementById('tables-container');
+for (let i = 1; i <= 6; i++) {
+  const pills = stateOptions.map(opt =>
+    `<span class="state-pill ${opt.pill} ${defaultStates[i-1]===opt.val?'selected':''}" 
+      data-val="${opt.val}" onclick="selectState(${i}, this)">${opt.label}</span>`
+  ).join('');
+
+  tablesContainer.innerHTML += `
+    <div class="table-block">
+      <div class="table-block-header">
+        <div class="table-num">${i}</div>
+        <div class="table-name-display" id="name-display-t${i}">${defaultNames[i-1]}</div>
+      </div>
+      <div class="fields-grid cols3" style="margin-bottom:10px;">
+        <div class="field">
+          <label>Nom affiché (FR)</label>
+          <input type="text" id="name-fr-t${i}" value="${defaultNames[i-1]}" oninput="updateNameDisplay(${i})">
+        </div>
+        <div class="field">
+          <label>Nom affiché (EN)</label>
+          <input type="text" id="name-en-t${i}" value="${defaultNames[i-1]}">
+        </div>
+        <div class="field">
+          <label>Progression (%)</label>
+          <input type="number" id="val-t${i}" value="${defaultPcts[i-1]}" min="0" max="100" oninput="handlePctChange(${i})">
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Statut</div>
+      <div class="state-row" id="state-row-t${i}">${pills}</div>
+      <input type="hidden" id="state-t${i}" value="${defaultStates[i-1]}">
+    </div>
+  `;
+}
+
+function selectState(i, el) {
+  document.querySelectorAll(`#state-row-t${i} .state-pill`).forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('state-t' + i).value = el.dataset.val;
+  if (el.dataset.val === 'sd') document.getElementById('val-t' + i).value = 100;
+}
+
+function handlePctChange(i) {
+  const val = parseInt(document.getElementById('val-t' + i).value);
+  if (val === 100) {
+    document.querySelectorAll(`#state-row-t${i} .state-pill`).forEach(p => p.classList.remove('selected'));
+    document.querySelector(`#state-row-t${i} [data-val="sd"]`).classList.add('selected');
+    document.getElementById('state-t' + i).value = 'sd';
+  }
+}
+
+function updateNameDisplay(i) {
+  document.getElementById('name-display-t' + i).textContent = document.getElementById('name-fr-t' + i).value || 'TABLE ' + i;
+}
+
+/* ─── ANNONCES ─────────────────────────────────── */
+const annColors = ['#d42020', '#e07c00', '#1a6ef7'];
+const annDefaults = [
+  { fr: "TABLE 5 — Réunion d'urgence vendredi 9h", en: "TABLE 5 — Emergency meeting Friday 9am", tfr: "Aujourd'hui", ten: "Today" },
+  { fr: "Audit qualité interne — Mercredi matin", en: "Internal quality audit — Wed morning", tfr: "Cette semaine", ten: "This week" },
+  { fr: "Formation sécurité obligatoire — 12 juin", en: "Mandatory safety training — June 12", tfr: "Semaine prochaine", ten: "Next week" },
+];
+const colorOptions = [
+  { val: '#d42020', label: 'Rouge' },
+  { val: '#e07c00', label: 'Orange' },
+  { val: '#1a6ef7', label: 'Bleu' },
+  { val: '#00b861', label: 'Vert' },
+];
+
+const annContainer = document.getElementById('annonces-container');
+const annHTML = annDefaults.map((a, idx) => {
+  const i = idx + 1;
+  const dots = colorOptions.map(c =>
+    `<div class="color-opt ${annColors[idx]===c.val?'selected':''}" 
+      style="background:${c.val}" title="${c.label}"
+      onclick="selectColor('ann-color-${i}', this)" data-val="${c.val}"></div>`
+  ).join('');
+  return `
+    <div class="ann-block" style="margin-bottom:10px;">
+      <div class="ann-block-header">
+        <span class="ann-num">Annonce ${i}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-sub);white-space:nowrap;">Couleur du point</div>
+        <div class="color-row" id="color-row-ann${i}">${dots}</div>
+        <input type="hidden" id="ann-color-${i}" value="${annColors[idx]}">
+      </div>
+      <div class="fields-grid" style="margin-bottom:10px;">
+        <div class="field"><label>Titre (FR)</label><input type="text" id="a${i}-fr" value="${a.fr}"></div>
+        <div class="field"><label>Titre (EN)</label><input type="text" id="a${i}-en" value="${a.en}"></div>
+        <div class="field"><label>Date / Heure (FR)</label><input type="text" id="a${i}t-fr" value="${a.tfr}"></div>
+        <div class="field"><label>Date / Heure (EN)</label><input type="text" id="a${i}t-en" value="${a.ten}"></div>
+      </div>
+    </div>
+  `;
+}).join('');
+annContainer.innerHTML = annHTML;
+
+function selectColor(hiddenId, el) {
+  const row = el.parentElement;
+  row.querySelectorAll('.color-opt').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById(hiddenId).value = el.dataset.val;
+}
+
+/* ─── TICKER ───────────────────────────────────── */
+const tickerDefs = [
+  { type: 'tok', fr: '✔ Taux qualité global : 94% — Excellent !', en: '✔ Overall quality rate: 94% — Excellent!' },
+  { type: 'tob', fr: '🔥 TABLE 5 — Retouche requise', en: '🔥 TABLE 5 — Rework required' },
+  { type: '',    fr: '🛡️ 18 jours sans incident — Objectif : 30 jours', en: '🛡️ 18 days without incident — Target: 30 days' },
+];
+const typeOptions = [
+  { val: '',    label: 'Blanc',  cls: 'type-white' },
+  { val: 'tok', label: '✔ Vert', cls: 'type-green' },
+  { val: 'tow', label: '⚠ Orange', cls: 'type-orange' },
+  { val: 'tob', label: '✖ Rouge', cls: 'type-red' },
+];
+
+const tickerContainer = document.getElementById('ticker-container');
+tickerContainer.innerHTML = tickerDefs.map((t, idx) => {
+  const i = idx + 1;
+  const typePills = typeOptions.map(o =>
+    `<span class="type-opt ${o.cls} ${t.type===o.val?'selected':''}"
+      data-val="${o.val}" onclick="selectType('t${i}-type', this)">${o.label}</span>`
+  ).join('');
+  return `
+    <div class="ticker-block" style="margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Message ${i}</div>
+      <div class="ticker-type-row">${typePills}</div>
+      <input type="hidden" id="t${i}-type" value="${t.type}">
+      <div class="fields-grid">
+        <div class="field"><label>Texte (FR)</label><input type="text" id="t${i}-fr" value="${t.fr}"></div>
+        <div class="field"><label>Texte (EN)</label><input type="text" id="t${i}-en" value="${t.en}"></div>
+      </div>
+    </div>
+  `;
+}).join('');
+
+function selectType(hiddenId, el) {
+  const row = el.parentElement;
+  row.querySelectorAll('.type-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById(hiddenId).value = el.dataset.val;
+}
+
+/* ─── FIREBASE INITIALISATION ET AUTHENTIFICATION ──────────────── */
+const firebaseConfig = {
+  apiKey: "AIzaSyBZkmAglZh1HmfVYKgy0EGfw8kuIRHOR6Q",
+  authDomain: "agb-product.firebaseapp.com",
+  databaseURL: "https://agb-product-default-rtdb.firebaseio.com",
+  projectId: "agb-product",
+  storageBucket: "agb-product.firebasestorage.app",
+  messagingSenderId: "1067586214794",
+  appId: "1:1067586214794:web:6f8309a3b017841a118673"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+// Gestion de l'affichage de l'écran de connexion
+auth.onAuthStateChanged((user) => {
+  const overlay = document.getElementById('login-overlay');
+  if (user) {
+    overlay.style.display = 'none'; // L'utilisateur est connecté, on cache le login
+  } else {
+    overlay.style.display = 'flex'; // L'utilisateur n'est pas connecté, on bloque l'accès
+  }
+});
+
+// Fonction pour se connecter avec affichage détaillé de l'erreur
+function loginAdmin() {
+  const email = document.getElementById('admin-email').value.trim(); // Enlève les espaces invisibles
+  const pwd = document.getElementById('admin-pwd').value;
+  const errBox = document.getElementById('login-error');
+  
+  // On masque l'erreur précédente s'il y en avait une
+  errBox.style.display = 'none';
+  errBox.textContent = "Connexion en cours...";
+  errBox.style.color = "#1a6ef7"; // Bleu pour le chargement
+  errBox.style.display = 'block';
+
+  auth.signInWithEmailAndPassword(email, pwd)
+    .then(() => {
+      errBox.style.display = 'none';
+      document.getElementById('admin-pwd').value = ''; // On vide le mot de passe par sécurité
+    })
+    .catch((error) => {
+      // Afficher la vraie erreur envoyée par Firebase
+      errBox.style.color = "#ef4444"; // Rouge pour l'erreur
+      errBox.innerHTML = "<b>Erreur technique Firebase :</b><br><br>Code : <code>" + error.code + "</code><br>Message : " + error.message;
+      console.error("Détail de l'erreur Firebase :", error);
+    });
+}
+
+// Fonction pour se déconnecter
+function logoutAdmin() {
+  auth.signOut();
+}
+
+/* ─── ENVOI DES DONNÉES ──────────────────────────────────── */
+document.getElementById('btn-update').addEventListener('click', () => {
+  let tablesData = {};
+  for (let i = 1; i <= 6; i++) {
+    tablesData['t' + i] = {
+      pct: document.getElementById('val-t' + i).value,
+      state: document.getElementById('state-t' + i).value,
+      nameFr: document.getElementById('name-fr-t' + i).value,
+      nameEn: document.getElementById('name-en-t' + i).value,
+    };
+  }
+
+  const jsiVal = parseInt(document.getElementById('val-jsi').value) || 0;
+  const jsiTarget = parseInt(document.getElementById('val-jsi-target').value) || 30;
+  const jsiRecord = parseInt(document.getElementById('val-jsi-record').value) || 34;
+  const jsiRemaining = Math.max(0, jsiTarget - jsiVal);
+
+  const data = {
+    kpis: {
+      qualite: document.getElementById('val-kpi1').value,
+      retouche: document.getElementById('val-kpi2').value,
+      nc: document.getElementById('val-kpi3').value,
+      fpp: document.getElementById('val-kpi4').value,
+      fppTarget: document.getElementById('val-kpi4target').value,
+      jsi: jsiVal,
+      jsiRecord: jsiRecord,
+      jsiTarget: jsiTarget,
+      jsiRemaining: jsiRemaining,
+      kpi1subFr: document.getElementById('kpi1sub-fr').value,
+      kpi1subEn: document.getElementById('kpi1sub-en').value,
+      kpi2subFr: document.getElementById('kpi2sub-fr').value,
+      kpi2subEn: document.getElementById('kpi2sub-en').value,
+      jsiSubFr: document.getElementById('jsi-sub-fr').value,
+      jsiSubEn: document.getElementById('jsi-sub-en').value,
+    },
+    tables: tablesData,
+    messages: {
+      motiv: {
+        fr: document.getElementById('msg-motiv-fr').value,
+        en: document.getElementById('msg-motiv-en').value,
+      },
+      week: {
+        num: document.getElementById('week-num').value,
+        goalFr: document.getElementById('week-goal-fr').value,
+        goalEn: document.getElementById('week-goal-en').value,
+        prog: document.getElementById('week-prog').value,
+        progLabelFr: document.getElementById('week-prog-label-fr').value,
+        progLabelEn: document.getElementById('week-prog-label-en').value,
+      },
+      annonces: {
+        a1color: document.getElementById('ann-color-1').value,
+        a1fr: document.getElementById('a1-fr').value, a1en: document.getElementById('a1-en').value,
+        a1t_fr: document.getElementById('a1t-fr').value, a1t_en: document.getElementById('a1t-en').value,
+        a2color: document.getElementById('ann-color-2').value,
+        a2fr: document.getElementById('a2-fr').value, a2en: document.getElementById('a2-en').value,
+        a2t_fr: document.getElementById('a2t-fr').value, a2t_en: document.getElementById('a2t-en').value,
+        a3color: document.getElementById('ann-color-3').value,
+        a3fr: document.getElementById('a3-fr').value, a3en: document.getElementById('a3-en').value,
+        a3t_fr: document.getElementById('a3t-fr').value, a3t_en: document.getElementById('a3t-en').value,
+      },
+      ticker: {
+        m1type: document.getElementById('t1-type').value, m1fr: document.getElementById('t1-fr').value, m1en: document.getElementById('t1-en').value,
+        m2type: document.getElementById('t2-type').value, m2fr: document.getElementById('t2-fr').value, m2en: document.getElementById('t2-en').value,
+        m3type: document.getElementById('t3-type').value, m3fr: document.getElementById('t3-fr').value, m3en: document.getElementById('t3-en').value,
+      }
+    }
+  };
+
+  db.ref('dashboardData').set(data).then(() => {
+    const toast = document.getElementById('status');
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+  }).catch((error) => {
+    alert("Erreur de publication. Vos identifiants ont peut-être expiré. Message technique : " + error.message);
+  });
+});
+</script>
+</body>
+</html>
