@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur de Rupture d'Inventaire</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="bg-slate-900 text-white p-4 shadow-md">
+        <div class="container mx-auto flex items-center gap-3">
+            <i data-lucide="line-chart" class="w-6 h-6 text-blue-400"></i>
+            <h1 class="text-xl font-bold tracking-wide">Planificateur de Rupture d'Inventaire</h1>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 md:p-6 lg:p-8">
+
+        <!-- ============ CALCULATEUR DE POIDS DES FEUILLES ============ -->
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 mb-6">
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-4 border-b pb-2">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <i data-lucide="scale" class="w-5 h-5 text-slate-500"></i>
+                    Calcul du poids des feuilles de coupe
+                </h2>
+                <div class="flex flex-wrap items-center gap-3">
+                    <label class="text-sm text-slate-600 flex items-center gap-2">
+                        Densité acier (lb/pi²/po)
+                        <input type="number" id="steelFactor" value="40.8" step="0.1" oninput="onFactorChange()" class="w-20 p-1.5 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    </label>
+                    <button onclick="addWeightRow()" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-sm font-medium">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Ajouter une feuille
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm min-w-[860px]">
+                    <thead>
+                        <tr class="text-left text-xs uppercase tracking-wider text-slate-400 border-b border-slate-200">
+                            <th class="py-2 pr-2 font-medium">Format (code-article)</th>
+                            <th class="py-2 px-1 font-medium">Dimensions</th>
+                            <th class="py-2 px-1 font-medium text-center">Épaisseur</th>
+                            <th class="py-2 px-1 font-medium text-right">Surface</th>
+                            <th class="py-2 px-1 font-medium text-right">lb/pi²</th>
+                            <th class="py-2 px-1 font-medium text-right">Poids/feuille</th>
+                            <th class="py-2 px-1 font-medium text-right">Qté (3 sem.)</th>
+                            <th class="py-2 px-1 font-medium text-right">Poids ligne</th>
+                            <th class="py-2 pl-1 font-medium"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="weightRows"></tbody>
+                </table>
+            </div>
+
+            <div class="flex flex-wrap justify-end items-center gap-4 mt-4 pt-3 border-t border-slate-200">
+                <div class="text-right">
+                    <span class="text-xs text-slate-500 uppercase tracking-wider">Poids total estimé (3 sem.)</span>
+                    <p id="weightTotal" class="text-2xl font-bold text-slate-800">0 lbs</p>
+                </div>
+                <button onclick="sendWeightToMrp()" class="bg-slate-900 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-xl shadow transition-colors flex items-center gap-2">
+                    Envoyer vers le MRP <i data-lucide="arrow-down" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-400 mt-2">Choisissez le code-article : dimensions, épaisseur et surface se remplissent automatiquement. Le lb/pi² est calculé à partir de la densité acier (modifiable par ligne, ex. plaque à carreaux plus lourde).</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Panneau de configuration (Gauche) -->
+            <div class="lg:col-span-4 space-y-6">
+                
+                <!-- Carte Informations de base -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-lg font-semibold flex items-center gap-2 mb-4 border-b pb-2">
+                        <i data-lucide="package" class="w-5 h-5 text-slate-500"></i>
+                        Données de base
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Nom de l'article (Optionnel)</label>
+                            <input type="text" id="itemName" placeholder="Ex: Checker Plate 1/4 60x240" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Date de début de l'analyse</label>
+                            <input type="date" id="startDate" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Stock Initial Actuel (unités ou lbs)</label>
+                            <input type="number" id="initialStock" value="42380" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte Consommation -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-lg font-semibold flex items-center gap-2 mb-4 border-b pb-2">
+                        <i data-lucide="activity" class="w-5 h-5 text-slate-500"></i>
+                        Taux de Consommation (MRP)
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Quantité totale requise</label>
+                            <input type="number" id="mrpQuantity" value="83313" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Période (en jours ouvrables)</label>
+                            <input type="number" id="mrpDays" value="15" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <p class="text-xs text-slate-400 mt-1">Ex: 15 jours = 3 semaines de production</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte Livraisons -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4 border-b pb-2">
+                        <h2 class="text-lg font-semibold flex items-center gap-2">
+                            <i data-lucide="truck" class="w-5 h-5 text-slate-500"></i>
+                            Arrivages Prévus (PO)
+                        </h2>
+                        <button onclick="addDeliveryRow()" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-full transition-colors" title="Ajouter une livraison">
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="deliveriesContainer" class="space-y-3 max-h-48 overflow-y-auto pr-1">
+                        <!-- Les lignes de livraison s'ajouteront ici -->
+                    </div>
+                </div>
+
+                <button onclick="runSimulation()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow transition-colors flex justify-center items-center gap-2">
+                    <i data-lucide="calculator" class="w-5 h-5"></i>
+                    Lancer la Simulation
+                </button>
+
+                <div class="mt-6 text-center text-slate-400 text-xs py-2 border-t border-slate-200">
+                    Développé par El Boudouri Mohamed Ilyas
+                </div>
+            </div>
+
+            <!-- Panneau de Résultats (Droite) -->
+            <div class="lg:col-span-8 space-y-6">
+                
+                <!-- KPIs -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+                        <div class="p-3 bg-slate-100 rounded-lg text-slate-600">
+                            <i data-lucide="flame" class="w-8 h-8"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 uppercase tracking-wider">Consommation</p>
+                            <p id="resDailyRate" class="text-2xl font-bold text-slate-800">-- <span class="text-sm font-normal text-slate-500">/ jour ouvrable</span></p>
+                        </div>
+                    </div>
+
+                    <div id="ruptureCard" class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 transition-colors">
+                        <div id="ruptureIconBg" class="p-3 bg-slate-100 rounded-lg text-slate-600 transition-colors">
+                            <i id="ruptureIcon" data-lucide="calendar" class="w-8 h-8"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-slate-500 uppercase tracking-wider">Date de Rupture</p>
+                            <p id="resRuptureDate" class="text-2xl font-bold text-slate-800">--</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Graphique -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-lg font-semibold mb-4 text-slate-700">Projection de l'inventaire sur 90 jours ouvrables</h2>
+                    <div class="relative h-96 w-full">
+                        <canvas id="inventoryChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Initialiser les icônes Lucide
+        lucide.createIcons();
+
+        // Variables globales
+        let deliveries = [];
+        let deliveryIdCounter = 0;
+        let chartInstance = null;
+
+        // Mettre la date d'aujourd'hui par défaut
+        document.getElementById('startDate').valueAsDate = new Date();
+
+        // Ajouter une livraison initiale pour l'exemple
+        function addDeliveryRow(dateStr = '', qty = '') {
+            const container = document.getElementById('deliveriesContainer');
+            const id = deliveryIdCounter++;
+            
+            const row = document.createElement('div');
+            row.id = `delivery-${id}`;
+            row.className = 'flex gap-2 items-center bg-slate-50 p-2 rounded border border-slate-100';
+            row.innerHTML = `
+                <input type="date" class="delivery-date w-full p-1.5 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none" value="${dateStr}">
+                <input type="number" placeholder="Qté" class="delivery-qty w-32 p-1.5 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none" value="${qty}">
+                <button onclick="removeDeliveryRow(${id})" class="text-red-500 hover:text-red-700 p-1 bg-white border border-slate-200 rounded">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            `;
+            container.appendChild(row);
+            lucide.createIcons();
+        }
+
+        function removeDeliveryRow(id) {
+            const row = document.getElementById(`delivery-${id}`);
+            if (row) row.remove();
+        }
+
+        // Ajouter des exemples de livraisons par défaut
+        const nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 10);
+        addDeliveryRow(nextWeek.toISOString().split('T')[0], '11250');
+
+        // Fonction pour formater les dates (composantes LOCALES, pas UTC)
+        // Évite tout décalage d'un jour selon le fuseau horaire.
+        function formatDateStr(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        // --- Jours fériés AGB (Nouveau-Brunswick) : les 9 jours de congé ---
+        // Calcul automatique pour n'importe quelle année (dates variables incluses)
+
+        // Calcul du dimanche de Pâques (algorithme de Meeus/Jones/Butcher)
+        function easterSunday(year){
+            const a = year % 19;
+            const b = Math.floor(year / 100);
+            const c = year % 100;
+            const d = Math.floor(b / 4);
+            const e = b % 4;
+            const f = Math.floor((b + 8) / 25);
+            const g = Math.floor((b - f + 1) / 3);
+            const h = (19 * a + b - d - g + 15) % 30;
+            const i = Math.floor(c / 4);
+            const k = c % 4;
+            const l = (32 + 2 * e + 2 * i - h - k) % 7;
+            const m = Math.floor((a + 11 * h + 22 * l) / 451);
+            const month = Math.floor((h + l - 7 * m + 114) / 31); // 3=mars, 4=avril
+            const day = ((h + l - 7 * m + 114) % 31) + 1;
+            return new Date(year, month - 1, day);
+        }
+
+        // n-ième jour de semaine d'un mois (ex: 3e lundi). weekday: 0=dim..6=sam
+        function nthWeekday(year, month, weekday, n){
+            let count = 0;
+            const d = new Date(year, month, 1);
+            while (d.getMonth() === month) {
+                if (d.getDay() === weekday) {
+                    count++;
+                    if (count === n) return new Date(d);
+                }
+                d.setDate(d.getDate() + 1);
+            }
+            return null;
+        }
+
+        const _holidayCache = {};
+        // Retourne un Set des chaînes 'YYYY-MM-DD' des 9 fériés AGB pour l'année
+        function getHolidaySet(year){
+            if (_holidayCache[year]) return _holidayCache[year];
+            const set = new Set();
+            const add = (dateObj) => set.add(formatDateStr(dateObj));
+
+            // 1. Jour de l'An — 1er janvier
+            add(new Date(year, 0, 1));
+            // 2. Fête de la famille — 3e lundi de février
+            add(nthWeekday(year, 1, 1, 3));
+            // 3. Vendredi Saint — 2 jours avant Pâques
+            const easter = easterSunday(year);
+            const goodFriday = new Date(easter); goodFriday.setDate(easter.getDate() - 2);
+            add(goodFriday);
+            // 4. Fête du Canada — 1er juillet
+            add(new Date(year, 6, 1));
+            // 5. Fête du Nouveau-Brunswick — 1er lundi d'août
+            add(nthWeekday(year, 7, 1, 1));
+            // 6. Fête du Travail — 1er lundi de septembre
+            add(nthWeekday(year, 8, 1, 1));
+            // 7. Jour du Souvenir — 11 novembre
+            add(new Date(year, 10, 11));
+            // 8. Noël — 25 décembre
+            add(new Date(year, 11, 25));
+            // 9. Lendemain de Noël — 26 décembre
+            add(new Date(year, 11, 26));
+
+            _holidayCache[year] = set;
+            return set;
+        }
+
+        function isHoliday(dateObj){
+            return getHolidaySet(dateObj.getFullYear()).has(formatDateStr(dateObj));
+        }
+
+        // Vérifier si un jour est ouvrable : ni week-end, ni férié AGB
+        function isWorkday(dateObj) {
+            const day = dateObj.getDay();
+            if (day === 0 || day === 6) return false;   // dimanche / samedi
+            if (isHoliday(dateObj)) return false;       // férié AGB
+            return true;
+        }
+
+        // Moteur de simulation
+        function runSimulation() {
+            // 1. Récupérer les valeurs des inputs
+            const startDateStr = document.getElementById('startDate').value;
+            const initialStock = parseFloat(document.getElementById('initialStock').value) || 0;
+            const mrpQty = parseFloat(document.getElementById('mrpQuantity').value) || 0;
+            const mrpDays = parseFloat(document.getElementById('mrpDays').value) || 1;
+            const itemName = document.getElementById('itemName').value || "Matériel";
+
+            if (!startDateStr) {
+                alert("Veuillez choisir une date de début.");
+                return;
+            }
+
+            // 2. Calculer le taux journalier
+            const dailyRate = mrpQty / mrpDays;
+            
+            // Afficher le taux
+            document.getElementById('resDailyRate').innerHTML = `${dailyRate.toLocaleString('fr-CA', {maximumFractionDigits: 1})} <span class="text-sm font-normal text-slate-500">/ jour</span>`;
+
+            // 3. Lire les livraisons
+            const deliveryElements = document.querySelectorAll('#deliveriesContainer > div');
+            const plannedDeliveries = {};
+            deliveryElements.forEach(el => {
+                const dateInput = el.querySelector('.delivery-date').value;
+                const qtyInput = parseFloat(el.querySelector('.delivery-qty').value);
+                if (dateInput && !isNaN(qtyInput)) {
+                    if (plannedDeliveries[dateInput]) {
+                        plannedDeliveries[dateInput] += qtyInput;
+                    } else {
+                        plannedDeliveries[dateInput] = qtyInput;
+                    }
+                }
+            });
+
+            // 4. Simulation jour par jour
+            let currentDate = new Date(startDateStr);
+            // Corriger le décalage de fuseau horaire
+            currentDate.setMinutes(currentDate.getMinutes() + currentDate.getTimezoneOffset());
+            
+            let currentStock = initialStock;
+            let ruptureDate = null;
+            
+            const chartLabels = [];
+            const chartData = [];
+            
+            let daysSimulated = 0;
+            const maxWorkdays = 90; // Projeter sur environ 4 mois
+
+            while (daysSimulated < maxWorkdays) {
+                const dateStr = formatDateStr(currentDate);
+                
+                // Arrivage en matinée ? On l'ajoute.
+                if (plannedDeliveries[dateStr]) {
+                    currentStock += plannedDeliveries[dateStr];
+                }
+
+                // Consommation (uniquement les jours ouvrables)
+                if (isWorkday(currentDate)) {
+                    currentStock -= dailyRate;
+                    
+                    // Enregistrer pour le graphique (on n'affiche que les jours ouvrables pour faire plus propre)
+                    chartLabels.push(currentDate.toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' }));
+                    chartData.push(currentStock);
+                    
+                    daysSimulated++;
+                }
+
+                // Vérifier la rupture (première fois qu'on passe sous zéro)
+                if (currentStock < 0 && ruptureDate === null) {
+                    ruptureDate = new Date(currentDate);
+                }
+
+                // Passer au jour suivant
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            // 5. Mettre à jour l'interface (Carte de Rupture)
+            const ruptureCard = document.getElementById('ruptureCard');
+            const ruptureIconBg = document.getElementById('ruptureIconBg');
+            const resRuptureText = document.getElementById('resRuptureDate');
+            const iconElement = document.getElementById('ruptureIcon');
+
+            if (ruptureDate) {
+                const formatter = new Intl.DateTimeFormat('fr-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                resRuptureText.innerText = formatter.format(ruptureDate);
+                
+                // Style Alerte
+                ruptureCard.className = "bg-red-50 p-5 rounded-xl shadow-sm border border-red-200 flex items-center gap-4 transition-colors";
+                ruptureIconBg.className = "p-3 bg-red-100 rounded-lg text-red-600 transition-colors";
+                iconElement.setAttribute('data-lucide', 'alert-triangle');
+                resRuptureText.className = "text-xl md:text-2xl font-bold text-red-700 capitalize";
+            } else {
+                resRuptureText.innerText = "Aucune (Stock sécuritaire)";
+                
+                // Style Sécuritaire
+                ruptureCard.className = "bg-green-50 p-5 rounded-xl shadow-sm border border-green-200 flex items-center gap-4 transition-colors";
+                ruptureIconBg.className = "p-3 bg-green-100 rounded-lg text-green-600 transition-colors";
+                iconElement.setAttribute('data-lucide', 'check-circle');
+                resRuptureText.className = "text-xl md:text-2xl font-bold text-green-700";
+            }
+            lucide.createIcons();
+
+            // 6. Dessiner le graphique
+            drawChart(chartLabels, chartData, itemName, ruptureDate);
+        }
+
+        function drawChart(labels, data, itemName, ruptureDate) {
+            const ctx = document.getElementById('inventoryChart').getContext('2d');
+            
+            // Détruire l'ancien graphique s'il existe
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            // Créer une couleur dégradée pour la zone sous la courbe
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(37, 99, 235, 0.2)'); // bleu
+            gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+
+            // Configurer le plugin pour tracer une ligne rouge horizontale au niveau zéro
+            const zeroLinePlugin = {
+                id: 'zeroLine',
+                beforeDraw(chart) {
+                    const yScale = chart.scales.y;
+                    const yPos = yScale.getPixelForValue(0);
+                    if (yPos > chart.chartArea.top && yPos < chart.chartArea.bottom) {
+                        const ctx = chart.ctx;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.moveTo(chart.chartArea.left, yPos);
+                        ctx.lineTo(chart.chartArea.right, yPos);
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = '#dc2626'; // Red
+                        ctx.setLineDash([5, 5]);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            };
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `Évolution du Stock : ${itemName}`,
+                        data: data,
+                        borderColor: '#2563eb', // Blue-600
+                        backgroundColor: gradient,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.1 // Légère courbure
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Stock (unités / lbs)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += Math.round(context.parsed.y).toLocaleString('fr-CA') + (context.parsed.y < 0 ? ' (RUPTURE)' : '');
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: [zeroLinePlugin]
+            });
+        }
+
+        // ======================================================================
+        //  CALCULATEUR DE POIDS DES FEUILLES DE COUPE
+        //  Code-article : [PL|PC]STHA-[TTTT][WW][LLLLL]
+        //   TTTT  = épaisseur en millièmes de pouce (0250 = 0.250" = 1/4")
+        //   WW    = largeur en pouces (48, 60, 72...)
+        //   LLLLL = longueur x100 en pouces (09600 = 96.00")
+        //   PL = plaque lisse | PC = plaque à carreaux (checker)
+        // ======================================================================
+        const WEIGHT_CODES = `PLSTHA-01054809600
+PLSTHA-01054814400
+PLSTHA-01056009600
+PLSTHA-01056014400
+PLSTHA-01057209600
+PLSTHA-01057212000
+PLSTHA-01057214400
+PLSTHA-01204809600
+PLSTHA-01204812000
+PLSTHA-01204814400
+PLSTHA-01206009600
+PLSTHA-01206012000
+PLSTHA-01207209600
+PLSTHA-01356012000
+PLSTHA-01884814400
+PLSTHA-01884814700
+PLSTHA-01884824000
+PLSTHA-01886009600
+PLSTHA-01886012000
+PLSTHA-01886014400
+PLSTHA-01886024000
+PLSTHA-01887209600
+PLSTHA-01887212000
+PLSTHA-01887214400
+PLSTHA-02504809600
+PLSTHA-02504814400
+PLSTHA-02504824000
+PLSTHA-02506009600
+PLSTHA-02506024000
+PLSTHA-02507209600
+PLSTHA-02507214400
+PLSTHA-10004809600
+PCSTHA-02504809600
+PCSTHA-02504824000
+PCSTHA-02506009600
+PCSTHA-02506024000`;
+
+        // Étiquettes lisibles par épaisseur (millièmes de pouce -> texte)
+        const THK_LABELS = {105:'12 GA',120:'11 GA',135:'10 GA',188:'3/16"',250:'1/4"',313:'5/16"',375:'3/8"',500:'1/2"',625:'5/8"',750:'3/4"',1000:'1"'};
+
+        function decodeCode(code){
+            const parts = code.split('-');
+            if(parts.length < 2 || parts[1].length < 11) return null;
+            const num  = parts[1];
+            const tMil = parseInt(num.slice(0,4),10);
+            const thk  = tMil / 1000;
+            const w    = parseInt(num.slice(4,6),10);
+            const l    = parseInt(num.slice(6,11),10) / 100;
+            const type = parts[0].startsWith('PC') ? 'Carreaux' : 'Lisse';
+            const label= THK_LABELS[tMil] || (thk.toFixed(3) + '"');
+            return { code, thk, w, l, type, label };
+        }
+
+        const CATALOG = WEIGHT_CODES.trim().split('\n').map(c => decodeCode(c.trim())).filter(Boolean);
+
+        function fmtNum(n, d = 0){
+            return Number(n).toLocaleString('fr-CA', { minimumFractionDigits: d, maximumFractionDigits: d });
+        }
+
+        function buildFormatOptions(selectedIdx){
+            let opts = '<option value="">— Choisir / Manuel —</option>';
+            CATALOG.forEach((it, i) => {
+                const sel = (selectedIdx === i) ? 'selected' : '';
+                opts += `<option value="${i}" ${sel}>${it.type} · ${it.label} · ${it.w}"×${it.l}" · ${it.code}</option>`;
+            });
+            return opts;
+        }
+
+        function addWeightRow(presetIndex = null, qty = ''){
+            const tbody = document.getElementById('weightRows');
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-slate-100 hover:bg-slate-50';
+            tr.innerHTML = `
+                <td class="py-2 pr-2"><select class="wc-format w-full min-w-[240px] p-1.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none">${buildFormatOptions(presetIndex)}</select></td>
+                <td class="py-2 px-1">
+                    <div class="flex items-center gap-1">
+                        <input type="number" class="wc-w w-16 p-1.5 border border-slate-300 rounded text-sm" placeholder="larg.">
+                        <span class="text-slate-400">×</span>
+                        <input type="number" class="wc-l w-16 p-1.5 border border-slate-300 rounded text-sm" placeholder="long.">
+                        <span class="text-xs text-slate-400">po</span>
+                    </div>
+                </td>
+                <td class="py-2 px-1 text-center"><span class="wc-thk text-slate-600">—</span></td>
+                <td class="py-2 px-1 text-right"><span class="wc-surf font-medium text-slate-700">—</span></td>
+                <td class="py-2 px-1 text-right"><input type="number" step="0.01" class="wc-lbft2 w-20 p-1.5 border border-slate-300 rounded text-sm text-right" data-auto="1"></td>
+                <td class="py-2 px-1 text-right"><span class="wc-perSheet font-semibold text-slate-800">—</span></td>
+                <td class="py-2 px-1 text-right"><input type="number" class="wc-qty w-20 p-1.5 border border-slate-300 rounded text-sm text-right" placeholder="nb"></td>
+                <td class="py-2 px-1 text-right"><span class="wc-line font-bold text-blue-700">—</span></td>
+                <td class="py-2 pl-1 text-center"><button onclick="this.closest('tr').remove(); recalcWeights();" class="text-red-500 hover:text-red-700 p-1 bg-white border border-slate-200 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+            `;
+            tbody.appendChild(tr);
+
+            const sel  = tr.querySelector('.wc-format');
+            const lbIn = tr.querySelector('.wc-lbft2');
+            sel.addEventListener('change', () => applyFormat(tr));
+            tr.querySelectorAll('.wc-w, .wc-l, .wc-qty').forEach(el => el.addEventListener('input', recalcWeights));
+            lbIn.addEventListener('input', () => { lbIn.dataset.auto = '0'; recalcWeights(); });
+
+            if (presetIndex !== null) applyFormat(tr);
+            if (qty !== '') tr.querySelector('.wc-qty').value = qty;
+
+            lucide.createIcons();
+            recalcWeights();
+        }
+
+        function applyFormat(tr){
+            const idx = tr.querySelector('.wc-format').value;
+            if (idx === '') { tr.querySelector('.wc-thk').textContent = '—'; delete tr.dataset.thk; recalcWeights(); return; }
+            const it = CATALOG[parseInt(idx, 10)];
+            tr.querySelector('.wc-w').value = it.w;
+            tr.querySelector('.wc-l').value = it.l;
+            tr.querySelector('.wc-thk').textContent = it.label;
+            tr.dataset.thk = it.thk;
+            const lbIn = tr.querySelector('.wc-lbft2');
+            if (lbIn.dataset.auto !== '0') {
+                const factor = parseFloat(document.getElementById('steelFactor').value) || 40.8;
+                lbIn.value = (it.thk * factor).toFixed(2);
+            }
+            recalcWeights();
+        }
+
+        function recalcWeights(){
+            let total = 0;
+            document.querySelectorAll('#weightRows tr').forEach(tr => {
+                const w   = parseFloat(tr.querySelector('.wc-w').value)   || 0;
+                const l   = parseFloat(tr.querySelector('.wc-l').value)   || 0;
+                const lb  = parseFloat(tr.querySelector('.wc-lbft2').value)|| 0;
+                const qty = parseFloat(tr.querySelector('.wc-qty').value) || 0;
+                const surf     = w * l / 144;          // pouces² -> pieds²
+                const perSheet = surf * lb;            // poids d'une feuille
+                const line     = perSheet * qty;       // poids de la ligne
+                tr.querySelector('.wc-surf').textContent     = surf     ? fmtNum(surf, 1) + ' pi²' : '—';
+                tr.querySelector('.wc-perSheet').textContent = perSheet ? fmtNum(perSheet, 1) + ' lb' : '—';
+                tr.querySelector('.wc-line').textContent     = line     ? fmtNum(line, 0) + ' lb' : '—';
+                total += line;
+            });
+            document.getElementById('weightTotal').textContent = fmtNum(total, 0) + ' lbs';
+            return total;
+        }
+
+        // Recalcule le lb/pi² des lignes non modifiées manuellement quand la densité change
+        function onFactorChange(){
+            const factor = parseFloat(document.getElementById('steelFactor').value) || 40.8;
+            document.querySelectorAll('#weightRows tr').forEach(tr => {
+                const lbIn = tr.querySelector('.wc-lbft2');
+                if (lbIn.dataset.auto !== '0' && tr.dataset.thk) {
+                    lbIn.value = (parseFloat(tr.dataset.thk) * factor).toFixed(2);
+                }
+            });
+            recalcWeights();
+        }
+
+        function sendWeightToMrp(){
+            const total = recalcWeights();
+            if (total <= 0) { alert("Ajoutez au moins une feuille avec une quantité pour calculer le poids total."); return; }
+            const box = document.getElementById('mrpQuantity');
+            box.value = Math.round(total);
+            box.classList.add('ring-2', 'ring-green-500');
+            setTimeout(() => box.classList.remove('ring-2', 'ring-green-500'), 1200);
+            runSimulation();
+        }
+
+        // Lancer une première simulation au chargement de la page
+        window.onload = () => {
+            // Deux lignes d'exemple (l'utilisateur peut supprimer / ajouter à l'infini)
+            addWeightRow(CATALOG.findIndex(c => c.code === 'PLSTHA-02504809600'), 100); // 1/4" 48x96
+            addWeightRow(CATALOG.findIndex(c => c.code === 'PLSTHA-01884814400'), 50);  // 3/16" 48x144
+            setTimeout(runSimulation, 200);
+        };
+    </script>
+</body>
+</html>
