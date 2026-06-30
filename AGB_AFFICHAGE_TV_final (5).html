@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGB — Affichage Qualité</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  /* Fond crème doux — jamais blanc pur */
+  --bg:#f5f0eb;
+  --card:#faf7f4;
+  --card2:#f0ece7;
+
+  /* Bordures très discrètes */
+  --border:rgba(0,0,0,0.07);
+
+  /* Textes — hiérarchie à 3 niveaux */
+  --t1:#1a1a1a;   /* Titres principaux */
+  --t2:#444444;   /* Texte courant     */
+  --t3:#888888;   /* Secondaire/muted  */
+
+  /* Couleurs désaturées — douces, pas criardes */
+  --green:#2d7a4f;
+  --green-bg:#eaf4ef;
+  --green-bar:#6dbf94;
+
+  --blue:#1e4fa8;
+  --blue-bg:#eaf0fb;
+  --blue-bar:#7aaae8;
+
+  --orange:#b85c00;
+  --orange-bg:#fdf0e4;
+  --orange-bar:#e8a05a;
+
+  --red:#a82020;
+  --red-bg:#fbeaea;
+  --red-bar:#e07070;
+
+  --gray:#555e6b;
+  --gray-bg:#eceef1;
+  --gray-bar:#9aa3ad;
+
+  --accent:#1e4fa8;
+}
+
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);}
+body{font-family:'Inter',sans-serif;color:var(--t1);}
+
+/* ══════════════════════════
+   LAYOUT
+══════════════════════════ */
+.screen{
+  display:grid;
+  grid-template-rows:auto auto 1fr auto auto;
+  height:100vh;
+  gap:10px;
+  padding:12px 12px 0;
+}
+
+/* ══════════════════════════
+   HEADER
+══════════════════════════ */
+.hdr{
+  background:var(--card);
+  border-radius:14px;
+  border:1px solid var(--border);
+  padding:10px 22px;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:20px;
+}
+
+.brand{display:flex;align-items:center;gap:14px;}
+.brand-logo{
+  width:42px;height:42px;border-radius:10px;
+  background:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;font-weight:900;color:#fff;letter-spacing:-0.02em;
+}
+.brand-name{font-size:19px;font-weight:900;color:var(--t1);letter-spacing:-0.02em;}
+.brand-name b{color:var(--accent);}
+.brand-sub{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.14em;margin-top:1px;}
+
+.hdr-legend{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;}
+.leg{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--t2);}
+.leg-dot{width:10px;height:10px;border-radius:50%;}
+
+.hdr-right{display:flex;align-items:center;gap:14px;}
+.lang-btn{
+  background:var(--card2);border:1px solid var(--border);
+  border-radius:20px;padding:5px 14px;
+  font-size:12px;font-weight:700;color:var(--t2);
+  cursor:pointer;user-select:none;transition:0.15s;
+  display:flex;align-items:center;gap:6px;
+}
+.lang-btn:hover{border-color:var(--accent);color:var(--accent);}
+.clock{font-size:26px;font-weight:900;color:var(--t1);line-height:1;text-align:right;letter-spacing:-0.02em;}
+.clock-date{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.1em;text-align:right;margin-top:2px;}
+
+/* ══════════════════════════
+   KPI ROW
+══════════════════════════ */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.kpi{
+  background:var(--card);
+  border-radius:14px;
+  border:1px solid var(--border);
+  padding:16px 18px;
+  display:flex;align-items:center;gap:16px;
+}
+.kpi-icon{
+  width:52px;height:52px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;flex-shrink:0;
+}
+.kpi-lbl{
+  font-size:12px;font-weight:700;
+  text-transform:uppercase;letter-spacing:0.1em;
+  color:var(--t3);margin-bottom:4px;
+}
+.kpi-val{font-size:32px;font-weight:900;line-height:1;letter-spacing:-0.03em;}
+.kpi-sub{font-size:12px;font-weight:600;color:var(--t3);margin-top:4px;}
+
+/* ══════════════════════════
+   TABLES
+══════════════════════════ */
+.tables-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
+
+.tcard{
+  border-radius:16px;
+  border:1.5px solid var(--border);
+  padding:16px 12px 14px;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  position:relative;overflow:hidden;
+  transition:transform 0.2s;
+  cursor:default;
+}
+.tcard:hover{transform:translateY(-2px);}
+
+/* Numéro en filigrane très discret */
+.tcard-watermark{
+  position:absolute;bottom:-12px;right:2px;
+  font-size:105px;font-weight:900;
+  opacity:0.16;color:var(--t1);
+  line-height:1;letter-spacing:-0.05em;
+  pointer-events:none;user-select:none;
+}
+
+.tcard-name{
+  font-size:16px;font-weight:800;
+  letter-spacing:0.18em;text-transform:uppercase;
+  z-index:1;
+}
+.tcard-emoji{font-size:38px;line-height:1;z-index:1;}
+.tcard-pct{
+  font-size:36px;font-weight:900;
+  line-height:1;letter-spacing:-0.03em;z-index:1;
+}
+.tcard-track{width:100%;height:7px;border-radius:20px;overflow:hidden;z-index:1;}
+.tcard-bar{height:100%;border-radius:20px;transition:width 1.4s cubic-bezier(.4,0,.2,1);}
+.tcard-status{
+  font-size:11px;font-weight:800;
+  text-transform:uppercase;letter-spacing:0.1em;
+  padding:4px 14px;border-radius:20px;
+  z-index:1;width:100%;text-align:center;
+}
+
+/* Couleurs par état — toutes douces */
+.t-green{background:var(--green-bg);border-color:rgba(45,122,79,0.2);}
+.t-green .tcard-name,.t-green .tcard-pct{color:var(--green);}
+.t-green .tcard-track{background:rgba(45,122,79,0.15);}
+.t-green .tcard-bar{background:var(--green-bar);}
+.t-green .tcard-status{background:rgba(45,122,79,0.12);color:var(--green);}
+
+.t-blue{background:var(--blue-bg);border-color:rgba(30,79,168,0.2);}
+.t-blue .tcard-name,.t-blue .tcard-pct{color:var(--blue);}
+.t-blue .tcard-track{background:rgba(30,79,168,0.15);}
+.t-blue .tcard-bar{background:var(--blue-bar);}
+.t-blue .tcard-status{background:rgba(30,79,168,0.12);color:var(--blue);}
+
+.t-orange{background:var(--orange-bg);border-color:rgba(184,92,0,0.2);}
+.t-orange .tcard-name,.t-orange .tcard-pct{color:var(--orange);}
+.t-orange .tcard-track{background:rgba(184,92,0,0.15);}
+.t-orange .tcard-bar{background:var(--orange-bar);}
+.t-orange .tcard-status{background:rgba(184,92,0,0.12);color:var(--orange);}
+
+.t-red{background:var(--red-bg);border-color:rgba(168,32,32,0.25);}
+.t-red .tcard-name,.t-red .tcard-pct{color:var(--red);}
+.t-red .tcard-track{background:rgba(168,32,32,0.15);}
+.t-red .tcard-bar{background:var(--red-bar);}
+.t-red .tcard-status{background:rgba(168,32,32,0.12);color:var(--red);}
+
+.t-gray{background:var(--gray-bg);border-color:rgba(85,94,107,0.2);}
+.t-gray .tcard-name,.t-gray .tcard-pct{color:var(--gray);}
+.t-gray .tcard-track{background:rgba(85,94,107,0.15);}
+.t-gray .tcard-bar{background:var(--gray-bar);}
+.t-gray .tcard-status{background:rgba(85,94,107,0.12);color:var(--gray);}
+
+/* Alertes subtiles — pas agressives */
+.t-red{animation:ar 3s ease-in-out infinite;}
+.t-orange{animation:ao 3.5s ease-in-out infinite;}
+@keyframes ar{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 3px rgba(168,32,32,0.12),0 4px 16px rgba(168,32,32,0.1)}}
+@keyframes ao{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 3px rgba(184,92,0,0.1),0 4px 14px rgba(184,92,0,0.08)}}
+
+/* ══════════════════════════
+   BOTTOM 3 CARDS
+══════════════════════════ */
+.bottom-row{display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:10px;}
+
+.bcard{
+  background:var(--card);
+  border-radius:14px;
+  border:1px solid var(--border);
+  padding:14px 18px;
+  display:flex;flex-direction:column;gap:10px;
+}
+
+/* Titre de section */
+.sec-title{
+  display:flex;align-items:center;gap:9px;
+  padding-bottom:9px;
+  border-bottom:1px solid var(--border);
+}
+.sec-title-icon{font-size:20px;}
+.sec-title-text{
+  font-size:14px;font-weight:800;
+  text-transform:uppercase;letter-spacing:0.1em;
+  color:var(--t1);
+}
+
+/* ─ JSI ─ */
+.jsi-row{display:flex;align-items:center;gap:16px;}
+.jsi-big{
+  font-size:60px;font-weight:900;
+  color:var(--green);line-height:1;
+  letter-spacing:-0.04em;flex-shrink:0;
+}
+.jsi-side{flex:1;}
+.jsi-lbl{font-size:15px;font-weight:800;color:var(--t1);}
+.jsi-rec{font-size:12px;font-weight:600;color:var(--t3);margin-top:3px;}
+.jsi-prog-labels{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--t2);margin-top:8px;margin-bottom:5px;}
+.jsi-track{height:8px;background:rgba(45,122,79,0.15);border-radius:20px;overflow:hidden;}
+.jsi-bar{height:100%;background:var(--green-bar);border-radius:20px;transition:width 1.4s cubic-bezier(.4,0,.2,1);}
+.jsi-goal{
+  background:var(--green-bg);border-radius:10px;
+  padding:8px 14px;text-align:center;
+  border:1px solid rgba(45,122,79,0.15);
+}
+.jsi-goal-txt{font-size:13px;font-weight:800;color:var(--green);}
+
+/* ─ MOTIV ─ */
+.motiv-q{
+  font-size:15px;font-weight:700;font-style:italic;
+  color:var(--t1);line-height:1.6;
+  border-left:3px solid var(--accent);
+  padding:10px 14px;
+  background:var(--blue-bg);border-radius:0 10px 10px 0;
+}
+.motiv-goal{
+  background:var(--orange-bg);border-radius:10px;
+  padding:10px 14px;border:1px solid rgba(184,92,0,0.15);
+}
+.motiv-week{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:var(--orange);margin-bottom:4px;}
+.motiv-goal-txt{font-size:14px;font-weight:700;color:var(--t1);line-height:1.35;}
+.motiv-prog-labels{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--t2);margin-top:8px;margin-bottom:5px;}
+.motiv-track{height:7px;background:rgba(184,92,0,0.15);border-radius:20px;overflow:hidden;}
+.motiv-bar{height:100%;background:var(--orange-bar);border-radius:20px;transition:width 1.4s;}
+
+/* ─ ANNONCES ─ */
+.ann-list{display:flex;flex-direction:column;gap:7px;}
+.ann{
+  display:flex;align-items:flex-start;gap:10px;
+  background:var(--card2);border-radius:10px;
+  padding:9px 12px;border:1px solid var(--border);
+}
+.ann-left{display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:3px;flex-shrink:0;}
+.ann-dot{width:10px;height:10px;border-radius:50%;}
+.ann-badge{font-size:9px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:2px 7px;border-radius:4px;white-space:nowrap;}
+.ann-body{}
+.ann-text{font-size:13px;font-weight:700;color:var(--t1);line-height:1.35;}
+.ann-time{font-size:11px;font-weight:600;color:var(--t3);margin-top:3px;}
+
+/* ══════════════════════════
+   TICKER
+══════════════════════════ */
+.ticker{
+  height:52px;
+  background:#1a1a1a;
+  border-radius:12px 12px 0 0;
+  display:flex;align-items:center;
+  overflow:hidden;
+}
+.ticker-live{
+  background:var(--accent);
+  height:100%;padding:0 20px;
+  display:flex;align-items:center;gap:8px;
+  font-size:11px;font-weight:800;letter-spacing:0.2em;color:#fff;
+  flex-shrink:0;
+}
+.t-dot{width:8px;height:8px;border-radius:50%;background:#fff;animation:bl 1.2s ease-in-out infinite;}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:0.15}}
+
+.ticker-track{flex:1;overflow:hidden;height:100%;position:relative;}
+.ticker-track::before{content:'';position:absolute;left:0;top:0;bottom:0;width:40px;background:linear-gradient(to right,#1a1a1a,transparent);z-index:2;}
+.ticker-track::after{content:'';position:absolute;right:0;top:0;bottom:0;width:40px;background:linear-gradient(to left,#1a1a1a,transparent);z-index:2;}
+.ticker-scroll{
+  display:inline-flex;align-items:center;height:100%;
+  animation:ts 32s linear infinite;
+  white-space:nowrap;padding-left:60px;
+}
+@keyframes ts{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+.tk{display:inline-flex;align-items:center;gap:10px;padding:0 28px;height:100%;border-right:1px solid rgba(255,255,255,0.08);}
+.tk-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.tk-tag{font-size:10px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;padding:3px 9px;border-radius:5px;}
+.tk-txt{font-size:14px;font-weight:700;}
+
+.tkg .tk-ico{background:rgba(109,191,148,0.15);}
+.tkg .tk-tag{background:rgba(109,191,148,0.18);color:#6dbf94;}
+.tkg .tk-txt{color:#6dbf94;}
+.tkr .tk-ico{background:rgba(224,112,112,0.15);animation:pi 1.8s ease-in-out infinite;}
+.tkr .tk-tag{background:rgba(224,112,112,0.18);color:#e07070;}
+.tkr .tk-txt{color:#e07070;}
+.tko .tk-ico{background:rgba(232,160,90,0.15);}
+.tko .tk-tag{background:rgba(232,160,90,0.18);color:#e8a05a;}
+.tko .tk-txt{color:#e8a05a;}
+.tkw .tk-ico{background:rgba(255,255,255,0.08);}
+.tkw .tk-tag{background:rgba(255,255,255,0.1);color:#aaaaaa;}
+.tkw .tk-txt{color:#cccccc;}
+@keyframes pi{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 5px rgba(224,112,112,0)}}
+
+/* ── FADE ── */
+.lf{transition:opacity 0.3s;}
+.lf.fading{opacity:0;}
+/* ── ANNONCE URGENTE PLEIN ÉCRAN ── */
+#urgent-overlay{
+  display:none; position:fixed; inset:0; z-index:99999;
+  background:rgba(18,2,2,0.94);
+  align-items:center; justify-content:center; text-align:center;
+  padding:6vh 6vw;
+}
+#urgent-overlay.show{display:flex;}
+.urgent-box{max-width:1600px; animation:urgpulse 1.6s ease-in-out infinite;}
+.urgent-badge{
+  display:inline-block; background:var(--red); color:#fff;
+  font-size:30px; font-weight:900; letter-spacing:0.14em;
+  padding:16px 40px; border-radius:16px; margin-bottom:50px;
+  box-shadow:0 0 0 6px rgba(168,32,32,0.25);
+}
+.urgent-title{font-size:92px; font-weight:900; color:#fff; line-height:1.04; margin-bottom:22px;}
+.urgent-msg{font-size:48px; font-weight:600; color:#ffd9d9; line-height:1.2;}
+.urgent-sep{height:2px; background:rgba(255,255,255,0.16); margin:50px auto; width:55%;}
+.urgent-en.urgent-title{font-size:62px; opacity:0.85;}
+.urgent-en.urgent-msg{font-size:36px; opacity:0.85;}
+@keyframes urgpulse{0%,100%{transform:scale(1);}50%{transform:scale(1.012);}}
+#urgent-overlay.info-mode{background:rgba(3,10,26,0.94);}
+#urgent-overlay.info-mode .urgent-badge{background:var(--accent);box-shadow:0 0 0 6px rgba(30,79,168,0.22);}
+#urgent-overlay.info-mode .urgent-msg{color:#d6e2f7;}
+::-webkit-scrollbar{display:none;}
+</style>
+</head>
+<body>
+
+<!-- ANNONCE URGENTE PLEIN ÉCRAN (pilotée depuis l'admin via Firebase) -->
+<div id="urgent-overlay">
+  <div class="urgent-box">
+    <div class="urgent-badge" id="urg-badge">🚨 ANNONCE URGENTE · URGENT</div>
+    <div class="urgent-title" id="urg-title-fr"></div>
+    <div class="urgent-msg" id="urg-msg-fr"></div>
+    <div class="urgent-sep"></div>
+    <div class="urgent-title urgent-en" id="urg-title-en"></div>
+    <div class="urgent-msg urgent-en" id="urg-msg-en"></div>
+  </div>
+</div>
+
+<div class="screen">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="brand">
+      <div class="brand-logo">A</div>
+      <div>
+        <div class="brand-name">AGB &nbsp;<b>|</b>&nbsp; <span data-i="brand">QUALITÉ</span></div>
+        <div class="brand-sub" data-i="brand-sub">Tableau de bord production</div>
+      </div>
+    </div>
+
+    <div class="hdr-legend lf" id="legend">
+      <div class="leg"><div class="leg-dot" style="background:var(--green)"></div><span data-i="leg1">En cours</span></div>
+      <div class="leg"><div class="leg-dot" style="background:var(--blue)"></div><span data-i="leg2">Avance rapide 🚀</span></div>
+      <div class="leg"><div class="leg-dot" style="background:var(--orange)"></div><span data-i="leg3">En retard 🐢</span></div>
+      <div class="leg"><div class="leg-dot" style="background:var(--red)"></div><span data-i="leg4">Bloqué 🔥</span></div>
+      <div class="leg"><div class="leg-dot" style="background:var(--gray)"></div><span data-i="leg5">Terminé 🏁</span></div>
+    </div>
+
+    <div class="hdr-right">
+      <div class="lang-btn" onclick="toggleLang()">
+        <span id="lang-flag">🇬🇧</span><span id="lang-label">EN</span>
+      </div>
+      <div>
+        <div class="clock" id="clk">--:--</div>
+        <div class="clock-date" id="clk-date">---</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-row lf" id="kpi-row">
+    <div class="kpi">
+      <div class="kpi-icon" style="background:var(--green-bg)">✅</div>
+      <div>
+        <div class="kpi-lbl" data-i="kpi1lbl">Taux qualité</div>
+        <div class="kpi-val" id="disp-kpi1" style="color:var(--green)">94%</div>
+        <div class="kpi-sub" id="disp-kpi1sub">▲ +2% vs semaine passée</div>
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:var(--orange-bg)">🔁</div>
+      <div>
+        <div class="kpi-lbl" data-i="kpi2lbl">Taux de retouche</div>
+        <div class="kpi-val" id="disp-kpi2" style="color:var(--orange)">6%</div>
+        <div class="kpi-sub" id="disp-kpi2sub">▼ Objectif : &lt; 5%</div>
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:var(--red-bg)">⚠️</div>
+      <div>
+        <div class="kpi-lbl" data-i="kpi3lbl">Non-conformités</div>
+        <div class="kpi-val" id="disp-kpi3" style="color:var(--red)">3</div>
+        <div class="kpi-sub" data-i="kpi3sub">Dernières 24h</div>
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:var(--blue-bg)">🎯</div>
+      <div>
+        <div class="kpi-lbl" data-i="kpi4lbl">1er passage (FPP)</div>
+        <div class="kpi-val" id="disp-kpi4" style="color:var(--blue)">88%</div>
+        <div class="kpi-sub" id="disp-kpi4sub">Objectif : 90%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLES -->
+  <div class="tables-row lf" id="tables-row">
+    <div class="tcard t-green" id="card-t1">
+      <div class="tcard-watermark">1</div>
+      <div class="tcard-name" id="tname-t1">TABLE 1</div>
+      <div class="tcard-emoji" id="emj-t1">✅</div>
+      <div class="tcard-pct" id="pct-t1">80%</div>
+      <div class="tcard-track"><div class="tcard-bar" id="bar-t1" style="width:80%"></div></div>
+      <div class="tcard-status" id="tstatus-t1">En cours</div>
+    </div>
+    <div class="tcard t-blue" id="card-t2">
+      <div class="tcard-watermark">2</div>
+      <div class="tcard-name" id="tname-t2">TABLE 2</div>
+      <div class="tcard-emoji" id="emj-t2">🚀</div>
+      <div class="tcard-pct" id="pct-t2">90%</div>
+      <div class="tcard-track"><div class="tcard-bar" id="bar-t2" style="width:90%"></div></div>
+      <div class="tcard-status" id="tstatus-t2">Avance rapide</div>
+    </div>
+    <div class="tcard t-green" id="card-t3">
+      <div class="tcard-watermark">3</div>
+      <div class="tcard-name" id="tname-t3">TABLE 3</div>
+      <div class="tcard-emoji" id="emj-t3">✅</div>
+      <div class="tcard-pct" id="pct-t3">55%</div>
+      <div class="tcard-track"><div class="tcard-bar" id="bar-t3" style="width:55%"></div></div>
+      <div class="tcard-status" id="tstatus-t3">En cours</div>
+    </div>
+    <div class="tcard t-orange" id="card-t4">
+      <div class="tcard-watermark">4</div>
+      <div class="tcard-name" id="tname-t4">TABLE 4</div>
+      <div class="tcard-emoji" id="emj-t4">🐢</div>
+      <div class="tcard-pct" id="pct-t4">40%</div>
+      <div class="tcard-track"><div class="tcard-bar" id="bar-t4" style="width:40%"></div></div>
+      <div class="tcard-status" id="tstatus-t4">En retard</div>
+    </div>
+    <div class="tcard t-red" id="card-t5">
+      <div class="tcard-watermark">5</div>
+      <div class="tcard-name" id="tname-t5">TABLE 5</div>
+      <div class="tcard-emoji" id="emj-t5">🔥</div>
+      <div class="tcard-pct" id="pct-t5">25%</div>
+      <div class="tcard-track"><div class="tcard-bar" id="bar-t5" style="width:25%"></div></div>
+      <div class="tcard-status" id="tstatus-t5">BLOQUÉ</div>
+    </div>
+    <div class="tcard t-gray" id="card-t6">
+      <div class="tcard-watermark">6</div>
+      <div class="tcard-name" id="tname-t6">TABLE 6</div>
+      <div class="tcard-emoji" id="emj-t6">🏁</div>
+      <div class="tcard-pct" id="pct-t6">100%</div>
+      <div class="tcard-track"><div class="tcard-bar" id="bar-t6" style="width:100%"></div></div>
+      <div class="tcard-status" id="tstatus-t6">Terminé</div>
+    </div>
+  </div>
+
+  <!-- BOTTOM 3 -->
+  <div class="bottom-row lf" id="bottom-row">
+
+    <!-- JSI -->
+    <div class="bcard">
+      <div class="sec-title">
+        <div class="sec-title-icon">🛡️</div>
+        <div class="sec-title-text" data-i="bc1title">Jours sans incident</div>
+      </div>
+      <div class="jsi-row">
+        <div class="jsi-big" id="disp-jsi">18</div>
+        <div class="jsi-side">
+          <div class="jsi-lbl" data-i="bc1lbl">jours sans incident</div>
+          <div class="jsi-rec" id="disp-jsi-record">Record : 34 jours — On continue !</div>
+          <div class="jsi-prog-labels">
+            <span data-i="bc1prog">Progression</span>
+            <span id="disp-jsi-count">18 / 30 jours</span>
+          </div>
+          <div class="jsi-track"><div class="jsi-bar" id="jsi-prog-bar" style="width:60%"></div></div>
+        </div>
+      </div>
+      <div class="jsi-goal">
+        <div class="jsi-goal-txt" id="disp-jsi-obj">🎯 Objectif 30 jours — Encore 12 jours !</div>
+      </div>
+    </div>
+
+    <!-- MOTIV -->
+    <div class="bcard">
+      <div class="sec-title">
+        <div class="sec-title-icon">⭐</div>
+        <div class="sec-title-text" data-i="bc2title">Message de la semaine</div>
+      </div>
+      <div class="motiv-q" id="motiv-msg">"La qualité n'est pas un acte, c'est une habitude."</div>
+      <div class="motiv-goal">
+        <div class="motiv-week" id="disp-week-label">Objectif semaine 24</div>
+        <div class="motiv-goal-txt" id="disp-week-goal">Réduire le taux de retouche de 6% à 5%</div>
+        <div class="motiv-prog-labels">
+          <span data-i="bc2prog">Progression</span>
+          <span id="disp-week-prog-label">6% → 5%</span>
+        </div>
+        <div class="motiv-track"><div class="motiv-bar" id="obj-prog" style="width:60%"></div></div>
+      </div>
+    </div>
+
+    <!-- ANNONCES -->
+    <div class="bcard">
+      <div class="sec-title">
+        <div class="sec-title-icon">📢</div>
+        <div class="sec-title-text" data-i="bc3title">Annonces internes</div>
+      </div>
+      <div class="ann-list">
+        <div class="ann">
+          <div class="ann-left">
+            <div class="ann-dot" id="dot-a1" style="background:#a82020"></div>
+            <div class="ann-badge" id="badge-a1" style="background:#fbeaea;color:#a82020">URGENT</div>
+          </div>
+          <div class="ann-body">
+            <div class="ann-text" id="ann1-text">TABLE 5 — Réunion d'urgence vendredi 9h</div>
+            <div class="ann-time" id="ann1-time">Aujourd'hui</div>
+          </div>
+        </div>
+        <div class="ann">
+          <div class="ann-left">
+            <div class="ann-dot" id="dot-a2" style="background:#b85c00"></div>
+            <div class="ann-badge" id="badge-a2" style="background:#fdf0e4;color:#b85c00">PRÉVU</div>
+          </div>
+          <div class="ann-body">
+            <div class="ann-text" id="ann2-text">Audit qualité interne — Mercredi matin</div>
+            <div class="ann-time" id="ann2-time">Cette semaine</div>
+          </div>
+        </div>
+        <div class="ann">
+          <div class="ann-left">
+            <div class="ann-dot" id="dot-a3" style="background:#1e4fa8"></div>
+            <div class="ann-badge" id="badge-a3" style="background:#eaf0fb;color:#1e4fa8">INFO</div>
+          </div>
+          <div class="ann-body">
+            <div class="ann-text" id="ann3-text">Formation sécurité obligatoire — 12 juin</div>
+            <div class="ann-time" id="ann3-time">Semaine prochaine</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TICKER -->
+  <div class="ticker">
+    <div class="ticker-live">
+      <div class="t-dot"></div>LIVE
+    </div>
+    <div class="ticker-track">
+      <div class="ticker-scroll" id="ticker-scroll"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let currentLang='fr';
+let FD={fr:{},en:{}};
+
+const T={
+  fr:{brand:'QUALITÉ','brand-sub':'Tableau de bord production',
+    leg1:'En cours',leg2:'Avance rapide 🚀',leg3:'En retard 🐢',leg4:'Bloqué 🔥',leg5:'Terminé 🏁',
+    kpi1lbl:'Taux qualité',kpi2lbl:'Taux de retouche',kpi3lbl:'Non-conformités',
+    kpi3sub:'Dernières 24h',kpi4lbl:'1er passage (FPP)',
+    bc1title:'Jours sans incident',bc1lbl:'jours sans incident',bc1prog:'Progression',
+    bc2title:'Message de la semaine',bc2prog:'Progression',bc3title:'Annonces internes'},
+  en:{brand:'QUALITY','brand-sub':'Production dashboard',
+    leg1:'In progress',leg2:'Fast forward 🚀',leg3:'Behind 🐢',leg4:'Blocked 🔥',leg5:'Done 🏁',
+    kpi1lbl:'Quality rate',kpi2lbl:'Rework rate',kpi3lbl:'Non-conformities',
+    kpi3sub:'Last 24h',kpi4lbl:'First pass (FPY)',
+    bc1title:'Days without incident',bc1lbl:'days without incident',bc1prog:'Progress',
+    bc2title:'Message of the week',bc2prog:'Progress',bc3title:'Internal announcements'}
+};
+
+function tick(){
+  const n=new Date(),loc=currentLang==='fr'?'fr-CA':'en-CA';
+  document.getElementById('clk').textContent=n.toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('clk-date').textContent=n.toLocaleDateString(loc,{weekday:'long',day:'numeric',month:'long'}).toUpperCase();
+}
+tick();setInterval(tick,1000);
+
+function badgeFor(hex){
+  const m={'#a82020':['#fbeaea','#a82020','URGENT'],'#d42020':['#fbeaea','#a82020','URGENT'],'#ef4444':['#fbeaea','#a82020','URGENT'],
+    '#b85c00':['#fdf0e4','#b85c00','PRÉVU'],'#e07c00':['#fdf0e4','#b85c00','PRÉVU'],'#f97316':['#fdf0e4','#b85c00','PRÉVU'],
+    '#1e4fa8':['#eaf0fb','#1e4fa8','INFO'],'#1a6ef7':['#eaf0fb','#1e4fa8','INFO'],'#3b82f6':['#eaf0fb','#1e4fa8','INFO'],
+    '#2d7a4f':['#eaf4ef','#2d7a4f','OK'],'#00b861':['#eaf4ef','#2d7a4f','OK'],'#22c55e':['#eaf4ef','#2d7a4f','OK']};
+  return m[hex]||['#f0ece7','#666','INFO'];
+}
+
+function applyLang(lang){
+  const t=T[lang];
+  document.querySelectorAll('[data-i]').forEach(el=>{const k=el.getAttribute('data-i');if(t[k]!==undefined)el.textContent=t[k];});
+  const fd=FD[lang];
+  const set=(id,v)=>{if(v!==undefined&&v!==null&&document.getElementById(id))document.getElementById(id).textContent=v;};
+  set('disp-kpi1sub',fd.kpi1sub);set('disp-kpi2sub',fd.kpi2sub);set('disp-kpi4sub',fd.kpi4sub);
+  set('disp-jsi-record',fd.jsiRecord);set('disp-jsi-obj',fd.jsiObj);set('disp-jsi-count',fd.jsiCount);
+  set('motiv-msg',fd.motiv);set('disp-week-label',fd.weekLabel);set('disp-week-goal',fd.weekGoal);
+  set('disp-week-prog-label',fd.weekProgLabel);
+  for(let i=1;i<=3;i++){set('ann'+i+'-text',fd['ann'+i]);set('ann'+i+'-time',fd['ann'+i+'t']);}
+  for(let i=1;i<=6;i++){set('tname-t'+i,fd['tname'+i]);set('tstatus-t'+i,fd['tstatus'+i]);}
+  if(fd.ticker){
+    const items=[...fd.ticker,...fd.ticker,...fd.ticker];
+    document.getElementById('ticker-scroll').innerHTML=items.map(([cls,ico,tag,txt])=>
+      `<div class="tk ${cls}"><div class="tk-ico">${ico}</div><div class="tk-tag">${tag}</div><div class="tk-txt">${txt}</div></div>`
+    ).join('');
+  }
+  document.getElementById('lang-flag').textContent=lang==='fr'?'🇬🇧':'🇫🇷';
+  document.getElementById('lang-label').textContent=lang==='fr'?'EN':'FR';
+  tick();
+}
+
+FD.fr.ticker=[['tkg','✅','QUALITÉ','Taux qualité global : 94% — Excellent !'],['tkr','🔥','URGENT','TABLE 5 — Retouche requise'],['tkw','🛡️','INFO','18 jours sans incident — Objectif : 30 jours']];
+FD.en.ticker=[['tkg','✅','QUALITY','Overall quality rate: 94% — Excellent!'],['tkr','🔥','URGENT','TABLE 5 — Rework required'],['tkw','🛡️','INFO','18 days without incident — Target: 30 days']];
+
+function switchLang(lang,manual){
+  document.querySelectorAll('.lf').forEach(el=>el.classList.add('fading'));
+  setTimeout(()=>{currentLang=lang;applyLang(lang);document.querySelectorAll('.lf').forEach(el=>el.classList.remove('fading'));},300);
+  if(manual){clearInterval(autoInt);autoInt=setInterval(autoSwitch,5000);}
+}
+function toggleLang(){switchLang(currentLang==='fr'?'en':'fr',true);}
+function autoSwitch(){switchLang(currentLang==='fr'?'en':'fr',false);}
+let autoInt=setInterval(autoSwitch,5000);
+applyLang(currentLang);
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+
+<script>
+const fc={apiKey:"AIzaSyBZkmAglZh1HmfVYKgy0EGfw8kuIRHOR6Q",authDomain:"agb-product.firebaseapp.com",databaseURL:"https://agb-product-default-rtdb.firebaseio.com",projectId:"agb-product",storageBucket:"agb-product.firebasestorage.app",messagingSenderId:"1067586214794",appId:"1:1067586214794:web:6f8309a3b017841a118673"};
+// App Firebase DÉDIÉE à l'affichage TV : session isolée de l'admin (évite que la
+// connexion anonyme de la TV ne déconnecte le compte admin ouvert dans le même navigateur)
+const tvApp = firebase.initializeApp(fc, 'affichageTV');
+const db = tvApp.database();
+
+// Connexion anonyme silencieuse, sur l'app dédiée uniquement
+tvApp.auth().signInAnonymously().catch((error) => {
+  console.error("Erreur de connexion anonyme :", error.code, error.message);
+});
+
+const SM={sg:{e:'✅',c:'t-green',fr:'En cours',en:'In progress'},sr:{e:'🚀',c:'t-blue',fr:'Avance rapide',en:'Fast forward'},so:{e:'🐢',c:'t-orange',fr:'En retard',en:'Behind'},sred:{e:'🔥',c:'t-red',fr:'BLOQUÉ',en:'BLOCKED'},sd:{e:'🏁',c:'t-gray',fr:'Terminé',en:'Done'}};const TM={'tok':'tkg','tow':'tko','tob':'tkr','':'tkw'};
+const IM={'tok':'✅','tow':'⚠️','tob':'🔥','':'ℹ️'};
+const GFr={'tok':'QUALITÉ','tow':'ALERTE','tob':'URGENT','':'INFO'};
+const GEn={'tok':'QUALITY','tow':'WARNING','tob':'URGENT','':'INFO'};
+
+/* ── Jours sans incident : compteur automatique ── */
+let jsiStart=null, jsiRec=34, jsiTgt=30, jsiSubF='On continue !', jsiSubE='Keep it up!', jsiLegacy=null;
+function jsiDaysSince(dateStr){
+  if(!dateStr) return null;
+  const p=String(dateStr).split('-').map(Number);
+  if(p.length<3||p.some(isNaN)) return null;
+  const start=new Date(p[0], p[1]-1, p[2]);            // minuit local — pas de décalage UTC
+  const now=new Date();
+  const today=new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.max(0, Math.round((today-start)/86400000));
+}
+function renderJsi(){
+  let jv=jsiDaysSince(jsiStart);
+  if(jv===null) jv=parseInt(jsiLegacy)||0;             // compat anciennes données
+  const jt=jsiTgt, jr=jsiRec, jrem=Math.max(0, jt-jv);
+  const el=document.getElementById('disp-jsi'); if(el) el.textContent=jv;
+  const bar=document.getElementById('jsi-prog-bar'); if(bar) bar.style.width=Math.min(100, jt>0?Math.round(jv/jt*100):0)+'%';
+  FD.fr.jsiRecord='Record : '+jr+' jours — '+jsiSubF; FD.en.jsiRecord='Record: '+jr+' days — '+jsiSubE;
+  FD.fr.jsiObj='🎯 Objectif '+jt+' jours — Encore '+jrem+' jours !'; FD.en.jsiObj='🎯 Target '+jt+' days — '+jrem+' days to go!';
+  FD.fr.jsiCount=jv+' / '+jt+' jours'; FD.en.jsiCount=jv+' / '+jt+' days';
+  applyLang(currentLang);
+}
+// La TV reste allumée : on recalcule au prochain minuit, puis toutes les 24 h
+(function scheduleMidnight(){
+  const now=new Date();
+  const next=new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 0, 0, 5);
+  setTimeout(()=>{ renderJsi(); setInterval(renderJsi, 86400000); }, next-now);
+})();
+
+let _prevAnnounceMode=null, _audioCtx=null, _firstSnapshot=true;
+function chime(type){
+  try{
+    if(!_audioCtx) _audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(_audioCtx.state==='suspended') _audioCtx.resume();
+    const ctx=_audioCtx, t0=ctx.currentTime;
+    const beep=(freq,start,dur,vol)=>{
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.type='sine'; o.frequency.value=freq;
+      g.gain.setValueAtTime(0, t0+start);
+      g.gain.linearRampToValueAtTime(vol, t0+start+0.02);
+      g.gain.linearRampToValueAtTime(0, t0+start+dur);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t0+start); o.stop(t0+start+dur+0.05);
+    };
+    if(type==='urgent'){
+      // alarme insistante : aigu-grave répété
+      beep(880,0,0.18,0.55); beep(660,0.22,0.18,0.55);
+      beep(880,0.46,0.18,0.55); beep(660,0.68,0.24,0.55);
+    } else {
+      // carillon doux montant
+      beep(523,0,0.18,0.4); beep(659,0.16,0.18,0.4); beep(784,0.32,0.32,0.4);
+    }
+  }catch(e){ console.warn('Audio indisponible (autoplay bloqué ?) :', e); }
+}
+
+// Débloque l'audio à la 1re interaction (politique navigateur). Sur lecteur Yodeck
+// avec sortie son activée, le son sort automatiquement sans interaction.
+function _unlockAudio(){
+  try{
+    if(!_audioCtx) _audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(_audioCtx.state==='suspended') _audioCtx.resume();
+    const o=_audioCtx.createOscillator(), g=_audioCtx.createGain();
+    g.gain.value=0; o.connect(g); g.connect(_audioCtx.destination);
+    o.start(); o.stop(_audioCtx.currentTime+0.01);
+  }catch(e){}
+  ['pointerdown','keydown','touchstart','click'].forEach(ev=>document.removeEventListener(ev,_unlockAudio));
+}
+['pointerdown','keydown','touchstart','click'].forEach(ev=>document.addEventListener(ev,_unlockAudio));
+
+function startDashboardListener(){
+db.ref('dashboardData').on('value',(snap)=>{
+  const d=snap.val();if(!d)return;
+  // ── Annonce plein écran : urgente (rouge) prioritaire, sinon normale (bleue) ──
+  const ov=document.getElementById('urgent-overlay');
+  let o=null, badge='', infoMode=false;
+  if(d.urgent && d.urgent.active){ o=d.urgent; badge='🚨 ANNONCE URGENTE · URGENT'; infoMode=false; }
+  else if(d.info && d.info.active){ o=d.info; badge='📢 ANNONCE · ANNOUNCEMENT'; infoMode=true; }
+  if(o){
+    document.getElementById('urg-title-fr').textContent=o.titleFr||'';
+    document.getElementById('urg-msg-fr').textContent=o.msgFr||'';
+    document.getElementById('urg-title-en').textContent=o.titleEn||o.titleFr||'';
+    document.getElementById('urg-msg-en').textContent=o.msgEn||o.msgFr||'';
+    document.getElementById('urg-badge').textContent=badge;
+    ov.classList.toggle('info-mode', infoMode);
+    ov.classList.add('show');
+  } else {
+    ov.classList.remove('show','info-mode');
+  }
+  const _mode = o ? (infoMode?'info':'urgent') : null;
+  if(_firstSnapshot){ _firstSnapshot=false; }          // 1er chargement : on ne sonne pas (évite de re-sonner à chaque rechargement)
+  else if(_mode && _mode!==_prevAnnounceMode){ chime(_mode); }
+  _prevAnnounceMode = _mode;
+  if(d.kpis){
+    const k=d.kpis;
+    if(k.qualite!==undefined)document.getElementById('disp-kpi1').textContent=k.qualite+'%';
+    if(k.retouche!==undefined)document.getElementById('disp-kpi2').textContent=k.retouche+'%';
+    if(k.nc!==undefined)document.getElementById('disp-kpi3').textContent=k.nc;
+    if(k.fpp!==undefined)document.getElementById('disp-kpi4').textContent=k.fpp+'%';
+    if(k.jsi!==undefined)document.getElementById('disp-jsi').textContent=k.jsi;
+    FD.fr.kpi1sub=k.kpi1subFr||'▲ +2% vs semaine passée';FD.en.kpi1sub=k.kpi1subEn||'▲ +2% vs last week';
+    FD.fr.kpi2sub=k.kpi2subFr||'▼ Objectif : < 5%';FD.en.kpi2sub=k.kpi2subEn||'▼ Target: < 5%';
+    FD.fr.kpi4sub='Objectif : '+(k.fppTarget||90)+'%';FD.en.kpi4sub='Target: '+(k.fppTarget||90)+'%';
+    // Jours sans incident : on mémorise les paramètres, le compteur est calculé en direct
+    jsiStart=k.jsiStartDate||null; jsiLegacy=k.jsi;
+    jsiRec=parseInt(k.jsiRecord)||34; jsiTgt=parseInt(k.jsiTarget)||30;
+    jsiSubF=k.jsiSubFr||'On continue !'; jsiSubE=k.jsiSubEn||'Keep it up!';
+    renderJsi();
+  }
+  if(d.tables){
+    for(let i=1;i<=6;i++){
+      const td=d.tables['t'+i];if(!td)continue;
+      if(td.pct!==undefined&&td.pct!==''){document.getElementById('bar-t'+i).style.width=td.pct+'%';document.getElementById('pct-t'+i).textContent=td.pct+'%';}
+      if(td.state&&SM[td.state]){const s=SM[td.state];document.getElementById('card-t'+i).className='tcard '+s.c;document.getElementById('emj-t'+i).textContent=s.e;FD.fr['tstatus'+i]=s.fr;FD.en['tstatus'+i]=s.en;}
+      if(td.nameFr)FD.fr['tname'+i]=td.nameFr;FD.en['tname'+i]=td.nameEn||td.nameFr||('TABLE '+i);
+    }
+  }
+  if(d.messages){
+    const m=d.messages;
+    if(m.motiv){FD.fr.motiv=m.motiv.fr;FD.en.motiv=m.motiv.en;}
+    if(m.week){
+      const wn=m.week.num||24;FD.fr.weekLabel='Objectif semaine '+wn;FD.en.weekLabel='Week '+wn+' goal';
+      FD.fr.weekGoal=m.week.goalFr;FD.en.weekGoal=m.week.goalEn;
+      FD.fr.weekProgLabel=m.week.progLabelFr;FD.en.weekProgLabel=m.week.progLabelEn;
+      if(m.week.prog!==undefined)document.getElementById('obj-prog').style.width=m.week.prog+'%';
+    }
+    if(m.annonces){
+      const a=m.annonces;
+      FD.fr.ann1=a.a1fr;FD.en.ann1=a.a1en;FD.fr.ann1t=a.a1t_fr;FD.en.ann1t=a.a1t_en;
+      FD.fr.ann2=a.a2fr;FD.en.ann2=a.a2en;FD.fr.ann2t=a.a2t_fr;FD.en.ann2t=a.a2t_en;
+      FD.fr.ann3=a.a3fr;FD.en.ann3=a.a3en;FD.fr.ann3t=a.a3t_fr;FD.en.ann3t=a.a3t_en;
+      [[1,'a1'],[2,'a2'],[3,'a3']].forEach(([i,k])=>{
+        const col=a[k+'color'];if(!col)return;
+        document.getElementById('dot-a'+i).style.background=col;
+        const[bg,tc,lb]=badgeFor(col);const b=document.getElementById('badge-a'+i);
+        b.style.background=bg;b.style.color=tc;b.textContent=lb;
+      });
+    }
+    if(m.ticker){
+      const td=m.ticker;
+      ['fr','en'].forEach(lang=>{
+        let arr=[];
+        [[td.m1type,td.m1fr,td.m1en],[td.m2type,td.m2fr,td.m2en],[td.m3type,td.m3fr,td.m3en]].forEach(([type,tfr,ten])=>{
+          const txt=lang==='fr'?tfr:ten;if(!txt)return;
+          const t=type||'';arr.push([TM[t],IM[t],lang==='fr'?GFr[t]:GEn[t],txt]);
+        });
+        FD[lang].ticker=arr;
+      });
+    }
+  }
+  applyLang(currentLang);
+}, (err)=>{
+  // Lecture refusée (ex. non authentifié) : visible dans la console au lieu d'échouer en silence
+  console.error('TV — lecture Firebase refusée :', err.code, err.message);
+});
+}
+
+// On ne démarre la lecture qu'une fois la connexion anonyme établie (évite la lecture trop tôt)
+let _tvListening=false;
+tvApp.auth().onAuthStateChanged((user)=>{
+  if(user && !_tvListening){ _tvListening=true; startDashboardListener(); }
+});</script>
+</body>
+</html>
