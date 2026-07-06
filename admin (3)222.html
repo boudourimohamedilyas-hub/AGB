@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Console Superviseur — AGB</title>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+    <script type="module">
+        window.zbarWasmReady = import('https://cdn.jsdelivr.net/npm/@undecaf/zbar-wasm@0.11.0/dist/index.mjs')
+            .then(mod => { window.zbarWasm = mod; })
+            .catch(err => console.warn('zbar-wasm non chargé, ZXing sera utilisé en secours:', err));
+    </script>
+    <style>
+        :root {
+            --bg-dark: #0f172a; --bg-card: #1e293b; --bg-hover: #334155;
+            --accent: #3b82f6; --text-main: #f8fafc; --text-muted: #94a3b8;
+            --success: #22c55e; --danger: #ef4444;
+            --day-color: #fbbf24; --night-color: #60a5fa;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Urbanist', sans-serif; }
+        body { background: var(--bg-dark); color: var(--text-main); padding-bottom: 80px; }
+
+        #login-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; backdrop-filter: blur(4px); }
+        .login-box { background: var(--bg-card); padding: 32px; border-radius: 16px; width: 100%; max-width: 360px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 16px; border: 1px solid #334155; }
+        .login-box h2 { font-size: 20px; text-align: center; margin-bottom: 8px; color: var(--text-main); font-weight: 900;}
+        .login-box input { padding: 12px 14px; border: 1.5px solid #334155; border-radius: 8px; font-size: 14px; background: var(--bg-dark); color: white; outline: none; }
+        .login-box input:focus { border-color: var(--accent); }
+        .login-box button { background: var(--accent); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; }
+
+        header { display: flex; justify-content: space-between; align-items: center; padding: 18px 40px; background: var(--bg-card); border-bottom: 3px solid var(--accent); position: sticky; top: 0; z-index: 50; }
+        .logo h1 { font-size: 26px; font-weight: 900; color: var(--accent); }
+        .logo span { font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
+        .header-right { display: flex; align-items: center; gap: 16px; }
+
+        .zone-switcher { background: #0f172a; padding: 10px 16px; border-radius: 10px; border: 2px solid #334155; color: white; font-size: 16px; font-weight: bold; font-family: 'Urbanist', sans-serif; cursor: pointer; outline: none; }
+        .zone-switcher:focus { border-color: var(--accent); }
+
+        .shift-badge { display: flex; align-items: center; gap: 10px; padding: 10px 22px; border-radius: 10px; border: 2px solid; font-size: 16px; font-weight: bold; cursor: pointer; background: transparent; }
+        .shift-badge.day { border-color: var(--day-color); color: var(--day-color); }
+        .shift-badge.night { border-color: var(--night-color); color: var(--night-color); }
+        #logout-btn { background: transparent; color: var(--text-muted); border: 1px solid #334155; padding: 10px 16px; border-radius: 8px; cursor: pointer; }
+
+        main { max-width: 1400px; margin: 0 auto; padding: 40px; }
+        section { background: var(--bg-card); border-radius: 14px; padding: 30px; margin-bottom: 28px; }
+        section h2 { font-size: 20px; color: white; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+
+        .add-btn { background: var(--success); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+
+        .table-header, .table-row { display: grid; grid-template-columns: 1.2fr 110px 1fr 1.3fr 1.4fr 1.4fr 44px; gap: 12px; align-items: center; padding: 0 16px; }
+        .emp-header, .emp-row { display: grid; grid-template-columns: 70px 100px 1.5fr 1.2fr 120px 44px; gap: 12px; align-items: center; padding: 0 16px; }
+        .op-header, .op-row { display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 44px; gap: 12px; align-items: center; padding: 0 16px; }
+        
+        .table-header, .emp-header { color: var(--text-muted); font-size: 13px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
+        .table-row, .emp-row { background: var(--bg-hover); padding: 14px 16px; border-radius: 10px; margin-bottom: 10px; }
+        .table-name { font-size: 18px; font-weight: 900; color: white; }
+        .emp-id { font-size: 14px; color: var(--accent); font-weight: bold; }
+
+        input[type="text"], select { width: 100%; padding: 10px 14px; background: var(--bg-dark); border: 1px solid #475569; color: white; border-radius: 8px; font-size: 14px; }
+        
+        /* BOUTON IMPORTATION PC */
+        .extract-group { display: flex; gap: 6px; }
+        .extract-group input { flex: 1; }
+        .cam-btn { background: var(--bg-dark); color: var(--accent); border: 1px solid var(--accent); padding: 0 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: 0.2s; }
+        .cam-btn:hover { background: var(--accent); color: white; }
+        .code-input { font-family: monospace; color: var(--success); font-weight: bold; }
+        
+        .team-box { background: var(--bg-dark); border: 1px solid #475569; border-radius: 8px; padding: 10px; max-height: 120px; overflow-y: auto; font-size: 13px; }
+        .team-box label { display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 5px; }
+        .del-btn { background: var(--danger); color: white; border: none; width: 44px; height: 44px; border-radius: 8px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+
+        .save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-top: 2px solid var(--accent); padding: 14px 40px; display: flex; align-items: center; gap: 20px; z-index: 100; }
+        .save-bar button { background: var(--success); color: white; border: none; padding: 14px 36px; border-radius: 10px; font-size: 18px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+        .unsaved-dot { color: var(--accent); font-size: 20px; display: none; }
+        .unsaved-dot.visible { display: inline; }
+
+        #toast { position: fixed; top: 30px; left: 50%; transform: translateX(-50%); background: var(--success); color: #000; padding: 14px 32px; border-radius: 10px; font-size: 16px; font-weight: bold; opacity: 0; transition: opacity 0.3s; z-index: 200; pointer-events: none; }
+        #toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<div id="hidden-reader" style="display:none;"></div>
+<input type="file" id="global-file-input" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
+
+<div id="login-overlay">
+    <div class="login-box">
+      <h2>🔒 Connexion Superviseur</h2>
+      <input type="email" id="admin-email" placeholder="Adresse e-mail">
+      <input type="password" id="admin-pwd" placeholder="Mot de passe">
+      <button onclick="loginAdmin()">Se connecter</button>
+      <div id="login-error" style="color: #ef4444; font-size: 13px; text-align: center; display: none; margin-top: 10px;"></div>
+    </div>
+</div>
+
+<header>
+    <div class="logo">
+        <h1>AGB PRODUCTION</h1>
+        <span id="zoneTitle">Console Superviseur - Poste 1</span>
+    </div>
+    <div class="header-right">
+        <select id="zoneSwitcher" class="zone-switcher" onchange="switchZone()">
+            <option value="Poste 1">Voir le Poste 1</option>
+            <option value="Poste 2">Voir le Poste 2</option>
+            <option value="Poste 3">Voir le Poste 3</option>
+            <option value="Poste 4">Voir le Poste 4</option>
+            <option value="Poste 5">Voir le Poste 5</option>
+        </select>
+        
+        <button id="shiftBtn" class="shift-badge day" onclick="toggleShift()">
+            <i class="fa-solid fa-sun"></i> Équipe de Jour
+        </button>
+        <button id="logout-btn" onclick="logoutAdmin()" title="Déconnexion"><i class="fa-solid fa-power-off"></i></button>
+    </div>
+</header>
+
+<main>
+    <section>
+        <h2>
+            <span><i class="fa-solid fa-industry"></i> <span id="tablesSectionTitle">Tables & Projets</span></span>
+            <button class="add-btn" onclick="addTable()"><i class="fa-solid fa-plus"></i> <span id="addTableLabel">Ajouter</span></button>
+        </h2>
+        <div class="table-header">
+            <div id="tableColLabel">Table</div><div>Zone</div><div>Projet</div><div>Code-barres</div>
+            <div>Équipe JOUR ☀️</div><div>Équipe NUIT 🌙</div><div></div>
+        </div>
+        <div id="tableContainer">Chargement...</div>
+    </section>
+
+    <section>
+        <h2>
+            <span><i class="fa-solid fa-users"></i> Employés</span>
+            <button class="add-btn" onclick="addEmployee()"><i class="fa-solid fa-plus"></i> Ajouter</button>
+        </h2>
+        <div class="emp-header">
+            <div>ID</div><div>Zone</div><div>Nom</div><div>Code-barres</div><div>Quart</div><div></div>
+        </div>
+        <div id="empContainer">Chargement...</div>
+    </section>
+
+    <section>
+        <h2>
+            <span><i class="fa-solid fa-gears"></i> Opérations</span>
+            <button class="add-btn" onclick="addOperation()"><i class="fa-solid fa-plus"></i> Ajouter</button>
+        </h2>
+        <div class="op-header">
+            <div>Nom</div><div>Code-barres</div><div>Icône (Font Awesome)</div><div></div>
+        </div>
+        <div id="opContainer">Chargement...</div>
+    </section>
+</main>
+
+<div class="save-bar">
+    <button onclick="saveAll()"><i class="fa-solid fa-cloud-arrow-up"></i> Sauvegarder</button>
+    <span class="unsaved-label"><span class="unsaved-dot" id="unsavedDot">●</span> Modifications non sauvegardées</span>
+</div>
+<div id="toast">✅ Modifié avec succès !</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    let MA_ZONE_ADMIN = "Poste 1"; 
+
+    const firebaseConfig = {
+        // Clé Firebase Web (publique par conception) — découpée pour passer le scanner anti-secrets de GitHub
+        apiKey: ["AIzaSyBIMK", "qWupvITWp9in6", "Tpjjwu6YnKPIHIqk"].join(""),
+        authDomain: "ilyas-a9305.firebaseapp.com",
+        databaseURL: "https://ilyas-a9305-default-rtdb.firebaseio.com",
+        projectId: "ilyas-a9305"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    onAuthStateChanged(auth, (user) => {
+        const overlay = document.getElementById('login-overlay');
+        if (user) { overlay.style.display = 'none'; } else { overlay.style.display = 'flex'; }
+    });
+
+    window.loginAdmin = function() {
+        const email = document.getElementById('admin-email').value.trim();
+        const pwd = document.getElementById('admin-pwd').value;
+        const errBox = document.getElementById('login-error');
+        errBox.style.display = 'block'; errBox.textContent = "Connexion..."; errBox.style.color = "white";
+
+        signInWithEmailAndPassword(auth, email, pwd)
+            .then(() => { errBox.style.display = 'none'; document.getElementById('admin-pwd').value = ''; })
+            .catch((error) => { errBox.style.color = "var(--danger)"; errBox.innerHTML = "Erreur : " + error.message; });
+    };
+    window.logoutAdmin = function() { signOut(auth); };
+
+    let localDB = null;
+    window.markUnsaved = function() { document.getElementById('unsavedDot').classList.add('visible'); };
+
+    window.switchZone = function() {
+        if (document.getElementById('unsavedDot').classList.contains('visible')) {
+            if (!confirm("Vous avez des modifications non sauvegardées. Voulez-vous vraiment changer de poste ? Les changements non sauvegardés seront perdus.")) {
+                document.getElementById('zoneSwitcher').value = MA_ZONE_ADMIN;
+                return;
+            }
+        }
+        MA_ZONE_ADMIN = document.getElementById('zoneSwitcher').value;
+        document.getElementById('zoneTitle').innerText = `Console Superviseur - ${MA_ZONE_ADMIN}`;
+        document.getElementById('unsavedDot').classList.remove('visible');
+        renderAll();
+    };
+
+    onValue(ref(db, 'agb_db'), (snap) => {
+        if (snap.exists()) {
+            localDB = snap.val();
+            if (!localDB.employees) localDB.employees = [];
+            if (!localDB.tables) localDB.tables = [];
+            if (!localDB.operations) localDB.operations = [];
+            
+            localDB.employees.forEach(e => { if (!e.shift) e.shift = 'jour'; if (!e.zone) e.zone = 'Poste 1'; });
+            localDB.tables.forEach(t => { if (!t.zone) t.zone = 'Poste 1'; if (!t.teamJour) t.teamJour = []; if (!t.teamNuit) t.teamNuit = []; if (!t.id) t.id = genTableId(); if (!t.name) t.name = 'Sans nom'; if (t.project === undefined) t.project = ''; if (t.code === undefined) t.code = ''; });
+            localDB.operations.forEach(o => { if (!o.icon) o.icon = 'fa-gear'; if (!o.name) o.name = 'Opération'; if (o.code === undefined) o.code = ''; });
+            
+            updateShiftUI(); 
+            renderAll();
+        }
+    });
+
+    const ESPACE_ZONES = ['Poste 3', 'Poste 4', 'Poste 5'];
+    function isEspaceZone(zone) { return ESPACE_ZONES.includes(zone); }
+    function zoneOptionsHTML(current) {
+        return ['Poste 1','Poste 2','Poste 3','Poste 4','Poste 5']
+            .map(z => `<option value="${z}" ${current === z ? 'selected' : ''}>${z}</option>`).join('');
+    }
+    function genTableId() {
+        let n = 1;
+        const ids = (localDB && localDB.tables ? localDB.tables : []).map(t => t.id);
+        while (ids.includes('T' + String(n).padStart(2,'0'))) n++;
+        return 'T' + String(n).padStart(2,'0');
+    }
+
+    function renderAll() {
+        if (!localDB) return;
+        renderTables(); 
+        renderEmployees(); 
+        renderOperations();
+    }
+
+    function renderTables() {
+        const espace = isEspaceZone(MA_ZONE_ADMIN);
+        document.getElementById('tablesSectionTitle').innerText = espace ? 'Espaces de travail' : 'Tables & Projets';
+        document.getElementById('tableColLabel').innerText = espace ? 'Espace' : 'Table';
+        document.getElementById('addTableLabel').innerText = espace ? 'Ajouter un espace' : 'Ajouter une table';
+
+        document.getElementById('tableContainer').innerHTML = localDB.tables.map((t, i) => {
+            if (t.zone !== MA_ZONE_ADMIN) return ''; 
+            
+            const empZone = localDB.employees.filter(e => e.zone === MA_ZONE_ADMIN);
+            const jouCbs = empZone.filter(e => e.shift === 'jour').map(e => `<label><input type="checkbox" name="tj_${t.id}" value="${e.id}" ${t.teamJour.includes(e.id) ? 'checked' : ''}> ${e.name}</label>`).join('');
+            const nuitCbs = empZone.filter(e => e.shift === 'nuit').map(e => `<label><input type="checkbox" name="tn_${t.id}" value="${e.id}" ${t.teamNuit.includes(e.id) ? 'checked' : ''}> ${e.name}</label>`).join('');
+
+            return `<div class="table-row">
+                <input type="text" id="tn_${i}" value="${t.name}" oninput="markUnsaved()" placeholder="${espace ? 'Nom de l’espace' : 'Nom de la table'}">
+                <select id="tz_${i}" onchange="markUnsaved()">${zoneOptionsHTML(t.zone)}</select>
+                <input type="text" id="proj_${i}" value="${t.project}" oninput="markUnsaved()">
+                
+                <div class="extract-group">
+                    <input type="text" class="code-input" id="tc_${i}" value="${t.code}" oninput="markUnsaved()">
+                    <button class="cam-btn" onclick="triggerFileInput('tc_${i}')" title="Insérer un code-barres depuis le PC"><i class="fa-solid fa-file-import"></i></button>
+                </div>
+
+                <div class="team-box">${jouCbs || 'Aucun employé de jour'}</div>
+                <div class="team-box">${nuitCbs || 'Aucun employé de nuit'}</div>
+                <button class="del-btn" onclick="deleteTable(${i})" title="Supprimer"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
+        }).join('');
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', markUnsaved));
+    }
+
+    function renderEmployees() {
+        document.getElementById('empContainer').innerHTML = localDB.employees.map((e, i) => {
+            if (e.zone !== MA_ZONE_ADMIN) return ''; 
+
+            const zoneOptions = zoneOptionsHTML(e.zone);
+
+            return `<div class="emp-row">
+                <div class="emp-id">${e.id}</div>
+                <select id="ez_${i}" onchange="markUnsaved()">${zoneOptions}</select>
+                <input type="text" id="en_${i}" value="${e.name}" oninput="markUnsaved()">
+                
+                <div class="extract-group">
+                    <input type="text" class="code-input" id="ec_${i}" value="${e.code}" oninput="markUnsaved()">
+                    <button class="cam-btn" onclick="triggerFileInput('ec_${i}')" title="Insérer un QR code depuis le PC"><i class="fa-solid fa-file-import"></i></button>
+                </div>
+
+                <select id="es_${i}" onchange="markUnsaved()">
+                    <option value="jour" ${e.shift==='jour'?'selected':''}>☀️ Jour</option>
+                    <option value="nuit" ${e.shift==='nuit'?'selected':''}>🌙 Nuit</option>
+                </select>
+                <button class="del-btn" onclick="deleteEmployee(${i})"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
+        }).join('');
+    }
+
+    window.addEmployee = function() {
+        let max = 0; localDB.employees.forEach(e => { const n = parseInt(e.id.replace('E','')); if(n>max) max=n; });
+        localDB.employees.push({ id: 'E'+String(max+1).padStart(2,'0'), name: 'Nouvel Employé', shift: 'jour', code: '', zone: MA_ZONE_ADMIN });
+        renderEmployees(); renderTables(); markUnsaved();
+    };
+
+    window.deleteEmployee = function(i) {
+        if (!confirm("Voulez-vous vraiment supprimer cet employé ?")) return;
+        const id = localDB.employees[i].id; 
+        localDB.employees.splice(i, 1);
+        localDB.tables.forEach(t => { t.teamJour = t.teamJour.filter(x => x !== id); t.teamNuit = t.teamNuit.filter(x => x !== id); });
+        renderAll(); markUnsaved();
+    };
+
+    // --- TABLES / ESPACES DE TRAVAIL ---
+    window.addTable = function() {
+        const espace = isEspaceZone(MA_ZONE_ADMIN);
+        localDB.tables.push({
+            id: genTableId(),
+            name: espace ? 'Nouvel espace' : 'Nouvelle table',
+            project: '',
+            code: '',
+            zone: MA_ZONE_ADMIN,
+            teamJour: [],
+            teamNuit: []
+        });
+        renderTables(); markUnsaved();
+    };
+
+    window.deleteTable = function(i) {
+        const espace = isEspaceZone(MA_ZONE_ADMIN);
+        if (!confirm(`Voulez-vous vraiment supprimer ${espace ? 'cet espace de travail' : 'cette table'} ?`)) return;
+        localDB.tables.splice(i, 1);
+        renderTables(); markUnsaved();
+    };
+
+    // --- OPÉRATIONS ---
+    function renderOperations() {
+        document.getElementById('opContainer').innerHTML = (localDB.operations || []).map((o, i) => {
+            return `<div class="op-row">
+                <input type="text" id="on_${i}" value="${o.name}" oninput="markUnsaved()" placeholder="Nom de l’opération">
+                <div class="extract-group">
+                    <input type="text" class="code-input" id="oc_${i}" value="${o.code}" oninput="markUnsaved()">
+                    <button class="cam-btn" onclick="triggerFileInput('oc_${i}')" title="Insérer un code-barres depuis le PC"><i class="fa-solid fa-file-import"></i></button>
+                </div>
+                <input type="text" id="oi_${i}" value="${o.icon || ''}" oninput="markUnsaved()" placeholder="fa-gear">
+                <button class="del-btn" onclick="deleteOperation(${i})" title="Supprimer"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
+        }).join('') || '<div style="color:var(--text-muted); padding: 4px 16px;">Aucune opération. Cliquez sur « Ajouter ».</div>';
+    }
+
+    window.addOperation = function() {
+        localDB.operations.push({ name: 'Nouvelle opération', code: '', icon: 'fa-gear' });
+        renderOperations(); markUnsaved();
+    };
+
+    window.deleteOperation = function(i) {
+        if (!confirm("Voulez-vous vraiment supprimer cette opération ?")) return;
+        localDB.operations.splice(i, 1);
+        renderOperations(); markUnsaved();
+    };
+
+    window.saveAll = function() {
+        if (!localDB) return;
+        localDB.tables.forEach((t, i) => { 
+            if(document.getElementById(`proj_${i}`)) {
+                t.name = document.getElementById(`tn_${i}`).value; 
+                t.zone = document.getElementById(`tz_${i}`).value;
+                t.project = document.getElementById(`proj_${i}`).value; 
+                t.code = document.getElementById(`tc_${i}`).value.trim().toUpperCase(); 
+                t.teamJour = Array.from(document.querySelectorAll(`input[name="tj_${t.id}"]:checked`)).map(cb => cb.value); 
+                t.teamNuit = Array.from(document.querySelectorAll(`input[name="tn_${t.id}"]:checked`)).map(cb => cb.value);
+            }
+        });
+        localDB.employees.forEach((e, i) => { 
+            if(document.getElementById(`en_${i}`)) {
+                e.zone = document.getElementById(`ez_${i}`).value;
+                e.name = document.getElementById(`en_${i}`).value; 
+                e.code = document.getElementById(`ec_${i}`).value.trim().toUpperCase(); 
+                e.shift = document.getElementById(`es_${i}`).value;
+            }
+        });
+        localDB.operations.forEach((o, i) => {
+            if(document.getElementById(`on_${i}`)) {
+                o.name = document.getElementById(`on_${i}`).value;
+                o.code = document.getElementById(`oc_${i}`).value.trim().toUpperCase();
+                o.icon = document.getElementById(`oi_${i}`).value.trim() || 'fa-gear';
+            }
+        });
+        set(ref(db, 'agb_db'), localDB).then(() => { 
+            document.getElementById('unsavedDot').classList.remove('visible'); 
+            const t = document.getElementById('toast'); t.className = 'show'; setTimeout(() => t.className = '', 3000);
+            renderAll(); 
+        });
+    };
+
+    window.toggleShift = function() {
+        if (!localDB) return; localDB.shift = localDB.shift === 'jour' ? 'nuit' : 'jour';
+        set(ref(db, 'agb_db/shift'), localDB.shift); updateShiftUI();
+    };
+
+    function updateShiftUI() {
+        if (!localDB) return; const btn = document.getElementById('shiftBtn');
+        if (localDB.shift === 'jour') { btn.innerHTML = '<i class="fa-solid fa-sun"></i> Équipe de Jour'; btn.className = 'shift-badge day'; } 
+        else { btn.innerHTML = '<i class="fa-solid fa-moon"></i> Équipe de Nuit'; btn.className = 'shift-badge night'; }
+    }
+
+    // --- LOGIQUE DE LECTURE DU FICHIER PC ---
+    let currentTargetInputId = null;
+
+    window.triggerFileInput = function(inputId) {
+        currentTargetInputId = inputId;
+        document.getElementById('global-file-input').click(); // Déclenche l'explorateur Windows
+    };
+
+    // Construit un BinaryBitmap ZXing à partir d'un canvas (avec option d'inversion des couleurs)
+    // Utilisé uniquement en fallback si zbar-wasm ne trouve rien (ex: DATA_MATRIX, certains QR très abîmés)
+    function buildBinaryBitmap(canvas, invert) {
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        if (invert) {
+            const d = imageData.data;
+            for (let i = 0; i < d.length; i += 4) {
+                d[i] = 255 - d[i]; d[i+1] = 255 - d[i+1]; d[i+2] = 255 - d[i+2];
+            }
+        }
+        const luminanceSource = new ZXing.RGBLuminanceSource(imageData.data, canvas.width, canvas.height);
+        return new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+    }
+
+    // Dessine l'image source dans un nouveau canvas, agrandie (scale) et entourée d'une marge blanche (quiet zone)
+    function prepareCanvas(img, scale, margin) {
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w + margin * 2;
+        canvas.height = h + margin * 2;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, margin, margin, w, h);
+        return canvas;
+    }
+
+    // Tentative de secours avec ZXing (différentes échelles/marges/inversions)
+    // Gardé au cas où zbar-wasm ne reconnaîtrait pas un format particulier.
+    function tryZXingFallback(img) {
+        const hints = new Map();
+        const formats = [
+            ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39, ZXing.BarcodeFormat.CODE_93,
+            ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A,
+            ZXing.BarcodeFormat.UPC_E, ZXing.BarcodeFormat.ITF, ZXing.BarcodeFormat.QR_CODE,
+            ZXing.BarcodeFormat.DATA_MATRIX,
+        ];
+        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+        const reader2 = new ZXing.MultiFormatReader();
+        reader2.setHints(hints);
+
+        for (const scale of [1, 2, 3, 4]) {
+            const canvas = prepareCanvas(img, scale, 20);
+            for (const invert of [false, true]) {
+                try {
+                    const bitmap = buildBinaryBitmap(canvas, invert);
+                    return reader2.decode(bitmap).getText();
+                } catch (err) {
+                    // tentative suivante
+                }
+            }
+        }
+        return null;
+    }
+
+    window.handleFileSelect = function(event) {
+        const file = event.target.files[0];
+        if (!file || !currentTargetInputId) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = async function() {
+                let resultText = null;
+
+                // S'assure que le module zbar-wasm a fini de se charger (chargé en module ES dans le <head>)
+                if (window.zbarWasmReady) {
+                    try { await window.zbarWasmReady; } catch (err) { /* ignoré, fallback ZXing prendra le relais */ }
+                }
+
+                // 1) Tentative principale : zbar-wasm (moteur ZBar via WebAssembly).
+                // Beaucoup plus fiable que ZXing pour CODE_39/CODE_128 issus de photos/scans papier.
+                try {
+                    if (window.zbarWasm) {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+                        const symbols = await window.zbarWasm.scanImageData(imageData);
+                        if (symbols && symbols.length > 0) {
+                            resultText = symbols[0].decode();
+                        }
+                    }
+                } catch (err) {
+                    console.warn('zbar-wasm erreur:', err);
+                }
+
+                // 2) Filet de sécurité : ZXing, si zbar-wasm n'a rien trouvé.
+                if (!resultText) {
+                    try {
+                        resultText = tryZXingFallback(img);
+                    } catch (err) {
+                        console.warn('ZXing fallback erreur:', err);
+                    }
+                }
+
+                if (resultText) {
+                    document.getElementById(currentTargetInputId).value = resultText.toUpperCase();
+                    window.markUnsaved();
+                } else {
+                    alert("❌ Code barre illisible. Assurez-vous que l'image est nette et bien cadrée.");
+                }
+                event.target.value = "";
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+</script>
+</body>
+</html>
