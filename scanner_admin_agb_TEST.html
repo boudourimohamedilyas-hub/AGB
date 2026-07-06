@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner Plancher - AGB Production</title>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a; --bg-card: #1e293b; --bg-hover: #334155; --accent: #f97316;
+            --text-main: #f8fafc; --text-muted: #94a3b8; --success: #22c55e; --danger: #ef4444;
+            --day-color: #fbbf24; --night-color: #60a5fa;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Urbanist', sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); padding-bottom: 50px;}
+
+        header { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; background-color: var(--bg-card); border-bottom: 2px solid var(--accent); }
+        .logo-area h1 { font-size: 28px; font-weight: 900; color: var(--accent); letter-spacing: 1px; }
+        .logo-area span { font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px;}
+        
+        .header-controls { display: flex; gap: 20px; align-items: center; }
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 10px; }
+        .btn-shift { background: var(--bg-hover); color: white; font-size: 18px; border: 2px solid transparent; transition: all 0.2s; }
+        .btn-shift.day { border-color: var(--day-color); color: var(--day-color); }
+        .btn-shift.night { border-color: var(--night-color); color: var(--night-color); }
+
+        main { padding: 40px; max-width: 1600px; margin: 0 auto; }
+
+        /* STATUS TV */
+        .tv-status-panel { background: #000; border: 3px solid var(--accent); padding: 30px; border-radius: 15px; margin-bottom: 40px; text-align: center; }
+        .tv-status-panel h2 { color: var(--accent); margin-bottom: 15px;}
+        .shortcut-hint { display: inline-block; background: #334155; padding: 5px 15px; border-radius: 20px; font-size: 14px; color: #cbd5e1; margin-bottom: 20px; border: 1px solid #475569; }
+        .shortcut-key { background: #cbd5e1; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-family: monospace; }
+        
+        .scanner-input { width: 100%; max-width: 600px; padding: 20px; font-size: 24px; text-align: center; border-radius: 8px; border: 2px solid #475569; background: var(--bg-dark); color: white; margin: 0 auto 20px auto; display: block; }
+        .scanner-input:focus { border-color: var(--success); outline: none; box-shadow: 0 0 20px rgba(34, 197, 94, 0.2); }
+        .btn-reset { background: var(--danger); color: white; margin: 0 auto;}
+
+        /* ADMIN */
+        .admin-section { background: var(--bg-card); padding: 30px; border-radius: 15px; margin-bottom: 30px; }
+        .admin-section h2 { margin-bottom: 20px; color: var(--accent); border-bottom: 1px solid var(--bg-hover); padding-bottom: 10px; }
+        
+        .admin-table-row { display: grid; grid-template-columns: 1fr 1fr 2fr 1.5fr 1.5fr; gap: 15px; margin-bottom: 15px; align-items: center; background: var(--bg-hover); padding: 15px; border-radius: 8px;}
+        .admin-emp-row { display: grid; grid-template-columns: 80px 1.5fr 2fr 1fr 50px; gap: 15px; margin-bottom: 10px; align-items: center; }
+        
+        input[type="text"], select.admin-select { width: 100%; padding: 12px; background: var(--bg-dark); border: 1px solid #475569; color: white; border-radius: 6px; font-size: 16px; }
+        
+        .extraction-group { display: flex; gap: 5px; }
+        .extraction-group input[type="text"] { flex-grow: 1; font-family: monospace; color: var(--success); font-weight: bold;}
+        .img-upload-btn { background: var(--bg-dark); color: var(--text-main); border: 1px solid var(--accent); padding: 0 15px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; }
+        .img-upload-btn:hover { background: var(--accent); color: white; }
+
+        .team-select { max-height: 100px; overflow-y: auto; background: var(--bg-dark); padding: 10px; border-radius: 6px; border: 1px solid #475569; font-size: 12px;}
+        .team-select label { display: block; margin-bottom: 5px; cursor: pointer; }
+        
+        .save-btn { background: var(--success); color: white; padding: 20px; font-size: 22px; border: none; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 20px; }
+        
+        #toast { visibility: hidden; min-width: 250px; background-color: var(--danger); color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 10; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 18px; font-weight: bold; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    </style>
+</head>
+<body>
+
+    <div id="hidden-reader" style="display: none;"></div>
+
+    <header>
+        <div class="logo-area">
+            <h1>AGB PRODUCTION</h1>
+            <span>Poste Scanner & Admin</span>
+        </div>
+        <div class="header-controls">
+            <button id="shiftBtn" class="btn btn-shift day" onclick="toggleShift()">
+                <i class="fa-solid fa-sun"></i> Équipe de Jour
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <!-- PANNEAU DE SCAN -->
+        <div class="tv-status-panel">
+            <h2><i class="fa-solid fa-barcode"></i> SCANNEZ ICI</h2>
+            <div style="margin-bottom: 15px;">
+                <label style="color: var(--text-muted); font-size: 14px; margin-right: 8px;">TV pilotée :</label>
+                <select id="posteSelect" class="admin-select" style="width:auto; display:inline-block;" onchange="changerPoste()">
+                    <option value="Poste 1">Poste 1</option>
+                    <option value="Poste 2">Poste 2</option>
+                </select>
+            </div>
+            <div class="shortcut-hint"><i class="fa-solid fa-keyboard"></i> Appuyez sur <span class="shortcut-key">ESPACE</span> pour changer Jour/Nuit</div>
+            
+            <input type="text" id="mainScanner" class="scanner-input" placeholder="La douchette écrit ici..." autocomplete="off">
+            <div id="currentStepText" style="font-size: 20px; color: var(--success); margin-bottom: 20px; font-weight: bold;">En attente de scan...</div>
+            <button class="btn btn-reset" onclick="resetTVWorkflow()"><i class="fa-solid fa-rotate-left"></i> Réinitialiser l'écran TV</button>
+        </div>
+
+        <h1 style="font-size: 36px; margin-bottom: 30px; border-top: 2px solid #334155; padding-top: 40px;"><i class="fa-solid fa-wand-magic-sparkles"></i> Console Admin</h1>
+        
+        <!-- SECTION TABLES -->
+        <div class="admin-section">
+            <h2><i class="fa-solid fa-industry"></i> Tables et Projets</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 2fr 1.5fr 1.5fr; gap: 15px; margin-bottom: 10px; color: var(--text-muted); font-weight: bold; font-size: 14px;">
+                <div>Nom</div><div>Projet Actuel</div><div>Code-barres (Extrait)</div><div>Équipe JOUR ☀️</div><div>Équipe NUIT 🌙</div>
+            </div>
+            <div id="adminTableContainer">Chargement depuis le cloud...</div>
+        </div>
+
+        <!-- SECTION EMPLOYÉS -->
+        <div class="admin-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--bg-hover); padding-bottom: 10px;">
+                <h2 style="border: none; margin: 0; padding: 0;"><i class="fa-solid fa-users"></i> Employés</h2>
+                <button onclick="addEmployee()" class="btn" style="background: var(--success); color: white; padding: 8px 15px; font-size: 14px;"><i class="fa-solid fa-plus"></i> Ajouter</button>
+            </div>
+            <div class="admin-emp-row" style="color: var(--text-muted); font-weight: bold; font-size: 14px;">
+                <div>ID</div><div>Nom</div><div>Code-barres (Extrait)</div><div>Quart</div><div>Suppr.</div>
+            </div>
+            <div id="adminEmployeeContainer"></div>
+        </div>
+
+        <button class="save-btn" onclick="saveAdminData()"><i class="fa-solid fa-cloud-arrow-up"></i> Sauvegarder dans le Cloud</button>
+    </main>
+
+    <div id="toast">Message</div>
+
+    <!-- FIREBASE SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // VOTRE CONFIGURATION FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyBIMKqWupvITWp9in6Tpjjwu6YnKPIHIqk",
+            authDomain: "ilyas-a9305.firebaseapp.com",
+            databaseURL: "https://ilyas-a9305-default-rtdb.firebaseio.com",
+            projectId: "ilyas-a9305",
+            storageBucket: "ilyas-a9305.firebasestorage.app",
+            messagingSenderId: "235632469385",
+            appId: "1:235632469385:web:e2e8cb4d06038fa02dad58",
+            measurementId: "G-S61Z0SFJXL"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const defaultData = {
+            shift: 'jour',
+            employees: [
+                { id: "E01", name: "Marc Tremblay", shift: "jour", code: "EMP001" },
+                { id: "E02", name: "Lucie Bouchard", shift: "jour", code: "EMP002" }
+            ],
+            tables: [
+                { id: "T1", name: "Table 1", project: "J6715-2", teamJour: ["E01"], teamNuit: [], code: "" },
+                { id: "T2", name: "Table 2", project: "J6715-3", teamJour: ["E02"], teamNuit: [], code: "" },
+                { id: "T3", name: "Table 3", project: "A VENIR", teamJour: [], teamNuit: [], code: "" },
+                { id: "T4", name: "Table 4", project: "A VENIR", teamJour: [], teamNuit: [], code: "" },
+                { id: "T5", name: "Table 5", project: "A VENIR", teamJour: [], teamNuit: [], code: "" },
+                { id: "T6", name: "Table 6", project: "A VENIR", teamJour: [], teamNuit: [], code: "" }
+            ],
+            operations: [
+                { name: "SOUDAGE", code: "OP_SOUDAGE", icon: "fa-fire" },
+                { name: "ASSEMBLAGE", code: "OP_ASSEMBLAGE", icon: "fa-screwdriver-wrench" },
+                { name: "TESTAGE", code: "OP_TEST", icon: "fa-vial" },
+                { name: "QUITTER", code: "OP_QUITTER", icon: "fa-power-off" }
+            ]
+        };
+
+        let localDB = null;
+        let currentState = { step: 1, session: { emp: null, table: null, op: null } };
+        const scannerInput = document.getElementById('mainScanner');
+
+        // === POSTE PILOTÉ : doit correspondre au poste affiché sur la TV ===
+        const MON_POSTE = localStorage.getItem('agb_test_poste') || 'Poste 1';
+        const statePath = 'agb_state/' + MON_POSTE.replace(/\s+/g, '_'); // "Poste 1" -> "agb_state/Poste_1"
+        const posteSel = document.getElementById('posteSelect');
+        if (posteSel) posteSel.value = MON_POSTE;
+
+        window.changerPoste = function() {
+            localStorage.setItem('agb_test_poste', document.getElementById('posteSelect').value);
+            location.reload(); // recharge pour ecouter/ecrire sur le bon poste
+        };
+
+        window.html5QrCode = null;
+        try { window.html5QrCode = new Html5Qrcode("hidden-reader"); } catch(e) {}
+
+        // 1. Lire la base depuis Firebase
+        onValue(ref(db, 'agb_db'), (snapshot) => {
+            if (snapshot.exists()) {
+                localDB = snapshot.val();
+                if(!localDB.employees) localDB.employees = [];
+                if(!localDB.tables) localDB.tables = [];
+                if(!localDB.operations) localDB.operations = [];
+                
+                localDB.employees.forEach(e => { if(!e.shift) e.shift='jour'; if(!e.code) e.code=""; });
+                localDB.tables.forEach(t => { if(!t.code) t.code=""; if(!t.teamJour) t.teamJour=[]; if(!t.teamNuit) t.teamNuit=[]; });
+                
+                updateShiftUI();
+                renderAdmin();
+            } else {
+                set(ref(db, 'agb_db'), defaultData);
+                set(ref(db, statePath), currentState);
+            }
+        });
+
+        // 2. Lire l'état du Scan depuis Firebase
+        onValue(ref(db, statePath), (snapshot) => {
+            if (snapshot.exists()) {
+                currentState = snapshot.val();
+                if (!currentState.session) currentState.session = {}; 
+                updateStatusUI();
+            }
+        });
+
+        function updateStatusUI() {
+            const statusDiv = document.getElementById('currentStepText');
+            if(currentState.step === 1) statusDiv.innerHTML = "Étape 1 : Attente du scan Employé...";
+            if(currentState.step === 2 && currentState.session.emp) statusDiv.innerHTML = `Étape 2 : ${currentState.session.emp.name} -> Scannez la table`;
+            if(currentState.step === 3 && currentState.session.table) statusDiv.innerHTML = `Étape 3 : Scannez l'opération pour la Table ${currentState.session.table.name}`;
+            if(currentState.step === 4) statusDiv.innerHTML = `Succès ! Enregistré.`;
+        }
+
+        // --- GESTION DU SCANNER ---
+        scannerInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const code = scannerInput.value.trim().toUpperCase();
+                if (code !== '') {
+                    processScan(code);
+                    scannerInput.value = '';
+                }
+            }
+        });
+
+        // --- NOUVEAU : RACCOURCI CLAVIER TOUCHE ESPACE ---
+        document.addEventListener('keydown', function(e) {
+            // Ne pas déclencher si on est dans l'admin et qu'on tape du texte
+            const isTypingInAdmin = (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') 
+                                    && e.target.id !== 'mainScanner';
+
+            if (isTypingInAdmin) return;
+
+            // Si on tape sur Espace
+            if (e.code === 'Space' || e.key === ' ') {
+                e.preventDefault(); // Empêche d'écrire un espace blanc dans la case
+                window.toggleShift(); // Alterne Jour/Nuit
+            }
+        });
+
+        // --- SÉCURITÉ ANTI-ERREUR : AIMANT À CURSEUR ---
+        // 1. Si on clique n'importe où, on remet le curseur dans la case (sauf dans l'admin)
+        document.addEventListener('click', (e) => {
+            const isTypingInAdmin = (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') 
+                                    && e.target.id !== 'mainScanner';
+            if (!isTypingInAdmin) {
+                scannerInput.focus();
+            }
+        });
+
+        // 2. Vérification toutes les 2 secondes : si le curseur a été perdu, on le remet
+        setInterval(() => {
+            if (document.activeElement !== scannerInput) {
+                const isTypingInAdmin = (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT');
+                if (!isTypingInAdmin) {
+                    scannerInput.focus();
+                }
+            }
+        }, 2000);
+
+        // Forcer le focus au démarrage
+        window.onload = function() {
+            scannerInput.focus();
+        };
+
+        function processScan(scannedCode) {
+            if(!localDB) return;
+            let found = false;
+            let newState = JSON.parse(JSON.stringify(currentState)); 
+            if (!newState.session) newState.session = {}; 
+
+            if (currentState.step === 1) {
+                const emp = localDB.employees.find(e => e.code && e.code.toUpperCase() === scannedCode);
+                if (emp) {
+                    if (emp.shift !== localDB.shift) {
+                        showToast("Employé du quart " + emp.shift + " ! Basculez l'équipe.");
+                        return;
+                    }
+                    newState.session.emp = emp;
+                    newState.step = 2;
+                    found = true;
+                }
+            } 
+            else if (currentState.step === 2) {
+                const table = localDB.tables.find(t => t.code && t.code.toUpperCase() === scannedCode);
+                if (table) {
+                    newState.session.table = table;
+                    newState.step = 3;
+                    found = true;
+                }
+            } 
+            else if (currentState.step === 3) {
+                const op = localDB.operations.find(o => o.code && o.code.toUpperCase() === scannedCode);
+                if (op) {
+                    newState.session.op = op;
+                    newState.step = 4;
+                    found = true;
+                    setTimeout(() => { window.resetTVWorkflow(); }, 3000);
+                }
+            }
+
+            if (found) {
+                set(ref(db, statePath), newState);
+            } else {
+                showToast("Code inconnu : " + scannedCode);
+            }
+        }
+
+        window.resetTVWorkflow = function() {
+            set(ref(db, statePath), { step: 1, session: { emp: null, table: null, op: null } });
+            scannerInput.focus();
+        };
+
+        window.toggleShift = function() {
+            if(!localDB) return;
+            // Alterner entre jour et nuit
+            localDB.shift = localDB.shift === 'jour' ? 'nuit' : 'jour';
+            
+            // Effet visuel immédiat sur le bouton
+            const btn = document.getElementById('shiftBtn');
+            btn.style.transform = 'scale(0.95)';
+            setTimeout(() => btn.style.transform = 'scale(1)', 150);
+
+            // Mettre à jour Firebase (qui mettra à jour la TV et le bouton)
+            set(ref(db, 'agb_db/shift'), localDB.shift); 
+            
+            // Re-focaliser la barre de scan au cas où
+            scannerInput.focus();
+        };
+
+        function updateShiftUI() {
+            if(!localDB) return;
+            const btn = document.getElementById('shiftBtn');
+            if (localDB.shift === 'jour') {
+                btn.innerHTML = '<i class="fa-solid fa-sun"></i> Équipe de Jour';
+                btn.className = 'btn btn-shift day';
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-moon"></i> Équipe de Nuit';
+                btn.className = 'btn btn-shift night';
+            }
+        }
+
+        window.extractCodeFromImage = function(fileInput, targetInputId) {
+            if (fileInput.files.length === 0) return;
+            const file = fileInput.files[0];
+            if (!window.html5QrCode) { showToast("Lecteur d'image non prêt."); return; }
+
+            window.html5QrCode.scanFile(file, true)
+            .then(decodedText => {
+                document.getElementById(targetInputId).value = decodedText;
+                showToast("✅ Code extrait : " + decodedText);
+            })
+            .catch(err => {
+                showToast("❌ Impossible de lire l'image.");
+            });
+            fileInput.value = "";
+        };
+
+        function renderAdmin() {
+            if(!localDB) return;
+
+            const createCheckboxes = (tableId, shiftType, selectedIds) => {
+                const shiftEmployees = localDB.employees.filter(e => e.shift === shiftType);
+                return `<div class="team-select">` + 
+                    shiftEmployees.map(e => `
+                        <label><input type="checkbox" name="team_${shiftType}_${tableId}" value="${e.id}" ${selectedIds.includes(e.id) ? 'checked' : ''}> ${e.name}</label>
+                    `).join('') + `</div>`;
+            };
+
+            document.getElementById('adminTableContainer').innerHTML = localDB.tables.map((t, index) => `
+                <div class="admin-table-row">
+                    <div style="font-size: 18px; font-weight: bold; color:white;">${t.name}</div>
+                    <input type="text" id="proj_${index}" value="${t.project}">
+                    <div class="extraction-group">
+                        <input type="text" id="t_code_${index}" value="${t.code}">
+                        <label class="img-upload-btn"><i class="fa-solid fa-camera"></i> <input type="file" accept="image/*" style="display:none;" onchange="extractCodeFromImage(this, 't_code_${index}')"></label>
+                    </div>
+                    <div>${createCheckboxes(t.id, 'jour', t.teamJour)}</div>
+                    <div>${createCheckboxes(t.id, 'nuit', t.teamNuit)}</div>
+                </div>
+            `).join('');
+
+            document.getElementById('adminEmployeeContainer').innerHTML = localDB.employees.map((e, index) => `
+                <div class="admin-emp-row">
+                    <div style="font-size: 14px; color:var(--accent);">${e.id}</div>
+                    <input type="text" id="emp_name_${index}" value="${e.name}">
+                    <div class="extraction-group">
+                        <input type="text" id="e_code_${index}" value="${e.code}">
+                        <label class="img-upload-btn"><i class="fa-solid fa-camera"></i> <input type="file" accept="image/*" style="display:none;" onchange="extractCodeFromImage(this, 'e_code_${index}')"></label>
+                    </div>
+                    <select id="emp_shift_${index}" class="admin-select">
+                        <option value="jour" ${e.shift === 'jour' ? 'selected' : ''}>☀️ Jour</option>
+                        <option value="nuit" ${e.shift === 'nuit' ? 'selected' : ''}>🌙 Nuit</option>
+                    </select>
+                    <button onclick="deleteEmployee(${index})" style="background:var(--danger); color:white; border:none; padding:10px; border-radius:6px; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            `).join('');
+        }
+
+        window.addEmployee = function() {
+            let maxId = 0;
+            localDB.employees.forEach(e => {
+                const num = parseInt(e.id.replace('E', ''));
+                if (num > maxId) maxId = num;
+            });
+            const newId = "E" + String(maxId + 1).padStart(2, '0');
+            localDB.employees.push({ id: newId, name: "Nouvel Employé", shift: "jour", code: "" });
+            renderAdmin(); 
+        };
+
+        window.deleteEmployee = function(index) {
+            if(confirm("Supprimer cet employé ?")) {
+                localDB.employees.splice(index, 1);
+                renderAdmin();
+            }
+        };
+
+        window.saveAdminData = function() {
+            localDB.tables.forEach((t, index) => {
+                t.project = document.getElementById(`proj_${index}`).value;
+                t.code = document.getElementById(`t_code_${index}`).value.trim().toUpperCase();
+                
+                const jourChecks = document.querySelectorAll(`input[name="team_jour_${t.id}"]:checked`);
+                t.teamJour = Array.from(jourChecks).map(cb => cb.value);
+
+                const nuitChecks = document.querySelectorAll(`input[name="team_nuit_${t.id}"]:checked`);
+                t.teamNuit = Array.from(nuitChecks).map(cb => cb.value);
+            });
+
+            localDB.employees.forEach((e, index) => {
+                e.name = document.getElementById(`emp_name_${index}`).value;
+                e.code = document.getElementById(`e_code_${index}`).value.trim().toUpperCase();
+                e.shift = document.getElementById(`emp_shift_${index}`).value;
+            });
+
+            set(ref(db, 'agb_db'), localDB).then(() => {
+                showToast("✅ Sauvegardé sur le Cloud avec succès !");
+            }).catch((error) => {
+                showToast("Erreur de sauvegarde.");
+            });
+        };
+
+        function showToast(msg) {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg;
+            toast.className = "show";
+            setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+    </script>
+</body>
+</html>
