@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur de Rupture d'Inventaire</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="bg-slate-900 text-white p-4 shadow-md">
+        <div class="container mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <i data-lucide="line-chart" class="w-6 h-6 text-blue-400"></i>
+                <h1 class="text-xl font-bold tracking-wide">Planificateur de Rupture d'Inventaire</h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="downloadReport()" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors flex items-center gap-2" title="Télécharger le rapport PDF de la dernière simulation">
+                    <i data-lucide="file-down" class="w-4 h-4"></i> Rapport PDF
+                </button>
+                <button onclick="downloadCSV()" class="bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors flex items-center gap-2" title="Exporter la projection jour par jour en CSV (Excel)">
+                    <i data-lucide="table" class="w-4 h-4"></i> CSV
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 md:p-6 lg:p-8">
+
+        <!-- ============ CALCULATEUR DE POIDS DES FEUILLES ============ -->
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 mb-6">
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-4 border-b pb-2">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <i data-lucide="scale" class="w-5 h-5 text-slate-500"></i>
+                    Calcul du poids des feuilles de coupe
+                </h2>
+                <div class="flex flex-wrap items-center gap-3">
+                    <label class="text-sm text-slate-600 flex items-center gap-2">
+                        Densité acier (lb/pi²/po)
+                        <input type="number" id="steelFactor" value="40.8" step="0.1" oninput="onFactorChange()" class="w-20 p-1.5 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    </label>
+                    <button onclick="addWeightRow()" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-sm font-medium">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Ajouter une feuille
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm min-w-[860px]">
+                    <thead>
+                        <tr class="text-left text-xs uppercase tracking-wider text-slate-400 border-b border-slate-200">
+                            <th class="py-2 pr-2 font-medium">Format (code-article)</th>
+                            <th class="py-2 px-1 font-medium">Dimensions</th>
+                            <th class="py-2 px-1 font-medium text-center">Épaisseur</th>
+                            <th class="py-2 px-1 font-medium text-right">Surface</th>
+                            <th class="py-2 px-1 font-medium text-right">lb/pi²</th>
+                            <th class="py-2 px-1 font-medium text-right">Poids/feuille</th>
+                            <th class="py-2 px-1 font-medium text-right">Qté (3 sem.)</th>
+                            <th class="py-2 px-1 font-medium text-right">Poids ligne</th>
+                            <th class="py-2 pl-1 font-medium"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="weightRows"></tbody>
+                </table>
+            </div>
+
+            <div class="flex flex-wrap justify-end items-center gap-4 mt-4 pt-3 border-t border-slate-200">
+                <div class="text-right">
+                    <span class="text-xs text-slate-500 uppercase tracking-wider">Poids total estimé (3 sem.)</span>
+                    <p id="weightTotal" class="text-2xl font-bold text-slate-800">0 lbs</p>
+                </div>
+                <button onclick="sendWeightToMrp()" class="bg-slate-900 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-xl shadow transition-colors flex items-center gap-2">
+                    Envoyer vers le MRP <i data-lucide="arrow-down" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-400 mt-2">Choisissez le code-article : dimensions, épaisseur et surface se remplissent automatiquement. Le lb/pi² est calculé à partir de la densité acier (modifiable par ligne, ex. plaque à carreaux plus lourde).</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Panneau de configuration (Gauche) -->
+            <div class="lg:col-span-4 space-y-6">
+
+                <!-- Carte Informations de base -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-lg font-semibold flex items-center gap-2 mb-4 border-b pb-2">
+                        <i data-lucide="package" class="w-5 h-5 text-slate-500"></i>
+                        Données de base
+                    </h2>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Nom de l'article (Optionnel)</label>
+                            <input type="text" id="itemName" placeholder="Ex: Checker Plate 1/4 60x240" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Date de début de l'analyse</label>
+                            <input type="date" id="startDate" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Stock Initial Actuel (unités ou lbs)</label>
+                            <input type="number" id="initialStock" value="42380" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Carte Consommation -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-lg font-semibold flex items-center gap-2 mb-4 border-b pb-2">
+                        <i data-lucide="activity" class="w-5 h-5 text-slate-500"></i>
+                        Taux de Consommation (MRP)
+                    </h2>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Quantité totale requise</label>
+                            <input type="number" id="mrpQuantity" value="83313" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Période (en jours ouvrables)</label>
+                            <input type="number" id="mrpDays" value="15" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <p class="text-xs text-slate-400 mt-1">Ex: 15 jours = 3 semaines de production</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte Livraisons -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4 border-b pb-2">
+                        <h2 class="text-lg font-semibold flex items-center gap-2">
+                            <i data-lucide="truck" class="w-5 h-5 text-slate-500"></i>
+                            Arrivages Prévus (PO)
+                        </h2>
+                        <button onclick="addDeliveryRow()" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-full transition-colors" title="Ajouter une livraison">
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <div id="deliveriesContainer" class="space-y-3 max-h-48 overflow-y-auto pr-1"></div>
+                </div>
+
+                <button onclick="runSimulation()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow transition-colors flex justify-center items-center gap-2">
+                    <i data-lucide="calculator" class="w-5 h-5"></i>
+                    Lancer la Simulation
+                </button>
+
+                <div class="mt-6 text-center text-slate-400 text-xs py-2 border-t border-slate-200">
+                    Développé par El Boudouri Mohamed Ilyas
+                </div>
+            </div>
+
+            <!-- Panneau de Résultats (Droite) -->
+            <div class="lg:col-span-8 space-y-6">
+
+                <!-- KPIs -->
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
+                        <div class="p-2.5 bg-slate-100 rounded-lg text-slate-600">
+                            <i data-lucide="flame" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Consommation</p>
+                            <p id="resDailyRate" class="text-xl font-bold text-slate-800">-- <span class="text-xs font-normal text-slate-500">/ jour</span></p>
+                        </div>
+                    </div>
+
+                    <div id="ruptureCard" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3 transition-colors md:col-span-2 xl:col-span-1">
+                        <div id="ruptureIconBg" class="p-2.5 bg-slate-100 rounded-lg text-slate-600 transition-colors">
+                            <i id="ruptureIcon" data-lucide="calendar" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Date de Rupture</p>
+                            <p id="resRuptureDate" class="text-lg font-bold text-slate-800">--</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
+                        <div class="p-2.5 bg-slate-100 rounded-lg text-slate-600">
+                            <i data-lucide="hourglass" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Couverture</p>
+                            <p id="resCoverage" class="text-xl font-bold text-slate-800">--</p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Graphique -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+                        <h2 class="text-lg font-semibold text-slate-700">Projection de l'inventaire (jusqu'à la rupture, max 90 jours ouvrables)</h2>
+                        <div class="flex items-center gap-2">
+                            <button onclick="downloadReport()" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-sm font-medium">
+                                <i data-lucide="file-down" class="w-4 h-4"></i> Rapport PDF
+                            </button>
+                            <button onclick="downloadCSV()" class="text-slate-600 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-sm font-medium">
+                                <i data-lucide="table" class="w-4 h-4"></i> CSV
+                            </button>
+                        </div>
+                    </div>
+                    <div class="relative h-96 w-full">
+                        <canvas id="inventoryChart"></canvas>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-2">Points verts = arrivages · Ligne rouge = zéro · La courbe s'arrête au point de rupture</p>
+                </div>
+
+                <!-- Historique des estimations -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex flex-wrap justify-between items-center gap-3 mb-4 border-b pb-2">
+                        <h2 class="text-lg font-semibold flex items-center gap-2">
+                            <i data-lucide="history" class="w-5 h-5 text-slate-500"></i>
+                            Historique des estimations
+                            <span id="historyCount" class="text-xs font-normal bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">0</span>
+                        </h2>
+                        <div class="flex items-center gap-2">
+                            <button onclick="clearHistory()" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-sm font-medium">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i> Vider
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm min-w-[760px]">
+                            <thead>
+                                <tr class="text-left text-xs uppercase tracking-wider text-slate-400 border-b border-slate-200">
+                                    <th class="py-2 pr-2 font-medium">Simulé le</th>
+                                    <th class="py-2 px-1 font-medium">Article</th>
+                                    <th class="py-2 px-1 font-medium text-right">Stock initial</th>
+                                    <th class="py-2 px-1 font-medium text-right">Conso/jour</th>
+                                    <th class="py-2 px-1 font-medium">Date de rupture</th>
+                                    <th class="py-2 pl-1 font-medium text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyRows"></tbody>
+                        </table>
+                    </div>
+                    <p id="historyEmpty" class="text-sm text-slate-400 text-center py-4">Aucune estimation enregistrée. Chaque simulation est sauvegardée automatiquement ici.</p>
+                    <p id="storageWarning" class="hidden text-xs text-amber-600 mt-2">⚠ La sauvegarde locale n'est pas disponible dans ce navigateur : l'historique sera perdu à la fermeture de la page.</p>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Initialiser les icônes Lucide
+        lucide.createIcons();
+
+        // Variables globales
+        let deliveryIdCounter = 0;
+        let chartInstance = null;
+        let lastSimulation = null;   // Snapshot complet de la dernière simulation (pour rapport / CSV)
+
+        // Mettre la date d'aujourd'hui par défaut
+        document.getElementById('startDate').valueAsDate = new Date();
+
+        // ------------------------------------------------------------------
+        //  LIVRAISONS
+        // ------------------------------------------------------------------
+        function addDeliveryRow(dateStr = '', qty = '') {
+            const container = document.getElementById('deliveriesContainer');
+            const id = deliveryIdCounter++;
+
+            const row = document.createElement('div');
+            row.id = `delivery-${id}`;
+            row.className = 'flex gap-2 items-center bg-slate-50 p-2 rounded border border-slate-100';
+            row.innerHTML = `
+                <input type="date" class="delivery-date w-full p-1.5 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none" value="${dateStr}">
+                <input type="number" placeholder="Qté" class="delivery-qty w-32 p-1.5 border border-slate-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none" value="${qty}">
+                <button onclick="removeDeliveryRow(${id})" class="text-red-500 hover:text-red-700 p-1 bg-white border border-slate-200 rounded">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            `;
+            container.appendChild(row);
+            lucide.createIcons();
+        }
+
+        function removeDeliveryRow(id) {
+            const row = document.getElementById(`delivery-${id}`);
+            if (row) row.remove();
+        }
+
+        function clearDeliveryRows() {
+            document.getElementById('deliveriesContainer').innerHTML = '';
+        }
+
+        // Exemple de livraison par défaut
+        const nextWeek = new Date();
+        nextWeek.setDate(nextWeek.getDate() + 10);
+        addDeliveryRow(nextWeek.toISOString().split('T')[0], '11250');
+
+        // ------------------------------------------------------------------
+        //  DATES, FÉRIÉS ET JOURS OUVRABLES
+        // ------------------------------------------------------------------
+        // Formater une date en 'YYYY-MM-DD' avec les composantes LOCALES (pas UTC)
+        function formatDateStr(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        // Convertir 'YYYY-MM-DD' en Date locale (sans décalage de fuseau)
+        function parseDateStr(str) {
+            const [y, m, d] = str.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        }
+
+        // Calcul du dimanche de Pâques (algorithme de Meeus/Jones/Butcher)
+        function easterSunday(year){
+            const a = year % 19;
+            const b = Math.floor(year / 100);
+            const c = year % 100;
+            const d = Math.floor(b / 4);
+            const e = b % 4;
+            const f = Math.floor((b + 8) / 25);
+            const g = Math.floor((b - f + 1) / 3);
+            const h = (19 * a + b - d - g + 15) % 30;
+            const i = Math.floor(c / 4);
+            const k = c % 4;
+            const l = (32 + 2 * e + 2 * i - h - k) % 7;
+            const m = Math.floor((a + 11 * h + 22 * l) / 451);
+            const month = Math.floor((h + l - 7 * m + 114) / 31);
+            const day = ((h + l - 7 * m + 114) % 31) + 1;
+            return new Date(year, month - 1, day);
+        }
+
+        // n-ième jour de semaine d'un mois (ex: 3e lundi). weekday: 0=dim..6=sam
+        function nthWeekday(year, month, weekday, n){
+            let count = 0;
+            const d = new Date(year, month, 1);
+            while (d.getMonth() === month) {
+                if (d.getDay() === weekday) {
+                    count++;
+                    if (count === n) return new Date(d);
+                }
+                d.setDate(d.getDate() + 1);
+            }
+            return null;
+        }
+
+        const HOLIDAY_NAMES = [
+            "Jour de l'An", "Fête de la famille", "Vendredi Saint", "Fête du Canada",
+            "Fête du Nouveau-Brunswick", "Fête du Travail", "Jour du Souvenir", "Noël", "Lendemain de Noël"
+        ];
+
+        const _holidayCache = {};
+        // Retourne une Map 'YYYY-MM-DD' -> nom du férié pour l'année (9 fériés AGB, N.-B.)
+        function getHolidayMap(year){
+            if (_holidayCache[year]) return _holidayCache[year];
+            const map = new Map();
+            const easter = easterSunday(year);
+            const goodFriday = new Date(easter); goodFriday.setDate(easter.getDate() - 2);
+            const dates = [
+                new Date(year, 0, 1),            // Jour de l'An
+                nthWeekday(year, 1, 1, 3),       // Fête de la famille (3e lundi de février)
+                goodFriday,                      // Vendredi Saint
+                new Date(year, 6, 1),            // Fête du Canada
+                nthWeekday(year, 7, 1, 1),       // Fête du N.-B. (1er lundi d'août)
+                nthWeekday(year, 8, 1, 1),       // Fête du Travail (1er lundi de septembre)
+                new Date(year, 10, 11),          // Jour du Souvenir
+                new Date(year, 11, 25),          // Noël
+                new Date(year, 11, 26)           // Lendemain de Noël
+            ];
+            dates.forEach((d, i) => map.set(formatDateStr(d), HOLIDAY_NAMES[i]));
+            _holidayCache[year] = map;
+            return map;
+        }
+
+        function holidayName(dateObj){
+            return getHolidayMap(dateObj.getFullYear()).get(formatDateStr(dateObj)) || null;
+        }
+
+        // Jour ouvrable : ni week-end, ni férié AGB
+        function isWorkday(dateObj) {
+            const day = dateObj.getDay();
+            if (day === 0 || day === 6) return false;
+            if (holidayName(dateObj)) return false;
+            return true;
+        }
+
+        const FR_LONG = new Intl.DateTimeFormat('fr-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+        // ------------------------------------------------------------------
+        //  MOTEUR DE SIMULATION
+        // ------------------------------------------------------------------
+        function runSimulation() {
+            // 1. Lire les entrées
+            const startDateStr = document.getElementById('startDate').value;
+            const initialStock = parseFloat(document.getElementById('initialStock').value) || 0;
+            const mrpQty = parseFloat(document.getElementById('mrpQuantity').value) || 0;
+            const mrpDays = parseFloat(document.getElementById('mrpDays').value) || 1;
+            const itemName = document.getElementById('itemName').value || "Matériel";
+
+            if (!startDateStr) {
+                alert("Veuillez choisir une date de début.");
+                return;
+            }
+
+            // 2. Taux journalier
+            const dailyRate = mrpQty / mrpDays;
+            document.getElementById('resDailyRate').innerHTML =
+                `${dailyRate.toLocaleString('fr-CA', {maximumFractionDigits: 1})} <span class="text-xs font-normal text-slate-500">/ jour</span>`;
+
+            // 3. Livraisons planifiées
+            const deliveryElements = document.querySelectorAll('#deliveriesContainer > div');
+            const plannedDeliveries = {};
+            const deliveryList = [];
+            deliveryElements.forEach(el => {
+                const dateInput = el.querySelector('.delivery-date').value;
+                const qtyInput = parseFloat(el.querySelector('.delivery-qty').value);
+                if (dateInput && !isNaN(qtyInput)) {
+                    plannedDeliveries[dateInput] = (plannedDeliveries[dateInput] || 0) + qtyInput;
+                    deliveryList.push({ date: dateInput, qty: qtyInput });
+                }
+            });
+            deliveryList.sort((a, b) => a.date.localeCompare(b.date));
+
+            // 4. Simulation jour par jour
+            let currentDate = parseDateStr(startDateStr);
+            let currentStock = initialStock;
+            let ruptureDate = null;
+            let minStock = initialStock;
+
+            const chartLabels = [];
+            const chartData = [];
+            const chartDeliveryFlags = [];
+            const dailyLog = [];   // Journal détaillé pour le rapport / CSV
+
+            let daysSimulated = 0;
+            const maxWorkdays = 90;
+
+            while (daysSimulated < maxWorkdays) {
+                const dateStr = formatDateStr(currentDate);
+                const stockStart = currentStock;
+                const arrival = plannedDeliveries[dateStr] || 0;
+                const workday = isWorkday(currentDate);
+                const holiday = holidayName(currentDate);
+
+                if (arrival) currentStock += arrival;
+
+                let consumed = 0;
+                let isRuptureDay = false;
+                if (workday) {
+                    consumed = dailyRate;
+                    currentStock -= dailyRate;
+                    // Rupture : le stock passerait sous zéro ce jour-là.
+                    // On arrête la projection ici et on ne montre aucune valeur négative.
+                    if (currentStock < 0) {
+                        isRuptureDay = true;
+                        ruptureDate = new Date(currentDate);
+                        consumed = stockStart + arrival;   // Consommation réelle possible (le reste du stock)
+                        currentStock = 0;                   // On plafonne à zéro
+                    }
+                }
+
+                // Journal : on garde les jours ouvrables + tout jour avec arrivage
+                if (workday || arrival) {
+                    dailyLog.push({
+                        date: dateStr,
+                        weekday: currentDate.toLocaleDateString('fr-CA', { weekday: 'short' }),
+                        holiday: holiday,
+                        workday: workday,
+                        rupture: isRuptureDay,
+                        stockStart: stockStart,
+                        arrival: arrival,
+                        consumed: consumed,
+                        stockEnd: currentStock
+                    });
+                }
+
+                if (workday) {
+                    chartLabels.push(currentDate.toLocaleDateString('fr-CA', { month: 'short', day: 'numeric' }));
+                    chartData.push(currentStock);
+                    chartDeliveryFlags.push(arrival > 0);
+                    daysSimulated++;
+                }
+
+                if (currentStock < minStock) minStock = currentStock;
+
+                // La projection s'arrête au point de rupture
+                if (isRuptureDay) break;
+
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            // 5. KPIs dérivés
+            const coverageDays = ruptureDate
+                ? dailyLog.filter(d => d.workday && parseDateStr(d.date) < ruptureDate).length
+                : null;
+
+            // 6. Snapshot complet (rapport, CSV, historique)
+            lastSimulation = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                itemName, startDate: startDateStr, initialStock, mrpQty, mrpDays,
+                dailyRate,
+                deliveries: deliveryList,
+                ruptureDate: ruptureDate ? formatDateStr(ruptureDate) : null,
+                coverageDays, minStock,
+                finalStock: chartData.length ? chartData[chartData.length - 1] : initialStock,
+                horizonWorkdays: maxWorkdays,
+                dailyLog,
+                weightLines: collectWeightLines()
+            };
+
+            // 7. Mise à jour de l'interface
+            updateResultCards(lastSimulation, ruptureDate, coverageDays);
+            drawChart(chartLabels, chartData, chartDeliveryFlags, itemName);
+
+            // 8. Sauvegarde automatique dans l'historique
+            saveToHistory(lastSimulation);
+        }
+
+        function updateResultCards(sim, ruptureDate, coverageDays) {
+            const ruptureCard = document.getElementById('ruptureCard');
+            const ruptureIconBg = document.getElementById('ruptureIconBg');
+            const resRuptureText = document.getElementById('resRuptureDate');
+            const iconElement = document.getElementById('ruptureIcon');
+
+            if (ruptureDate) {
+                resRuptureText.innerText = FR_LONG.format(ruptureDate);
+                ruptureCard.className = "bg-red-50 p-4 rounded-xl shadow-sm border border-red-200 flex items-center gap-3 transition-colors md:col-span-2 xl:col-span-1";
+                ruptureIconBg.className = "p-2.5 bg-red-100 rounded-lg text-red-600 transition-colors";
+                iconElement.setAttribute('data-lucide', 'alert-triangle');
+                resRuptureText.className = "text-base md:text-lg font-bold text-red-700 capitalize";
+            } else {
+                resRuptureText.innerText = "Aucune (Stock sécuritaire)";
+                ruptureCard.className = "bg-green-50 p-4 rounded-xl shadow-sm border border-green-200 flex items-center gap-3 transition-colors md:col-span-2 xl:col-span-1";
+                ruptureIconBg.className = "p-2.5 bg-green-100 rounded-lg text-green-600 transition-colors";
+                iconElement.setAttribute('data-lucide', 'check-circle');
+                resRuptureText.className = "text-base md:text-lg font-bold text-green-700";
+            }
+
+            document.getElementById('resCoverage').innerText = ruptureDate
+                ? `${coverageDays} j ouvrables`
+                : `> ${sim.horizonWorkdays} j`;
+
+            lucide.createIcons();
+        }
+
+        // ------------------------------------------------------------------
+        //  GRAPHIQUE
+        // ------------------------------------------------------------------
+        function drawChart(labels, data, deliveryFlags, itemName) {
+            const ctx = document.getElementById('inventoryChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(37, 99, 235, 0.2)');
+            gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+
+            // Ligne horizontale : zéro (rouge)
+            const thresholdPlugin = {
+                id: 'thresholds',
+                beforeDraw(chart) {
+                    const yScale = chart.scales.y;
+                    const c = chart.ctx;
+                    const yPos = yScale.getPixelForValue(0);
+                    if (yPos > chart.chartArea.top && yPos < chart.chartArea.bottom) {
+                        c.save();
+                        c.beginPath();
+                        c.moveTo(chart.chartArea.left, yPos);
+                        c.lineTo(chart.chartArea.right, yPos);
+                        c.lineWidth = 2;
+                        c.strokeStyle = '#dc2626';
+                        c.setLineDash([5, 5]);
+                        c.stroke();
+                        c.restore();
+                    }
+                }
+            };
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `Évolution du Stock : ${itemName}`,
+                        data: data,
+                        borderColor: '#2563eb',
+                        backgroundColor: gradient,
+                        borderWidth: 2,
+                        pointRadius: deliveryFlags.map(f => f ? 5 : 0),
+                        pointBackgroundColor: deliveryFlags.map(f => f ? '#16a34a' : '#2563eb'),
+                        pointBorderColor: deliveryFlags.map(f => f ? '#15803d' : '#2563eb'),
+                        pointHoverRadius: 6,
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        y: { min: 0, title: { display: true, text: 'Stock (unités / lbs)' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.y !== null) {
+                                        const isLast = context.dataIndex === context.dataset.data.length - 1;
+                                        label += Math.round(context.parsed.y).toLocaleString('fr-CA');
+                                        if (isLast && context.parsed.y === 0) label += ' (RUPTURE)';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: [thresholdPlugin]
+            });
+        }
+
+        // ------------------------------------------------------------------
+        //  RAPPORT TÉLÉCHARGEABLE (HTML autonome, imprimable en PDF)
+        // ------------------------------------------------------------------
+        function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        function generateReportHTML(sim) {
+            const genDate = new Date(sim.timestamp);
+            const rupture = sim.ruptureDate ? FR_LONG.format(parseDateStr(sim.ruptureDate)) : null;
+
+            const deliveriesRows = sim.deliveries.length
+                ? sim.deliveries.map(d => `<tr><td>${esc(d.date)}</td><td class="num">${d.qty.toLocaleString('fr-CA')}</td></tr>`).join('')
+                : '<tr><td colspan="2" class="muted">Aucun arrivage planifié</td></tr>';
+
+            const weightRows = (sim.weightLines && sim.weightLines.length)
+                ? `<h2>4. Feuilles de coupe (calcul du poids)</h2>
+                   <table><thead><tr><th>Format</th><th>Dimensions</th><th class="num">lb/pi²</th><th class="num">Poids/feuille</th><th class="num">Qté</th><th class="num">Poids ligne</th></tr></thead><tbody>` +
+                   sim.weightLines.map(w => `<tr><td>${esc(w.format)}</td><td>${esc(w.dims)}</td><td class="num">${w.lbft2}</td><td class="num">${w.perSheet.toLocaleString('fr-CA',{maximumFractionDigits:1})}</td><td class="num">${w.qty}</td><td class="num">${w.line.toLocaleString('fr-CA',{maximumFractionDigits:0})}</td></tr>`).join('') +
+                   `</tbody></table>`
+                : '';
+
+            const logRows = sim.dailyLog.map(d => {
+                const flags = [];
+                if (d.rupture) flags.push('RUPTURE');
+                if (d.holiday) flags.push(d.holiday);
+                if (!d.workday && !d.holiday) flags.push('Week-end');
+                const cls = d.rupture ? ' class="rupture"' : '';
+                return `<tr${cls}>
+                    <td>${esc(d.date)} (${esc(d.weekday)})</td>
+                    <td>${flags.join(', ') || 'Ouvrable'}</td>
+                    <td class="num">${Math.round(d.stockStart).toLocaleString('fr-CA')}</td>
+                    <td class="num">${d.arrival ? '+' + d.arrival.toLocaleString('fr-CA') : '—'}</td>
+                    <td class="num">${d.consumed ? '−' + Math.round(d.consumed).toLocaleString('fr-CA') : '—'}</td>
+                    <td class="num"><strong>${Math.round(d.stockEnd).toLocaleString('fr-CA')}</strong></td>
+                </tr>`;
+            }).join('');
+            const ruptureNote = sim.ruptureDate
+                ? '<p class="muted">La projection s\u2019arrête au point de rupture : aucune valeur négative n\u2019est affichée.</p>'
+                : '';
+
+            const statusBanner = sim.ruptureDate
+                ? `<div class="banner red"><strong>⚠ RUPTURE PRÉVUE :</strong> ${esc(rupture)}</div>`
+                : `<div class="banner green"><strong>✓ Aucune rupture</strong> sur l'horizon de ${sim.horizonWorkdays} jours ouvrables.</div>`;
+
+            return `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8">
+<title>Rapport de rupture — ${esc(sim.itemName)} — ${esc(formatDateStr(genDate))}</title>
+<style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; max-width: 900px; margin: 0 auto; padding: 32px 24px; line-height: 1.5; }
+    h1 { font-size: 22px; border-bottom: 3px solid #2563eb; padding-bottom: 8px; }
+    h2 { font-size: 16px; color: #334155; margin-top: 28px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+    th, td { border: 1px solid #e2e8f0; padding: 5px 8px; text-align: left; }
+    th { background: #f1f5f9; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .muted { color: #94a3b8; }
+    .kv td:first-child { width: 45%; color: #64748b; }
+    .banner { padding: 12px 16px; border-radius: 8px; margin: 16px 0; }
+    .banner.red { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+    .banner.green { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+    tr.rupture td { background: #fef2f2; color: #b91c1c; }
+    tr.warn td { background: #fffbeb; }
+    .formula { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; font-size: 13px; }
+    .formula code { background: #e2e8f0; padding: 1px 5px; border-radius: 4px; }
+    footer { margin-top: 32px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+    @media print { body { padding: 0; } .banner { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style></head><body>
+<h1>Rapport de simulation de rupture d'inventaire</h1>
+<p class="muted">Généré le ${esc(genDate.toLocaleString('fr-CA'))} · Article : <strong>${esc(sim.itemName)}</strong></p>
+${statusBanner}
+
+<h2>1. Paramètres de la simulation</h2>
+<table class="kv">
+    <tr><td>Date de début de l'analyse</td><td>${esc(sim.startDate)}</td></tr>
+    <tr><td>Stock initial</td><td class="num">${sim.initialStock.toLocaleString('fr-CA')}</td></tr>
+    <tr><td>Quantité MRP requise</td><td class="num">${sim.mrpQty.toLocaleString('fr-CA')}</td></tr>
+    <tr><td>Période MRP (jours ouvrables)</td><td class="num">${sim.mrpDays}</td></tr>
+    <tr><td>Horizon de projection</td><td class="num">${sim.horizonWorkdays} jours ouvrables</td></tr>
+</table>
+
+<h2>2. Logique de calcul</h2>
+<div class="formula">
+    <p><strong>Consommation journalière :</strong> <code>taux = Quantité MRP ÷ Période</code> = ${sim.mrpQty.toLocaleString('fr-CA')} ÷ ${sim.mrpDays} = <strong>${sim.dailyRate.toLocaleString('fr-CA',{maximumFractionDigits:2})} / jour ouvrable</strong></p>
+    <p><strong>Simulation jour par jour :</strong> <code>stock(j) = stock(j−1) + arrivages(j) − taux si jour ouvrable</code>. Les arrivages sont ajoutés en début de journée, avant la consommation.</p>
+    <p><strong>Jours ouvrables :</strong> lundi au vendredi, en excluant les 9 jours fériés AGB (Nouveau-Brunswick) : ${HOLIDAY_NAMES.join(', ')}. La consommation est nulle les week-ends et jours fériés.</p>
+    <p><strong>Date de rupture :</strong> premier jour où le stock projeté ne suffit plus à couvrir la consommation. La projection s'arrête à ce point (le stock est affiché à zéro, jamais en négatif).</p>
+</div>
+
+<h2>3. Résultats</h2>
+<table class="kv">
+    <tr><td>Consommation journalière</td><td class="num">${sim.dailyRate.toLocaleString('fr-CA',{maximumFractionDigits:1})} / jour ouvrable</td></tr>
+    <tr><td>Date de rupture estimée</td><td>${rupture ? '<strong style="color:#b91c1c">' + esc(rupture) + '</strong>' : 'Aucune sur l’horizon'}</td></tr>
+    <tr><td>Couverture (jours ouvrables avant rupture)</td><td class="num">${sim.coverageDays !== null ? sim.coverageDays : '> ' + sim.horizonWorkdays}</td></tr>
+    <tr><td>Stock en fin de projection</td><td class="num">${Math.round(sim.finalStock).toLocaleString('fr-CA')}</td></tr>
+</table>
+
+<h2>Arrivages planifiés (PO)</h2>
+<table><thead><tr><th>Date</th><th class="num">Quantité</th></tr></thead><tbody>${deliveriesRows}</tbody></table>
+
+${weightRows}
+
+<h2>${(sim.weightLines && sim.weightLines.length) ? '5' : '4'}. Projection jour par jour</h2>
+${ruptureNote}
+<table>
+    <thead><tr><th>Date</th><th>Type de jour</th><th class="num">Stock début</th><th class="num">Arrivage</th><th class="num">Consommation</th><th class="num">Stock fin</th></tr></thead>
+    <tbody>${logRows}</tbody>
+</table>
+
+<footer>Planificateur de Rupture d'Inventaire · Développé par El Boudouri Mohamed Ilyas · Rapport autonome — imprimable en PDF via Ctrl+P</footer>
+</body></html>`;
+        }
+
+        // ------------------------------------------------------------------
+        //  RAPPORT PDF (jsPDF + autoTable) — repli HTML si librairie absente
+        // ------------------------------------------------------------------
+        // Formater un nombre pour le PDF (espaces normales, pas d'espaces insécables)
+        function pdfNum(n, d = 0){
+            return Number(n).toLocaleString('fr-CA', { minimumFractionDigits: d, maximumFractionDigits: d })
+                .replace(/[\u202F\u00A0]/g, ' ');
+        }
+        // Nettoyer le texte pour les polices standard de jsPDF
+        function pdfTxt(s){
+            return String(s ?? '').replace(/[\u2019\u2018]/g, "'").replace(/[\u202F\u00A0]/g, ' ')
+                .replace(/[\u2192]/g, '->').replace(/[\u2212\u2013\u2014]/g, '-');
+        }
+
+        function generateReportPDF(sim) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            const pageW = doc.internal.pageSize.getWidth();
+            const margin = 14;
+            const usable = pageW - margin * 2;
+            let y = 16;
+
+            const genDate = new Date(sim.timestamp);
+            const rupture = sim.ruptureDate ? pdfTxt(FR_LONG.format(parseDateStr(sim.ruptureDate))) : null;
+
+            // --- En-tête ---
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(15);
+            doc.setTextColor(30, 41, 59);
+            doc.text("Rapport de simulation de rupture d'inventaire", margin, y);
+            y += 2.5;
+            doc.setDrawColor(37, 99, 235);
+            doc.setLineWidth(0.8);
+            doc.line(margin, y, pageW - margin, y);
+            y += 6;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.setTextColor(100, 116, 139);
+            doc.text(pdfTxt(`Généré le ${genDate.toLocaleString('fr-CA')}  ·  Article : ${sim.itemName}`), margin, y);
+            y += 7;
+
+            // --- Bandeau de statut ---
+            const bannerLines = sim.ruptureDate
+                ? [`RUPTURE PRÉVUE : ${rupture}`]
+                : [`Aucune rupture sur l'horizon de ${sim.horizonWorkdays} jours ouvrables.`];
+            const bannerH = 6 + bannerLines.length * 5.5;
+            if (sim.ruptureDate) { doc.setFillColor(254, 242, 242); doc.setDrawColor(254, 202, 202); doc.setTextColor(185, 28, 28); }
+            else { doc.setFillColor(240, 253, 244); doc.setDrawColor(187, 247, 208); doc.setTextColor(21, 128, 61); }
+            doc.setLineWidth(0.3);
+            doc.roundedRect(margin, y, usable, bannerH, 2, 2, 'FD');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10.5);
+            bannerLines.forEach((l, i) => doc.text(pdfTxt(l), margin + 4, y + 7 + i * 5.5));
+            y += bannerH + 8;
+
+            const sectionTitle = (txt) => {
+                if (y > 265) { doc.addPage(); y = 16; }
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(11.5);
+                doc.setTextColor(51, 65, 85);
+                doc.text(pdfTxt(txt), margin, y);
+                y += 1.5;
+                doc.setDrawColor(226, 232, 240);
+                doc.setLineWidth(0.3);
+                doc.line(margin, y, pageW - margin, y);
+                y += 4;
+            };
+
+            const kvTable = (rows) => {
+                doc.autoTable({
+                    startY: y, margin: { left: margin, right: margin },
+                    body: rows.map(r => [pdfTxt(r[0]), pdfTxt(r[1])]),
+                    theme: 'grid',
+                    styles: { font: 'helvetica', fontSize: 9, textColor: [30, 41, 59], lineColor: [226, 232, 240], cellPadding: 1.8 },
+                    columnStyles: { 0: { cellWidth: usable * 0.45, textColor: [100, 116, 139] }, 1: { halign: 'left' } }
+                });
+                y = doc.lastAutoTable.finalY + 8;
+            };
+
+            // --- 1. Paramètres ---
+            sectionTitle('1. Paramètres de la simulation');
+            kvTable([
+                ["Date de début de l'analyse", sim.startDate],
+                ['Stock initial', pdfNum(sim.initialStock)],
+                ['Quantité MRP requise', pdfNum(sim.mrpQty)],
+                ['Période MRP (jours ouvrables)', String(sim.mrpDays)],
+                ['Horizon de projection', sim.horizonWorkdays + ' jours ouvrables']
+            ]);
+
+            // --- 2. Logique de calcul ---
+            sectionTitle('2. Logique de calcul');
+            const logicLines = [
+                `Consommation journalière : taux = Quantité MRP / Période = ${pdfNum(sim.mrpQty)} / ${sim.mrpDays} = ${pdfNum(sim.dailyRate, 2)} par jour ouvrable.`,
+                `Simulation jour par jour : stock(j) = stock(j-1) + arrivages(j) - taux si jour ouvrable. Les arrivages sont ajoutés en début de journée, avant la consommation.`,
+                `Jours ouvrables : lundi au vendredi, en excluant les 9 jours fériés AGB (Nouveau-Brunswick) : ${HOLIDAY_NAMES.join(', ')}. La consommation est nulle les week-ends et jours fériés.`,
+                `Date de rupture : premier jour où le stock projeté ne suffit plus à couvrir la consommation. La projection s'arrête à ce point (le stock est affiché à zéro, jamais en négatif).`
+            ];
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(30, 41, 59);
+            logicLines.forEach(l => {
+                const wrapped = doc.splitTextToSize(pdfTxt(l), usable);
+                if (y + wrapped.length * 4.2 > 280) { doc.addPage(); y = 16; }
+                doc.text(wrapped, margin, y);
+                y += wrapped.length * 4.2 + 2.5;
+            });
+            y += 4;
+
+            // --- 3. Résultats ---
+            sectionTitle('3. Résultats');
+            const resRows = [
+                ['Consommation journalière', pdfNum(sim.dailyRate, 1) + ' / jour ouvrable'],
+                ['Date de rupture estimée', rupture ? rupture : "Aucune sur l'horizon"],
+                ['Couverture (jours ouvrables avant rupture)', sim.coverageDays !== null ? String(sim.coverageDays) : '> ' + sim.horizonWorkdays]
+            ];
+            resRows.push(['Stock en fin de projection', pdfNum(Math.round(sim.finalStock))]);
+            kvTable(resRows);
+
+            // --- Arrivages ---
+            sectionTitle('Arrivages planifiés (PO)');
+            doc.autoTable({
+                startY: y, margin: { left: margin, right: margin },
+                head: [['Date', 'Quantité']],
+                body: sim.deliveries.length
+                    ? sim.deliveries.map(d => [d.date, pdfNum(d.qty)])
+                    : [['Aucun arrivage planifié', '']],
+                theme: 'grid',
+                styles: { font: 'helvetica', fontSize: 9, textColor: [30, 41, 59], lineColor: [226, 232, 240], cellPadding: 1.8 },
+                headStyles: { fillColor: [241, 245, 249], textColor: [100, 116, 139], fontStyle: 'bold' },
+                columnStyles: { 1: { halign: 'right' } }
+            });
+            y = doc.lastAutoTable.finalY + 8;
+
+            // --- Feuilles de coupe (si présentes) ---
+            let nextNum = 4;
+            if (sim.weightLines && sim.weightLines.length) {
+                sectionTitle('4. Feuilles de coupe (calcul du poids)');
+                doc.autoTable({
+                    startY: y, margin: { left: margin, right: margin },
+                    head: [['Format', 'Dimensions', 'lb/pi2', 'Poids/feuille', 'Qté', 'Poids ligne']],
+                    body: sim.weightLines.map(w => [
+                        pdfTxt(w.format), pdfTxt(w.dims.replace(/"/g, ' po')), pdfNum(w.lbft2, 2),
+                        pdfNum(w.perSheet, 1), pdfNum(w.qty), pdfNum(w.line)
+                    ]),
+                    theme: 'grid',
+                    styles: { font: 'helvetica', fontSize: 8.5, textColor: [30, 41, 59], lineColor: [226, 232, 240], cellPadding: 1.6 },
+                    headStyles: { fillColor: [241, 245, 249], textColor: [100, 116, 139], fontStyle: 'bold' },
+                    columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } }
+                });
+                y = doc.lastAutoTable.finalY + 8;
+                nextNum = 5;
+            }
+
+            // --- Projection jour par jour ---
+            sectionTitle(nextNum + '. Projection jour par jour');
+            if (sim.ruptureDate) {
+                doc.setFont('helvetica', 'italic');
+                doc.setFontSize(8.5);
+                doc.setTextColor(100, 116, 139);
+                doc.text(pdfTxt("La projection s'arrête au point de rupture : aucune valeur négative n'est affichée."), margin, y);
+                y += 5;
+            }
+            doc.autoTable({
+                startY: y, margin: { left: margin, right: margin },
+                head: [['Date', 'Type de jour', 'Stock début', 'Arrivage', 'Consommation', 'Stock fin']],
+                body: sim.dailyLog.map(d => {
+                    const flags = [];
+                    if (d.rupture) flags.push('RUPTURE');
+                    if (d.holiday) flags.push(d.holiday);
+                    if (!d.workday && !d.holiday) flags.push('Week-end');
+                    return [
+                        `${d.date} (${d.weekday})`,
+                        pdfTxt(flags.join(', ') || 'Ouvrable'),
+                        pdfNum(Math.round(d.stockStart)),
+                        d.arrival ? '+' + pdfNum(d.arrival) : '-',
+                        d.consumed ? '-' + pdfNum(Math.round(d.consumed)) : '-',
+                        pdfNum(Math.round(d.stockEnd))
+                    ];
+                }),
+                theme: 'grid',
+                styles: { font: 'helvetica', fontSize: 8, textColor: [30, 41, 59], lineColor: [226, 232, 240], cellPadding: 1.4 },
+                headStyles: { fillColor: [241, 245, 249], textColor: [100, 116, 139], fontStyle: 'bold' },
+                columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right', fontStyle: 'bold' } },
+                didParseCell: (data) => {
+                    if (data.section === 'body' && sim.dailyLog[data.row.index] && sim.dailyLog[data.row.index].rupture) {
+                        data.cell.styles.fillColor = [254, 242, 242];
+                        data.cell.styles.textColor = [185, 28, 28];
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
+            });
+
+            // --- Pied de page (toutes les pages) ---
+            const pages = doc.internal.getNumberOfPages();
+            for (let p = 1; p <= pages; p++) {
+                doc.setPage(p);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(7.5);
+                doc.setTextColor(148, 163, 184);
+                doc.text(pdfTxt("Planificateur de Rupture d'Inventaire · Développé par El Boudouri Mohamed Ilyas"), margin, 290);
+                doc.text(`Page ${p} / ${pages}`, pageW - margin, 290, { align: 'right' });
+            }
+
+            return doc;
+        }
+
+        function downloadBlob(filename, content, mime) {
+            const blob = new Blob([content], { type: mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        function safeFileName(s){ return s.replace(/[^a-z0-9àâçéèêëîïôûùüÿ_ -]/gi, '').trim().replace(/\s+/g, '_') || 'materiel'; }
+
+        function downloadReport(sim = null) {
+            const s = sim || lastSimulation;
+            if (!s) { alert("Lancez d'abord une simulation."); return; }
+            const base = `rapport_rupture_${safeFileName(s.itemName)}_${s.startDate}`;
+            // PDF si la librairie est chargée, sinon repli sur le rapport HTML
+            if (window.jspdf && window.jspdf.jsPDF) {
+                try {
+                    const doc = generateReportPDF(s);
+                    doc.save(base + '.pdf');
+                    return;
+                } catch (e) {
+                    console.error('Erreur PDF, repli HTML :', e);
+                }
+            }
+            downloadBlob(base + '.html', generateReportHTML(s), 'text/html;charset=utf-8');
+        }
+
+        function downloadCSV(sim = null) {
+            const s = sim || lastSimulation;
+            if (!s) { alert("Lancez d'abord une simulation."); return; }
+            const sep = ';'; // Compatible Excel FR
+            let csv = '\uFEFF'; // BOM UTF-8 pour Excel
+            csv += `Article${sep}${s.itemName}\n`;
+            csv += `Date de début${sep}${s.startDate}\n`;
+            csv += `Stock initial${sep}${s.initialStock}\n`;
+            csv += `Taux journalier${sep}${s.dailyRate.toFixed(2)}\n`;
+            csv += `Date de rupture${sep}${s.ruptureDate || 'Aucune'}\n\n`;
+            csv += ['Date','Jour','Type','Stock début','Arrivage','Consommation','Stock fin'].join(sep) + '\n';
+            s.dailyLog.forEach(d => {
+                const type = d.rupture ? 'RUPTURE' : (d.holiday ? d.holiday : (d.workday ? 'Ouvrable' : 'Week-end'));
+                csv += [d.date, d.weekday, type, Math.round(d.stockStart), d.arrival || 0, Math.round(d.consumed), Math.round(d.stockEnd)].join(sep) + '\n';
+            });
+            if (s.ruptureDate) csv += `\nLa projection s'arrête au point de rupture (aucune valeur négative)\n`;
+            const name = `projection_${safeFileName(s.itemName)}_${s.startDate}.csv`;
+            downloadBlob(name, csv, 'text/csv;charset=utf-8');
+        }
+
+        // ------------------------------------------------------------------
+        //  HISTORIQUE DES ESTIMATIONS (sauvegarde locale + export/import)
+        // ------------------------------------------------------------------
+        const STORAGE_KEY = 'rupture_simulations_v1';
+        const MAX_HISTORY = 100;
+        let memoryHistory = [];      // Repli si localStorage indisponible
+        let storageAvailable = true;
+
+        try {
+            const t = '__test__';
+            localStorage.setItem(t, '1');
+            localStorage.removeItem(t);
+        } catch (e) {
+            storageAvailable = false;
+            document.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('storageWarning').classList.remove('hidden');
+            });
+        }
+
+        function loadHistory() {
+            if (!storageAvailable) return memoryHistory;
+            try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+            catch (e) { return []; }
+        }
+
+        function persistHistory(list) {
+            if (!storageAvailable) { memoryHistory = list; return; }
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
+            catch (e) {
+                // Quota dépassé : alléger les entrées les plus anciennes (retirer le journal détaillé)
+                const light = list.map((s, i) => i < list.length - 20 ? { ...s, dailyLog: [] } : s);
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(light)); } catch (e2) { /* abandon silencieux */ }
+            }
+        }
+
+        function saveToHistory(sim) {
+            const list = loadHistory();
+            list.push(sim);
+            while (list.length > MAX_HISTORY) list.shift();
+            persistHistory(list);
+            renderHistory();
+        }
+
+        function deleteFromHistory(id) {
+            const list = loadHistory().filter(s => s.id !== id);
+            persistHistory(list);
+            renderHistory();
+        }
+
+        function clearHistory() {
+            if (!confirm("Supprimer toutes les estimations enregistrées ?")) return;
+            persistHistory([]);
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = loadHistory().slice().reverse(); // Plus récentes en premier
+            const tbody = document.getElementById('historyRows');
+            const empty = document.getElementById('historyEmpty');
+            document.getElementById('historyCount').textContent = list.length;
+            tbody.innerHTML = '';
+            empty.style.display = list.length ? 'none' : 'block';
+
+            list.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-100 hover:bg-slate-50';
+                const when = new Date(s.timestamp).toLocaleString('fr-CA', { dateStyle: 'short', timeStyle: 'short' });
+                const badge = s.ruptureDate
+                    ? `<span class="inline-block bg-red-100 text-red-700 text-xs font-medium px-2 py-0.5 rounded-full">${s.ruptureDate}</span>`
+                    : `<span class="inline-block bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">Aucune</span>`;
+                tr.innerHTML = `
+                    <td class="py-2 pr-2 text-slate-500 whitespace-nowrap">${when}</td>
+                    <td class="py-2 px-1 font-medium">${esc(s.itemName)}</td>
+                    <td class="py-2 px-1 text-right">${s.initialStock.toLocaleString('fr-CA')}</td>
+                    <td class="py-2 px-1 text-right">${s.dailyRate.toLocaleString('fr-CA',{maximumFractionDigits:1})}</td>
+                    <td class="py-2 px-1">${badge}</td>
+                    <td class="py-2 pl-1">
+                        <div class="flex justify-end gap-1.5">
+                            <button onclick="restoreSimulation(${s.id})" class="text-blue-600 hover:text-blue-800 p-1.5 bg-blue-50 hover:bg-blue-100 rounded" title="Recharger les paramètres dans le formulaire"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></button>
+                            <button onclick="downloadHistoryReport(${s.id})" class="text-slate-600 hover:text-slate-800 p-1.5 bg-slate-50 hover:bg-slate-100 rounded" title="Télécharger le rapport PDF"><i data-lucide="file-down" class="w-4 h-4"></i></button>
+                            <button onclick="downloadHistoryCSV(${s.id})" class="text-slate-600 hover:text-slate-800 p-1.5 bg-slate-50 hover:bg-slate-100 rounded" title="Télécharger la projection CSV"><i data-lucide="table" class="w-4 h-4"></i></button>
+                            <button onclick="deleteFromHistory(${s.id})" class="text-red-500 hover:text-red-700 p-1.5 bg-red-50 hover:bg-red-100 rounded" title="Supprimer cette estimation"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        function findInHistory(id){ return loadHistory().find(s => s.id === id); }
+
+        function downloadHistoryReport(id) {
+            const s = findInHistory(id);
+            if (!s) return;
+            if (!s.dailyLog || !s.dailyLog.length) { alert("Le détail de cette ancienne estimation a été allégé. Rechargez-la puis relancez la simulation pour régénérer le rapport."); return; }
+            downloadReport(s);
+        }
+
+        function downloadHistoryCSV(id) {
+            const s = findInHistory(id);
+            if (!s) return;
+            if (!s.dailyLog || !s.dailyLog.length) { alert("Le détail de cette ancienne estimation a été allégé. Rechargez-la puis relancez la simulation."); return; }
+            downloadCSV(s);
+        }
+
+        function restoreSimulation(id) {
+            const s = findInHistory(id);
+            if (!s) return;
+            document.getElementById('itemName').value = s.itemName === 'Matériel' ? '' : s.itemName;
+            document.getElementById('startDate').value = s.startDate;
+            document.getElementById('initialStock').value = s.initialStock;
+            document.getElementById('mrpQuantity').value = s.mrpQty;
+            document.getElementById('mrpDays').value = s.mrpDays;
+            clearDeliveryRows();
+            (s.deliveries || []).forEach(d => addDeliveryRow(d.date, d.qty));
+            runSimulation();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ======================================================================
+        //  CALCULATEUR DE POIDS DES FEUILLES DE COUPE
+        //  Code-article : [PL|PC]STHA-[TTTT][WW][LLLLL]
+        //   TTTT  = épaisseur en millièmes de pouce (0250 = 0.250" = 1/4")
+        //   WW    = largeur en pouces (48, 60, 72...)
+        //   LLLLL = longueur x100 en pouces (09600 = 96.00")
+        //   PL = plaque lisse | PC = plaque à carreaux (checker)
+        // ======================================================================
+        const WEIGHT_CODES = `PLSTHA-01054809600
+PLSTHA-01054814400
+PLSTHA-01056009600
+PLSTHA-01056014400
+PLSTHA-01057209600
+PLSTHA-01057212000
+PLSTHA-01057214400
+PLSTHA-01204809600
+PLSTHA-01204812000
+PLSTHA-01204814400
+PLSTHA-01206009600
+PLSTHA-01206012000
+PLSTHA-01207209600
+PLSTHA-01356012000
+PLSTHA-01884814400
+PLSTHA-01884814700
+PLSTHA-01884824000
+PLSTHA-01886009600
+PLSTHA-01886012000
+PLSTHA-01886014400
+PLSTHA-01886024000
+PLSTHA-01887209600
+PLSTHA-01887212000
+PLSTHA-01887214400
+PLSTHA-02504809600
+PLSTHA-02504814400
+PLSTHA-02504824000
+PLSTHA-02506009600
+PLSTHA-02506024000
+PLSTHA-02507209600
+PLSTHA-02507214400
+PLSTHA-10004809600
+PCSTHA-02504809600
+PCSTHA-02504824000
+PCSTHA-02506009600
+PCSTHA-02506024000`;
+
+        const THK_LABELS = {105:'12 GA',120:'11 GA',135:'10 GA',188:'3/16"',250:'1/4"',313:'5/16"',375:'3/8"',500:'1/2"',625:'5/8"',750:'3/4"',1000:'1"'};
+
+        function decodeCode(code){
+            const parts = code.split('-');
+            if(parts.length < 2 || parts[1].length < 11) return null;
+            const num  = parts[1];
+            const tMil = parseInt(num.slice(0,4),10);
+            const thk  = tMil / 1000;
+            const w    = parseInt(num.slice(4,6),10);
+            const l    = parseInt(num.slice(6,11),10) / 100;
+            const type = parts[0].startsWith('PC') ? 'Carreaux' : 'Lisse';
+            const label= THK_LABELS[tMil] || (thk.toFixed(3) + '"');
+            return { code, thk, w, l, type, label };
+        }
+
+        const CATALOG = WEIGHT_CODES.trim().split('\n').map(c => decodeCode(c.trim())).filter(Boolean);
+
+        function fmtNum(n, d = 0){
+            return Number(n).toLocaleString('fr-CA', { minimumFractionDigits: d, maximumFractionDigits: d });
+        }
+
+        function buildFormatOptions(selectedIdx){
+            let opts = '<option value="">— Choisir / Manuel —</option>';
+            CATALOG.forEach((it, i) => {
+                const sel = (selectedIdx === i) ? 'selected' : '';
+                opts += `<option value="${i}" ${sel}>${it.type} · ${it.label} · ${it.w}"×${it.l}" · ${it.code}</option>`;
+            });
+            return opts;
+        }
+
+        function addWeightRow(presetIndex = null, qty = ''){
+            const tbody = document.getElementById('weightRows');
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-slate-100 hover:bg-slate-50';
+            tr.innerHTML = `
+                <td class="py-2 pr-2"><select class="wc-format w-full min-w-[240px] p-1.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none">${buildFormatOptions(presetIndex)}</select></td>
+                <td class="py-2 px-1">
+                    <div class="flex items-center gap-1">
+                        <input type="number" class="wc-w w-16 p-1.5 border border-slate-300 rounded text-sm" placeholder="larg.">
+                        <span class="text-slate-400">×</span>
+                        <input type="number" class="wc-l w-16 p-1.5 border border-slate-300 rounded text-sm" placeholder="long.">
+                        <span class="text-xs text-slate-400">po</span>
+                    </div>
+                </td>
+                <td class="py-2 px-1 text-center"><span class="wc-thk text-slate-600">—</span></td>
+                <td class="py-2 px-1 text-right"><span class="wc-surf font-medium text-slate-700">—</span></td>
+                <td class="py-2 px-1 text-right"><input type="number" step="0.01" class="wc-lbft2 w-20 p-1.5 border border-slate-300 rounded text-sm text-right" data-auto="1"></td>
+                <td class="py-2 px-1 text-right"><span class="wc-perSheet font-semibold text-slate-800">—</span></td>
+                <td class="py-2 px-1 text-right"><input type="number" class="wc-qty w-20 p-1.5 border border-slate-300 rounded text-sm text-right" placeholder="nb"></td>
+                <td class="py-2 px-1 text-right"><span class="wc-line font-bold text-blue-700">—</span></td>
+                <td class="py-2 pl-1 text-center"><button onclick="this.closest('tr').remove(); recalcWeights();" class="text-red-500 hover:text-red-700 p-1 bg-white border border-slate-200 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+            `;
+            tbody.appendChild(tr);
+
+            const sel  = tr.querySelector('.wc-format');
+            const lbIn = tr.querySelector('.wc-lbft2');
+            sel.addEventListener('change', () => applyFormat(tr));
+            tr.querySelectorAll('.wc-w, .wc-l, .wc-qty').forEach(el => el.addEventListener('input', recalcWeights));
+            lbIn.addEventListener('input', () => { lbIn.dataset.auto = '0'; recalcWeights(); });
+
+            if (presetIndex !== null) applyFormat(tr);
+            if (qty !== '') tr.querySelector('.wc-qty').value = qty;
+
+            lucide.createIcons();
+            recalcWeights();
+        }
+
+        function applyFormat(tr){
+            const idx = tr.querySelector('.wc-format').value;
+            if (idx === '') { tr.querySelector('.wc-thk').textContent = '—'; delete tr.dataset.thk; recalcWeights(); return; }
+            const it = CATALOG[parseInt(idx, 10)];
+            tr.querySelector('.wc-w').value = it.w;
+            tr.querySelector('.wc-l').value = it.l;
+            tr.querySelector('.wc-thk').textContent = it.label;
+            tr.dataset.thk = it.thk;
+            const lbIn = tr.querySelector('.wc-lbft2');
+            if (lbIn.dataset.auto !== '0') {
+                const factor = parseFloat(document.getElementById('steelFactor').value) || 40.8;
+                lbIn.value = (it.thk * factor).toFixed(2);
+            }
+            recalcWeights();
+        }
+
+        function recalcWeights(){
+            let total = 0;
+            document.querySelectorAll('#weightRows tr').forEach(tr => {
+                const w   = parseFloat(tr.querySelector('.wc-w').value)   || 0;
+                const l   = parseFloat(tr.querySelector('.wc-l').value)   || 0;
+                const lb  = parseFloat(tr.querySelector('.wc-lbft2').value)|| 0;
+                const qty = parseFloat(tr.querySelector('.wc-qty').value) || 0;
+                const surf     = w * l / 144;
+                const perSheet = surf * lb;
+                const line     = perSheet * qty;
+                tr.querySelector('.wc-surf').textContent     = surf     ? fmtNum(surf, 1) + ' pi²' : '—';
+                tr.querySelector('.wc-perSheet').textContent = perSheet ? fmtNum(perSheet, 1) + ' lb' : '—';
+                tr.querySelector('.wc-line').textContent     = line     ? fmtNum(line, 0) + ' lb' : '—';
+                total += line;
+            });
+            document.getElementById('weightTotal').textContent = fmtNum(total, 0) + ' lbs';
+            return total;
+        }
+
+        // Collecter les lignes de feuilles pour les inclure dans le rapport
+        function collectWeightLines(){
+            const lines = [];
+            document.querySelectorAll('#weightRows tr').forEach(tr => {
+                const w   = parseFloat(tr.querySelector('.wc-w').value)   || 0;
+                const l   = parseFloat(tr.querySelector('.wc-l').value)   || 0;
+                const lb  = parseFloat(tr.querySelector('.wc-lbft2').value)|| 0;
+                const qty = parseFloat(tr.querySelector('.wc-qty').value) || 0;
+                if (!qty || !w || !l || !lb) return;
+                const sel = tr.querySelector('.wc-format');
+                const format = sel.value !== '' ? CATALOG[parseInt(sel.value,10)].code : 'Manuel';
+                const surf = w * l / 144;
+                const perSheet = surf * lb;
+                lines.push({ format, dims: `${w}" × ${l}"`, lbft2: lb, qty, perSheet, line: perSheet * qty });
+            });
+            return lines;
+        }
+
+        function onFactorChange(){
+            const factor = parseFloat(document.getElementById('steelFactor').value) || 40.8;
+            document.querySelectorAll('#weightRows tr').forEach(tr => {
+                const lbIn = tr.querySelector('.wc-lbft2');
+                if (lbIn.dataset.auto !== '0' && tr.dataset.thk) {
+                    lbIn.value = (parseFloat(tr.dataset.thk) * factor).toFixed(2);
+                }
+            });
+            recalcWeights();
+        }
+
+        function sendWeightToMrp(){
+            const total = recalcWeights();
+            if (total <= 0) { alert("Ajoutez au moins une feuille avec une quantité pour calculer le poids total."); return; }
+            const box = document.getElementById('mrpQuantity');
+            box.value = Math.round(total);
+            box.classList.add('ring-2', 'ring-green-500');
+            setTimeout(() => box.classList.remove('ring-2', 'ring-green-500'), 1200);
+            runSimulation();
+        }
+
+        // Lancer une première simulation au chargement de la page
+        window.onload = () => {
+            addWeightRow(CATALOG.findIndex(c => c.code === 'PLSTHA-02504809600'), 100);
+            addWeightRow(CATALOG.findIndex(c => c.code === 'PLSTHA-01884814400'), 50);
+            renderHistory();
+            if (!storageAvailable) document.getElementById('storageWarning').classList.remove('hidden');
+            setTimeout(runSimulation, 200);
+        };
+    </script>
+</body>
+</html>
