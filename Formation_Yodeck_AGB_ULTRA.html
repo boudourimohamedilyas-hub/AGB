@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-fr="AGB · Régie de diffusion — Formation Yodeck" data-en="AGB · Broadcast Control — Yodeck Training">AGB · Régie de diffusion — Formation Yodeck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#06090D;--ink-2:#0B1118;--panel:#121A23;--panel-2:#18222D;
+  --line:#28363F;--line-soft:#18222B;
+  --text:#EAF2F7;--muted:#7E96A6;--dim:#4F6373;
+  --signal:#FFB020;--signal-2:#FF7A18;--live:#4FE3A6;--cool:#3FC4EA;--hot:#FF4D4D;
+  --display:"Barlow Condensed",Impact,sans-serif;
+  --body:"IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --mx:.5;--my:.5;--hp:0;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:96px}
+body{margin:0;background:var(--ink);color:var(--text);font-family:var(--body);font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body.booting{overflow:hidden}
+
+/* ══ DÉFILEMENT INERTIEL ══ */
+html.ss #scroller{position:fixed;top:0;left:0;right:0;will-change:transform;z-index:2}
+html.ss #spacer{display:block}
+#spacer{display:none}
+#scroller{position:relative;z-index:2}
+
+/* ══ SHADER DE FOND ══ */
+#gl{position:fixed;inset:0;z-index:0;display:block;width:100%;height:100%}
+
+/* ══ DÉMARRAGE ══ */
+#boot{position:fixed;inset:0;z-index:200;background:var(--ink);display:flex;align-items:center;justify-content:center;
+  clip-path:inset(0 0 0 0);transition:clip-path .95s cubic-bezier(.76,0,.24,1)}
+#boot.done{clip-path:inset(50% 0 50% 0);pointer-events:none}
+.boot-in{width:min(600px,86vw);font-family:var(--mono);font-size:12px;letter-spacing:.1em;position:relative}
+.boot-hd{font-family:var(--display);font-size:clamp(32px,5.4vw,58px);font-weight:800;letter-spacing:.07em;text-transform:uppercase;margin-bottom:4px;line-height:1}
+.boot-hd em{font-style:normal;color:var(--signal)}
+.boot-sub{color:var(--dim);font-size:10px;letter-spacing:.3em;text-transform:uppercase;margin-bottom:30px}
+.boot-pct{position:absolute;right:0;top:0;font-family:var(--display);font-size:clamp(40px,7vw,76px);font-weight:800;color:var(--signal);line-height:.8;font-variant-numeric:tabular-nums}
+.boot-line{display:flex;justify-content:space-between;gap:14px;color:var(--muted);opacity:0;transform:translateY(7px);padding:6px 0;border-bottom:1px solid var(--line-soft)}
+.boot-line.on{opacity:1;transform:none;transition:.32s}
+.boot-line b{color:var(--live);font-weight:500}
+.boot-prog{margin-top:24px;height:2px;background:var(--line-soft);position:relative;overflow:hidden}
+.boot-prog i{position:absolute;inset:0 100% 0 0;background:linear-gradient(90deg,var(--signal),var(--signal-2));transition:right .28s cubic-bezier(.16,1,.3,1)}
+.boot-skip{margin-top:14px;color:var(--dim);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;text-align:right}
+
+/* ══ VOLET DE TRANSITION ══ */
+#wipe{position:fixed;inset:0;z-index:120;pointer-events:none;display:flex}
+#wipe i{flex:1;background:var(--signal);transform:scaleY(0);transform-origin:bottom}
+#wipe.go i{animation:wipe .82s cubic-bezier(.76,0,.24,1) forwards}
+#wipe.go i:nth-child(1){animation-delay:0s}#wipe.go i:nth-child(2){animation-delay:.05s}
+#wipe.go i:nth-child(3){animation-delay:.1s}#wipe.go i:nth-child(4){animation-delay:.15s}
+#wipe.go i:nth-child(5){animation-delay:.2s}#wipe.go i:nth-child(6){animation-delay:.25s}
+@keyframes wipe{0%{transform:scaleY(0);transform-origin:bottom}45%{transform:scaleY(1);transform-origin:bottom}
+  55%{transform:scaleY(1);transform-origin:top}100%{transform:scaleY(0);transform-origin:top}}
+
+/* ══ ATMOSPHÈRE ══ */
+.atmo{position:fixed;inset:0;pointer-events:none;z-index:1}
+.atmo .grain{position:absolute;inset:-50%;opacity:.05;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");animation:grain 7s steps(6) infinite}
+@keyframes grain{0%{transform:translate(0,0)}16%{transform:translate(-4%,-3%)}33%{transform:translate(3%,-5%)}50%{transform:translate(-3%,4%)}66%{transform:translate(4%,3%)}83%{transform:translate(-5%,-2%)}100%{transform:translate(0,0)}}
+.atmo .fallback{position:absolute;inset:0;background:radial-gradient(700px 700px at calc(var(--mx)*100%) calc(var(--my)*100%),rgba(255,176,32,.10),transparent 62%),radial-gradient(125% 92% at 50% 40%,transparent 42%,rgba(0,0,0,.7) 100%);display:none}
+html.nogl .atmo .fallback{display:block}
+
+#mire{position:fixed;inset:0;z-index:150;display:none}
+#mire.on{display:flex}
+#mire i{flex:1}
+#mire i:nth-child(1){background:#C8C8C8}#mire i:nth-child(2){background:#C8C800}#mire i:nth-child(3){background:#00C8C8}
+#mire i:nth-child(4){background:#00C800}#mire i:nth-child(5){background:#C800C8}#mire i:nth-child(6){background:#C80000}#mire i:nth-child(7){background:#0000C8}
+
+/* ══ CURSEUR ══ */
+.cur{position:fixed;top:0;left:0;pointer-events:none;z-index:90;mix-blend-mode:screen}
+.cur-dot{width:5px;height:5px;background:var(--signal);border-radius:50%;transform:translate(-50%,-50%)}
+.cur-ret{width:38px;height:38px;transform:translate(-50%,-50%);border:1px solid rgba(255,176,32,.45);border-radius:50%;transition:width .3s cubic-bezier(.2,.8,.2,1),height .3s cubic-bezier(.2,.8,.2,1),border-color .3s}
+.cur-ret::before,.cur-ret::after{content:"";position:absolute;background:rgba(255,176,32,.5);left:50%;width:1px;height:6px}
+.cur-ret::before{top:-7px}.cur-ret::after{bottom:-7px}
+.cur-ret.hot{width:68px;height:68px;border-color:var(--signal)}
+.cur-txt{position:absolute;transform:translate(26px,20px);font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--signal);white-space:nowrap;opacity:.7}
+@media (pointer:coarse),(max-width:900px){.cur{display:none}}
+
+/* ══ MOUCHARD ══ */
+.bug{position:fixed;right:24px;bottom:22px;z-index:45;display:flex;align-items:center;gap:11px;padding:9px 14px;
+  background:rgba(6,9,13,.8);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:4px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  opacity:0;transform:translateY(10px);transition:.6s cubic-bezier(.16,1,.3,1)}
+.bug.in{opacity:1;transform:none}
+.bug .rec{width:7px;height:7px;border-radius:50%;background:var(--hot);animation:rec 1.4s infinite}
+@keyframes rec{0%,100%{opacity:1}50%{opacity:.25}}
+.bug .ch{color:var(--signal);font-weight:600}
+.bug .tc{color:var(--muted);border-left:1px solid var(--line);padding-left:11px;font-variant-numeric:tabular-nums}
+@media(max-width:620px){.bug{right:12px;bottom:12px;font-size:9px;padding:7px 10px}.bug .tc{display:none}}
+
+/* ══ RAIL ══ */
+.rail{position:fixed;left:26px;top:50%;transform:translateY(-50%);z-index:35;display:flex;flex-direction:column}
+.rail .track{position:absolute;left:5px;top:6px;bottom:6px;width:1px;background:var(--line-soft)}
+.rail .fill{position:absolute;left:5px;top:6px;width:1px;background:linear-gradient(var(--signal),var(--signal-2));height:0}
+.rail a{position:relative;display:flex;align-items:center;gap:12px;padding:11px 0;text-decoration:none;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--dim)}
+.rail a .pip{width:11px;height:11px;border:1px solid var(--line);border-radius:50%;background:var(--ink);flex:none;transition:.3s}
+.rail a .lbl{opacity:0;transform:translateX(-6px);transition:.34s cubic-bezier(.2,.8,.2,1);white-space:nowrap}
+.rail:hover a .lbl{opacity:1;transform:none}
+.rail a.act{color:var(--signal)}
+.rail a.act .pip{border-color:var(--signal);background:var(--signal);box-shadow:0 0 0 4px rgba(255,176,32,.16)}
+@media(max-width:1280px){.rail{display:none}}
+
+.wrap{max-width:1160px;margin:0 auto;padding:0 30px;position:relative;z-index:2}
+
+/* ══ BARRE ══ */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:40;background:rgba(6,9,13,.72);backdrop-filter:blur(16px);border-bottom:1px solid var(--line-soft)}
+.topbar .wrap{display:flex;align-items:center;gap:20px;height:64px}
+.topbar .prog{position:absolute;left:0;bottom:-1px;height:1px;background:linear-gradient(90deg,var(--signal),var(--signal-2));width:0}
+.brand{font-family:var(--display);font-weight:800;font-size:23px;letter-spacing:.09em;text-transform:uppercase}
+.brand i{font-style:normal;color:var(--signal)}
+.onair{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+.onair .bulb{width:6px;height:6px;border-radius:50%;background:var(--live);animation:pulse 2.2s infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(79,227,166,.5)}50%{opacity:.5;box-shadow:0 0 0 5px rgba(79,227,166,0)}}
+.topbar nav{margin-left:auto;display:flex;gap:2px}
+.topbar nav a{position:relative;font-family:var(--mono);font-size:11.5px;color:var(--muted);text-decoration:none;padding:8px 11px}
+.topbar nav a::after{content:"";position:absolute;left:11px;right:11px;bottom:3px;height:1px;background:var(--signal);transform:scaleX(0);transform-origin:left;transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.topbar nav a:hover::after{transform:scaleX(1)}.topbar nav a:hover{color:var(--text)}
+@media(max-width:1080px){.topbar nav{display:none}}
+@media(max-width:620px){.onair{display:none}}
+.lang{margin-left:auto;display:flex;align-items:center;gap:10px;background:transparent;border:1px solid var(--line);border-radius:999px;padding:5px 14px 5px 8px;cursor:none;color:var(--text);transition:.3s}
+.topbar nav ~ .lang{margin-left:16px}
+.lang:hover{border-color:var(--signal);background:rgba(255,176,32,.07)}
+.lang .ring{width:19px;height:19px;flex:none;transform:rotate(-90deg)}
+.lang .ring circle{fill:none;stroke-width:2.5}
+.lang .ring .bg{stroke:var(--line)}
+.lang .ring .fg{stroke:var(--signal);stroke-dasharray:47.1;stroke-dashoffset:0;animation:tick 10s linear infinite}
+@keyframes tick{from{stroke-dashoffset:0}to{stroke-dashoffset:47.1}}
+.lang.paused .ring .fg{animation-play-state:paused;stroke:var(--dim)}
+.lang b{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.12em}
+.lang small{font-family:var(--mono);font-size:9.5px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+@media(max-width:620px){.lang small{display:none}}
+
+/* ══ HERO ══ */
+.hero{padding:164px 0 78px;position:relative}
+.hero-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:60px;align-items:center}
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--signal);margin-bottom:26px;display:flex;align-items:center;gap:12px}
+.eyebrow::before{content:"";width:30px;height:1px;background:var(--signal);flex:none}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(54px,8.8vw,112px);line-height:.84;letter-spacing:-.018em;text-transform:uppercase;margin:0 0 26px}
+h1 .ln{display:block;overflow:hidden;padding-bottom:.05em}
+h1 .ln>i{display:block;font-style:normal;transform:translateY(110%);transition:transform 1.05s cubic-bezier(.16,1,.3,1)}
+h1.rise .ln:nth-child(1)>i{transition-delay:.04s}
+h1.rise .ln:nth-child(2)>i{transition-delay:.13s}
+h1.rise .ln:nth-child(3)>i{transition-delay:.22s}
+h1.rise .ln>i{transform:none}
+h1 em{font-style:normal;background:linear-gradient(100deg,var(--signal),var(--signal-2) 52%,#ffd98a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{font-size:18.5px;color:var(--muted);max-width:44ch;margin:0 0 34px}
+.meta{display:flex;flex-wrap:wrap;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.meta div{padding:16px 24px 16px 0;margin-right:24px;border-right:1px solid var(--line-soft)}
+.meta div:last-child{border-right:0;margin-right:0}
+.meta b{display:block;font-family:var(--display);font-size:29px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.meta small{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+
+/* ══ MUR CHORÉGRAPHIÉ ══ */
+.stage{perspective:1500px}
+.wall{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;aspect-ratio:1/1;transform-style:preserve-3d;
+  transform:translateZ(calc(var(--hp) * -260px))
+            rotateX(calc((var(--my) - .5) * -14deg + var(--hp) * 16deg))
+            rotateY(calc((var(--mx) - .5) * 21deg + var(--hp) * -12deg));
+  transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.pane{position:relative;overflow:hidden;border-radius:4px;background:linear-gradient(160deg,var(--panel),var(--ink-2));border:1px solid var(--line-soft);
+  transform:translate3d(var(--ox,0px),var(--oy,0px),calc(var(--d) * 28px)) rotate(var(--or,0deg)) scale(.55);opacity:0;
+  transition:border-color .4s,box-shadow .4s,opacity .6s cubic-bezier(.16,1,.3,1),transform 1.15s cubic-bezier(.16,1,.3,1)}
+.wall.up .pane{opacity:1;transform:translate3d(0,0,calc(var(--d) * 28px)) rotate(0deg) scale(1)}
+.pane::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.09),transparent 42%);opacity:.7}
+.pane.hot{border-color:rgba(255,176,32,.6);box-shadow:0 0 30px -6px rgba(255,176,32,.5)}
+.pane.flick{animation:flick .34s steps(2)}
+@keyframes flick{0%{filter:brightness(3) contrast(.4)}30%{filter:brightness(.2)}60%{filter:brightness(2.2)}100%{filter:none}}
+.pane .tag{position:absolute;left:9px;bottom:7px;z-index:3;font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.pane .num{position:absolute;right:8px;top:6px;z-index:3;font-family:var(--display);font-size:15px;font-weight:700;color:var(--line)}
+.pane.hot .num{color:var(--signal)}
+.bars{position:absolute;inset:0;display:flex}
+.bars i{flex:1}
+.bars i:nth-child(1){background:#C8C8C8}.bars i:nth-child(2){background:#C8C800}.bars i:nth-child(3){background:#00C8C8}
+.bars i:nth-child(4){background:#00C800}.bars i:nth-child(5){background:#C800C8}.bars i:nth-child(6){background:#C80000}.bars i:nth-child(7){background:#0000C8}
+.bars-p::after{opacity:.35}
+.wave{position:absolute;inset:auto 10px 22px 10px;height:38%;display:flex;align-items:flex-end;gap:2px}
+.wave i{flex:1;background:linear-gradient(var(--signal),rgba(255,176,32,.18));border-radius:1px;animation:eq 1.5s ease-in-out infinite}
+@keyframes eq{0%,100%{height:22%}50%{height:92%}}
+.kpi{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.kpi b{font-family:var(--display);font-size:clamp(26px,3.4vw,44px);font-weight:800;line-height:.9}
+.kpi span{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
+.clock{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:clamp(13px,1.7vw,20px);color:var(--live);letter-spacing:.06em}
+.sweep{position:absolute;left:0;right:0;height:36%;z-index:2;background:linear-gradient(rgba(255,176,32,0),rgba(255,176,32,.14),rgba(255,176,32,0));animation:sweep 5.5s linear infinite}
+@keyframes sweep{from{top:-40%}to{top:110%}}
+.pane.dark{background:#080D13}
+.grid-p{position:absolute;inset:0;background-image:linear-gradient(var(--line-soft) 1px,transparent 1px),linear-gradient(90deg,var(--line-soft) 1px,transparent 1px);background-size:14px 14px;opacity:.5}
+@media(max-width:960px){.hero-grid{grid-template-columns:1fr;gap:48px}.hero{padding:120px 0 56px}.wall{transform:none;max-width:440px}}
+
+.ticker{border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);overflow:hidden;padding:13px 0;background:rgba(18,26,35,.4);position:relative;z-index:2}
+.ticker-in{display:flex;width:max-content;animation:roll 32s linear infinite}
+.ticker:hover .ticker-in{animation-play-state:paused}
+@keyframes roll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.ticker span{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);padding:0 26px;display:flex;align-items:center;gap:26px}
+.ticker span::after{content:"";width:4px;height:4px;background:var(--signal);border-radius:50%;opacity:.7}
+
+/* ══ SECTIONS ══ */
+.sec-head{display:flex;align-items:baseline;gap:18px;margin-bottom:30px;flex-wrap:wrap}
+.sec-head h2{font-family:var(--display);font-size:34px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin:0}
+.sec-head span{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.16em;text-transform:uppercase}
+.prep{padding:76px 0}
+.prep-list{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-soft);border:1px solid var(--line-soft)}
+.prep-list article{background:rgba(6,9,13,.86);padding:28px 24px;position:relative;transition:background .4s}
+.prep-list article::before{content:"";position:absolute;left:0;top:0;width:100%;height:1px;background:var(--signal);transform:scaleX(0);transform-origin:left;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.prep-list article:hover{background:rgba(11,17,24,.94)}
+.prep-list article:hover::before{transform:scaleX(1)}
+.prep-list h3{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--signal);margin:0 0 10px}
+.prep-list p{margin:0;font-size:14.5px;color:var(--muted)}
+@media(max-width:800px){.prep-list{grid-template-columns:1fr}}
+
+/* ══ MODULES ══ */
+.modules{padding:24px 0 20px}
+.module{padding:70px 0;border-top:1px solid var(--line-soft)}
+.mod-grid{display:grid;grid-template-columns:.68fr 1.32fr;gap:52px;align-items:start}
+.mod-num{position:relative;font-family:var(--display);font-size:92px;font-weight:800;line-height:.74;margin-bottom:18px;color:transparent;-webkit-text-stroke:1px var(--line);will-change:transform}
+.module.seen .mod-num{color:var(--signal);-webkit-text-stroke:0;transition:color .7s .15s}
+.mod-num i{font-style:normal;-webkit-text-stroke:0;color:var(--line);font-size:38px;margin-left:5px}
+.module h2{font-family:var(--display);font-size:clamp(30px,3.4vw,44px);font-weight:700;text-transform:uppercase;line-height:1;margin:0 0 16px;perspective:600px}
+.module h2 .w{display:inline-block;white-space:nowrap}
+.module h2 .c{display:inline-block;transform:rotateX(-92deg) translateY(.32em);opacity:0;transition:transform .72s cubic-bezier(.16,1,.3,1),opacity .5s}
+.module.seen h2 .c{transform:none;opacity:1}
+.mod-src{font-family:var(--mono);font-size:10.5px;color:var(--dim);border-left:2px solid rgba(255,176,32,.4);padding-left:12px;margin:0 0 20px;line-height:1.55}
+.module p.desc{font-size:15px;color:var(--muted);margin:0 0 24px}
+.steps{list-style:none;padding:0;margin:0 0 26px;counter-reset:s}
+.steps li{font-size:14.5px;padding:9px 0 9px 30px;position:relative;border-top:1px solid var(--line-soft);counter-increment:s;opacity:0;transform:translateX(-10px)}
+.module.seen .steps li{opacity:1;transform:none;transition:opacity .55s,transform .55s}
+.module.seen .steps li:nth-child(1){transition-delay:.4s}
+.module.seen .steps li:nth-child(2){transition-delay:.5s}
+.module.seen .steps li:nth-child(3){transition-delay:.6s}
+.module.seen .steps li:nth-child(4){transition-delay:.7s}
+.steps li::before{content:counter(s,decimal-leading-zero);position:absolute;left:0;top:9px;font-family:var(--mono);font-size:10px;color:var(--signal);letter-spacing:.08em}
+.btn{position:relative;display:inline-flex;align-items:center;gap:11px;overflow:hidden;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:var(--ink);background:var(--signal);text-decoration:none;padding:12px 20px;border-radius:3px;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .3s}
+.btn::before{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-120%)}
+.btn:hover::before{animation:shine .7s}
+@keyframes shine{to{transform:translateX(120%)}}
+.btn:hover{box-shadow:0 12px 34px -12px rgba(255,176,32,.85)}
+.screen{position:relative;background:linear-gradient(150deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:8px;padding:12px 12px 0;
+  box-shadow:0 46px 110px -50px #000,inset 0 1px 0 rgba(255,255,255,.05);
+  transform-style:preserve-3d;transform:perspective(1200px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));
+  transition:transform .55s cubic-bezier(.2,.8,.2,1);will-change:transform}
+.screen .glare{position:absolute;inset:0;border-radius:8px;pointer-events:none;z-index:4;opacity:0;transition:opacity .4s;background:radial-gradient(320px 320px at var(--gx,50%) var(--gy,50%),rgba(255,255,255,.12),transparent 65%)}
+.screen:hover .glare{opacity:1}
+.screen-bar{display:flex;align-items:center;gap:10px;padding:0 4px 11px}
+.tally{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none;transition:.4s}
+.module.live .tally{background:var(--live);box-shadow:0 0 0 5px rgba(79,227,166,.15)}
+.screen-bar .id{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase}
+.screen-bar .fmt{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--line)}
+.tube{position:relative;border-radius:3px;overflow:hidden;background:#000;clip-path:inset(50% 0 50% 0);transition:clip-path .72s cubic-bezier(.16,1,.3,1)}
+.module.seen .tube{clip-path:inset(0 0 0 0)}
+.tube .flash{position:absolute;left:0;right:0;top:50%;height:2px;background:#fff;opacity:0;z-index:3}
+.module.seen .tube .flash{animation:crt .72s cubic-bezier(.16,1,.3,1)}
+@keyframes crt{0%{opacity:1;transform:scaleX(.1)}55%{opacity:.9;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1)}}
+.tube iframe{display:block;width:100%;aspect-ratio:16/9;border:0;background:#000}
+.screen-foot{padding:10px 4px 12px;font-family:var(--mono);font-size:10px;color:var(--dim);display:flex;justify-content:space-between;gap:12px;letter-spacing:.08em}
+@media(max-width:960px){.mod-grid{grid-template-columns:1fr;gap:30px}.mod-num{font-size:58px}.screen{transform:none}}
+
+.ref{padding:80px 0}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14.5px;min-width:660px}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--signal);text-align:left;padding:13px 18px 13px 0;border-bottom:1px solid var(--line)}
+td{padding:15px 18px 15px 0;border-bottom:1px solid var(--line-soft);vertical-align:top;color:var(--muted);transition:color .3s}
+tbody tr{transition:background .3s}
+tbody tr:hover{background:rgba(255,176,32,.045)}
+tbody tr:hover td{color:var(--text)}
+td:first-child{color:var(--text);font-weight:600;white-space:nowrap}
+.note{margin-top:26px;font-size:14.5px;color:var(--muted);border-left:2px solid rgba(255,176,32,.45);padding-left:16px}
+footer{padding:56px 0 96px;border-top:1px solid var(--line-soft)}
+footer .wrap{display:flex;justify-content:space-between;gap:22px;flex-wrap:wrap}
+footer p{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.1em;margin:0}
+
+.rv{opacity:0;transform:translateY(26px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1)}
+.rv.in{opacity:1;transform:none}
+
+[data-fr]{transition:opacity .2s ease}
+body.chg [data-fr]{opacity:0}
+body.chg h1,body.chg .module h2,body.chg .sec-head h2{animation:rgbsplit .34s steps(3)}
+@keyframes rgbsplit{0%{text-shadow:-3px 0 rgba(255,80,80,.9),3px 0 rgba(80,200,255,.9)}50%{text-shadow:5px 0 rgba(255,80,80,.9),-5px 0 rgba(80,200,255,.9)}100%{text-shadow:none}}
+.chgbar{position:fixed;left:0;right:0;top:0;height:2px;background:var(--signal);transform:scaleX(0);transform-origin:left;z-index:95;pointer-events:none}
+body.chg .chgbar{animation:chgbar .5s cubic-bezier(.16,1,.3,1)}
+@keyframes chgbar{0%{transform:scaleX(0)}45%{transform:scaleX(1);transform-origin:left}46%{transform-origin:right}100%{transform:scaleX(0);transform-origin:right}}
+
+:focus-visible{outline:2px solid var(--signal);outline-offset:4px}
+a,button{cursor:none}
+@media (pointer:coarse),(max-width:900px){a,button{cursor:pointer}}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .rv,.steps li,.pane{opacity:1;transform:none}
+  .tube{clip-path:none}.wall{transform:none}
+  h1 .ln>i{transform:none}.module h2 .c{transform:none;opacity:1}
+  .mod-num{color:var(--signal);-webkit-text-stroke:0}
+  #boot,#gl,#wipe{display:none}
+  html.ss #scroller{position:relative}
+}
+@media print{body{background:#fff;color:#000}.atmo,.cur,.rail,.lang,.ticker,.bug,#gl,#boot,#wipe,iframe{display:none}.topbar{position:static}.rv{opacity:1;transform:none}html.ss #scroller{position:relative}}
+</style>
+</head>
+<body class="booting">
+
+<canvas id="gl"></canvas>
+<div class="atmo" aria-hidden="true"><div class="fallback"></div><div class="grain"></div></div>
+<div class="chgbar" aria-hidden="true"></div>
+<div id="wipe" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<div id="mire" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+<div id="boot">
+  <div class="boot-in">
+    <div class="boot-pct" id="bootPct">0</div>
+    <div class="boot-hd">AGB <em>·</em> Régie</div>
+    <div class="boot-sub">Système de diffusion — Saint-Quentin</div>
+    <div id="bootLines"></div>
+    <div class="boot-prog"><i id="bootBar"></i></div>
+    <div class="boot-skip">Cliquer pour passer</div>
+  </div>
+</div>
+
+<div class="cur" aria-hidden="true"><div class="cur-ret" id="curRet"></div></div>
+<div class="cur" aria-hidden="true"><div class="cur-dot" id="curDot"></div><div class="cur-txt" id="curTxt">0000 · 0000</div></div>
+
+<div class="bug" id="bug" aria-hidden="true">
+  <span class="rec"></span><span class="ch" id="bugCh">CH 01</span>
+  <span data-fr="En diffusion" data-en="On air">En diffusion</span>
+  <span class="tc" id="bugTc">00:00:00:00</span>
+</div>
+
+<div class="rail" aria-hidden="true">
+  <div class="track"></div><div class="fill" id="railFill"></div>
+  <a href="#m1"><span class="pip"></span><span class="lbl" data-fr="Image" data-en="Image">Image</span></a>
+  <a href="#m2"><span class="pip"></span><span class="lbl" data-fr="Vidéo" data-en="Video">Vidéo</span></a>
+  <a href="#m3"><span class="pip"></span><span class="lbl" data-fr="Page web" data-en="Web page">Page web</span></a>
+  <a href="#m4"><span class="pip"></span><span class="lbl" data-fr="Mise en page" data-en="Layout">Mise en page</span></a>
+  <a href="#m5"><span class="pip"></span><span class="lbl" data-fr="Liste de lecture" data-en="Playlist">Liste de lecture</span></a>
+</div>
+
+<div class="topbar">
+  <div class="wrap">
+    <div class="brand" data-fr="AGB<i>·</i>Écrans" data-en="AGB<i>·</i>Screens">AGB<i>·</i>Écrans</div>
+    <div class="onair"><span class="bulb"></span><span data-fr="En diffusion" data-en="On air">En diffusion</span></div>
+    <nav>
+      <a href="#m1" data-fr="01 Image" data-en="01 Image">01 Image</a>
+      <a href="#m2" data-fr="02 Vidéo" data-en="02 Video">02 Vidéo</a>
+      <a href="#m3" data-fr="03 Page web" data-en="03 Web page">03 Page web</a>
+      <a href="#m4" data-fr="04 Mise en page" data-en="04 Layout">04 Mise en page</a>
+      <a href="#m5" data-fr="05 Liste de lecture" data-en="05 Playlist">05 Liste de lecture</a>
+    </nav>
+    <button class="lang" id="langBtn" type="button" aria-live="polite">
+      <svg class="ring" viewBox="0 0 19 19" aria-hidden="true"><circle class="bg" cx="9.5" cy="9.5" r="7.5"></circle><circle class="fg" cx="9.5" cy="9.5" r="7.5"></circle></svg>
+      <b id="langCode">FR</b><small data-fr="Auto 10 s" data-en="Auto 10 s">Auto 10 s</small>
+    </button>
+  </div>
+  <div class="prog" id="topProg"></div>
+</div>
+
+<div id="scroller">
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow" data-fr="Guide de formation · Affichage numérique" data-en="Training guide · Digital signage" data-scramble>Guide de formation · Affichage numérique</div>
+      <h1 id="h1" data-fr="Prendre<br>le <em>contrôle</em><br>des écrans" data-en="Take <em>control</em><br>of the<br>screens">Prendre<br>le <em>contrôle</em><br>des écrans</h1>
+      <p class="lede" data-fr="Cinq modules vidéo pour publier n'importe quoi sur les écrans Yodeck : une image, une vidéo, une page web, une mise en page, puis une liste de lecture planifiée." data-en="Five video modules to publish anything to Yodeck screens: an image, a video, a web page, a layout, then a scheduled playlist.">Cinq modules vidéo pour publier n'importe quoi sur les écrans Yodeck : une image, une vidéo, une page web, une mise en page, puis une liste de lecture planifiée.</p>
+      <div class="meta">
+        <div><b data-count="5" data-pad="2">05</b><small data-fr="Modules" data-en="Modules">Modules</small></div>
+        <div><b data-count="25">25</b><small data-fr="Minutes au total" data-en="Minutes total">Minutes au total</small></div>
+        <div><b>FR/EN</b><small data-fr="Bascule automatique" data-en="Auto switching">Bascule automatique</small></div>
+        <div><b data-count="0" data-pad="2">00</b><small data-fr="Prérequis technique" data-en="Technical prerequisites">Prérequis technique</small></div>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="wall" id="wall" aria-hidden="true">
+        <div class="pane" style="--d:2;--ox:-120px;--oy:-90px;--or:-8deg"><span class="num">01</span><div class="kpi"><b>IMG</b><span data-fr="Statique" data-en="Static">Statique</span></div><span class="tag">CH-01</span></div>
+        <div class="pane bars-p dark" style="--d:0;--ox:0px;--oy:-150px;--or:5deg"><div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="tag">MIRE</span></div>
+        <div class="pane" style="--d:3;--ox:130px;--oy:-80px;--or:9deg"><span class="num">02</span><div class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="tag">CH-02</span></div>
+        <div class="pane dark" style="--d:1;--ox:-160px;--oy:0px;--or:6deg"><div class="grid-p"></div><div class="clock" id="clock">00:00:00</div><span class="tag">HORLOGE</span></div>
+        <div class="pane" style="--d:4;--ox:0px;--oy:0px;--or:0deg"><span class="num">03</span><div class="sweep"></div><div class="kpi"><b>WEB</b><span data-fr="En direct" data-en="Live">En direct</span></div><span class="tag">CH-03</span></div>
+        <div class="pane" style="--d:1;--ox:165px;--oy:10px;--or:-7deg"><span class="num">04</span><div class="kpi"><b>3</b><span data-fr="Zones" data-en="Zones">Zones</span></div><span class="tag">CH-04</span></div>
+        <div class="pane dark" style="--d:2;--ox:-120px;--oy:110px;--or:8deg"><div class="grid-p"></div><span class="tag">SIGNAL OK</span></div>
+        <div class="pane" style="--d:3;--ox:0px;--oy:160px;--or:-5deg"><span class="num">05</span><div class="kpi"><b>∞</b><span data-fr="Boucle" data-en="Loop">Boucle</span></div><span class="tag">CH-05</span></div>
+        <div class="pane dark" style="--d:0;--ox:135px;--oy:105px;--or:7deg"><div class="grid-p"></div><div class="kpi"><b>16:9</b><span>1920×1080</span></div><span class="tag">FORMAT</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="ticker" aria-hidden="true"><div class="ticker-in" id="tick"></div></div>
+
+<section class="prep">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <h2 data-fr="Avant de commencer" data-en="Before you start">Avant de commencer</h2>
+      <span data-fr="Trois choses à avoir sous la main" data-en="Three things to have on hand" data-scramble>Trois choses à avoir sous la main</span>
+    </div>
+    <div class="prep-list rv">
+      <article>
+        <h3 data-fr="Un accès Yodeck" data-en="A Yodeck account">Un accès Yodeck</h3>
+        <p data-fr="Demandez vos identifiants au responsable de l'affichage. Vérifiez que vous voyez bien les écrans du plancher dans la section Screens." data-en="Ask the signage lead for your credentials. Check that the shop floor screens appear under Screens.">Demandez vos identifiants au responsable de l'affichage. Vérifiez que vous voyez bien les écrans du plancher dans la section Screens.</p>
+      </article>
+      <article>
+        <h3 data-fr="Le contenu à diffuser" data-en="The content to publish">Le contenu à diffuser</h3>
+        <p data-fr="Image, vidéo ou adresse web, prêt et validé. Le contenu s'affiche en public : faites relire avant de publier." data-en="Image, video or web address, ready and approved. It goes up in public, so have it proofread before publishing.">Image, vidéo ou adresse web, prêt et validé. Le contenu s'affiche en public : faites relire avant de publier.</p>
+      </article>
+      <article>
+        <h3 data-fr="Le nom exact de l'écran" data-en="The exact screen name">Le nom exact de l'écran</h3>
+        <p data-fr="Savoir sur quel écran ou quel groupe d'écrans le contenu doit apparaître évite les publications au mauvais endroit." data-en="Knowing which screen or screen group the content belongs on prevents publishing in the wrong place.">Savoir sur quel écran ou quel groupe d'écrans le contenu doit apparaître évite les publications au mauvais endroit.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<main class="modules">
+  <div class="wrap">
+
+    <article class="module" id="m1" data-ch="01">
+      <div class="mod-grid">
+        <div>
+          <div class="mod-num" data-par="-30">01<i>/05</i></div>
+          <h2 data-split data-fr="Insérer une image et l'afficher à l'écran" data-en="Add an image and put it on screen">Insérer une image et l'afficher à l'écran</h2>
+          <p class="mod-src">How to Schedule and Deploy Content to Yodeck Screens</p>
+          <p class="desc" data-fr="Le point de départ. Vous téléversez une image dans la médiathèque, puis vous l'envoyez vers un écran avec une plage horaire." data-en="The starting point. You upload an image to the media library, then send it to a screen with a time slot.">Le point de départ. Vous téléversez une image dans la médiathèque, puis vous l'envoyez vers un écran avec une plage horaire.</p>
+          <ul class="steps">
+            <li data-fr="Ajouter l'image à la médiathèque" data-en="Add the image to the media library">Ajouter l'image à la médiathèque</li>
+            <li data-fr="Choisir l'écran de destination" data-en="Choose the destination screen">Choisir l'écran de destination</li>
+            <li data-fr="Définir la période d'affichage" data-en="Set the display period">Définir la période d'affichage</li>
+            <li data-fr="Pousser la modification vers l'écran" data-en="Push the change to the screen">Pousser la modification vers l'écran</li>
+          </ul>
+          <a class="btn" href="https://scribehow.com/embed-preview/How_to_Schedule_and_Deploy_Content_to_Yodeck_Screens__ypEy9zkgTAyaiDDoT_w52A?as=video&amp;size=flexible&amp;voice=shimmer&amp;scaleMode=contain" target="_blank" rel="noopener" data-fr="Ouvrir en plein écran ↗" data-en="Open full screen ↗">Ouvrir en plein écran ↗</a>
+        </div>
+        <div class="screen" data-tilt data-par="14">
+          <div class="glare"></div>
+          <div class="screen-bar"><span class="tally"></span><span class="id" data-fr="Canal 01 — Image" data-en="Channel 01 — Image">Canal 01 — Image</span><span class="fmt">16:9</span></div>
+          <div class="tube"><span class="flash"></span>
+            <iframe src="https://scribehow.com/embed-preview/How_to_Schedule_and_Deploy_Content_to_Yodeck_Screens__ypEy9zkgTAyaiDDoT_w52A?as=video&amp;size=flexible&amp;voice=shimmer&amp;scaleMode=contain" title="Tutoriel : planifier et déployer du contenu sur les écrans Yodeck" loading="lazy" allowfullscreen></iframe>
+          </div>
+          <div class="screen-foot"><span data-fr="Tutoriel guidé · narration" data-en="Guided tutorial · narration">Tutoriel guidé · narration</span><span>SCRIBE</span></div>
+        </div>
+      </div>
+    </article>
+
+    <article class="module" id="m2" data-ch="02">
+      <div class="mod-grid">
+        <div>
+          <div class="mod-num" data-par="-30">02<i>/05</i></div>
+          <h2 data-split data-fr="Insérer une vidéo et l'afficher à l'écran" data-en="Add a video and put it on screen">Insérer une vidéo et l'afficher à l'écran</h2>
+          <p class="mod-src">How to Upload Videos and Assign Schedules in Yodeck</p>
+          <p class="desc" data-fr="Même principe qu'une image, avec deux différences : le fichier est plus lourd et sa durée dicte le temps d'affichage." data-en="Same idea as an image, with two differences: the file is heavier and its length sets the display time.">Même principe qu'une image, avec deux différences : le fichier est plus lourd et sa durée dicte le temps d'affichage.</p>
+          <ul class="steps">
+            <li data-fr="Téléverser le fichier vidéo" data-en="Upload the video file">Téléverser le fichier vidéo</li>
+            <li data-fr="Attendre la fin du traitement" data-en="Wait for processing to finish">Attendre la fin du traitement</li>
+            <li data-fr="Assigner l'horaire de diffusion" data-en="Assign the broadcast schedule">Assigner l'horaire de diffusion</li>
+            <li data-fr="Vérifier le rendu sur l'écran" data-en="Check how it looks on the screen">Vérifier le rendu sur l'écran</li>
+          </ul>
+          <a class="btn" href="https://scribehow.com/embed-preview/How_to_Upload_Videos_and_Assign_Schedules_in_Yodeck__6rMSX_zZSsGVBrjmCKB5xA?as=video&amp;size=flexible&amp;voice=shimmer&amp;scaleMode=contain" target="_blank" rel="noopener" data-fr="Ouvrir en plein écran ↗" data-en="Open full screen ↗">Ouvrir en plein écran ↗</a>
+        </div>
+        <div class="screen" data-tilt data-par="14">
+          <div class="glare"></div>
+          <div class="screen-bar"><span class="tally"></span><span class="id" data-fr="Canal 02 — Vidéo" data-en="Channel 02 — Video">Canal 02 — Vidéo</span><span class="fmt">16:9</span></div>
+          <div class="tube"><span class="flash"></span>
+            <iframe src="https://scribehow.com/embed-preview/How_to_Upload_Videos_and_Assign_Schedules_in_Yodeck__6rMSX_zZSsGVBrjmCKB5xA?as=video&amp;size=flexible&amp;voice=shimmer&amp;scaleMode=contain" title="Tutoriel : téléverser des vidéos et assigner des horaires dans Yodeck" loading="lazy" allowfullscreen></iframe>
+          </div>
+          <div class="screen-foot"><span data-fr="Tutoriel guidé · narration" data-en="Guided tutorial · narration">Tutoriel guidé · narration</span><span>SCRIBE</span></div>
+        </div>
+      </div>
+    </article>
+
+    <article class="module" id="m3" data-ch="03">
+      <div class="mod-grid">
+        <div>
+          <div class="mod-num" data-par="-30">03<i>/05</i></div>
+          <h2 data-split data-fr="Insérer un lien et l'afficher à l'écran" data-en="Add a link and put it on screen">Insérer un lien et l'afficher à l'écran</h2>
+          <p class="mod-src">How to Add and Display Web Pages on Yodeck</p>
+          <p class="desc" data-fr="Pour tout contenu qui se met à jour tout seul : tableau de bord, page interne, site public. L'écran affiche la page en direct." data-en="For anything that updates on its own: a dashboard, an internal page, a public site. The screen shows the page live.">Pour tout contenu qui se met à jour tout seul : tableau de bord, page interne, site public. L'écran affiche la page en direct.</p>
+          <ul class="steps">
+            <li data-fr="Créer une source de type page web" data-en="Create a web page source">Créer une source de type page web</li>
+            <li data-fr="Coller l'adresse complète (https://…)" data-en="Paste the full address (https://…)">Coller l'adresse complète (https://…)</li>
+            <li data-fr="Régler la fréquence de rafraîchissement" data-en="Set the refresh rate">Régler la fréquence de rafraîchissement</li>
+            <li data-fr="Publier sur l'écran choisi" data-en="Publish to the chosen screen">Publier sur l'écran choisi</li>
+          </ul>
+          <a class="btn" href="https://scribehow.com/embed-preview/How_to_Add_and_Display_Web_Pages_on_Yodeck__kv4ROPpFT4yspFHb-BytGQ?as=video&amp;size=flexible&amp;voice=shimmer&amp;scaleMode=contain" target="_blank" rel="noopener" data-fr="Ouvrir en plein écran ↗" data-en="Open full screen ↗">Ouvrir en plein écran ↗</a>
+        </div>
+        <div class="screen" data-tilt data-par="14">
+          <div class="glare"></div>
+          <div class="screen-bar"><span class="tally"></span><span class="id" data-fr="Canal 03 — Page web" data-en="Channel 03 — Web page">Canal 03 — Page web</span><span class="fmt">16:9</span></div>
+          <div class="tube"><span class="flash"></span>
+            <iframe src="https://scribehow.com/embed-preview/How_to_Add_and_Display_Web_Pages_on_Yodeck__kv4ROPpFT4yspFHb-BytGQ?as=video&amp;size=flexible&amp;voice=shimmer&amp;scaleMode=contain" title="Tutoriel : ajouter et afficher des pages web sur Yodeck" loading="lazy" allowfullscreen></iframe>
+          </div>
+          <div class="screen-foot"><span data-fr="Tutoriel guidé · narration" data-en="Guided tutorial · narration">Tutoriel guidé · narration</span><span>SCRIBE</span></div>
+        </div>
+      </div>
+    </article>
+
+    <article class="module" id="m4" data-ch="04">
+      <div class="mod-grid">
+        <div>
+          <div class="mod-num" data-par="-30">04<i>/05</i></div>
+          <h2 data-split data-fr="Créer une mise en page et l'afficher à l'écran" data-en="Build a layout and put it on screen">Créer une mise en page et l'afficher à l'écran</h2>
+          <p class="mod-src">Creating and Deploying a Holiday Layout in Yodeck</p>
+          <p class="desc" data-fr="La mise en page divise l'écran en zones pour afficher plusieurs contenus en même temps. L'exemple utilisé est un thème des fêtes." data-en="A layout splits the screen into zones so several contents show at once. The example uses a holiday theme.">La mise en page divise l'écran en zones pour afficher plusieurs contenus en même temps. L'exemple utilisé est un thème des fêtes.</p>
+          <ul class="steps">
+            <li data-fr="Créer une mise en page vierge" data-en="Create an empty layout">Créer une mise en page vierge</li>
+            <li data-fr="Découper l'écran en zones" data-en="Split the screen into zones">Découper l'écran en zones</li>
+            <li data-fr="Assigner un contenu à chaque zone" data-en="Assign content to each zone">Assigner un contenu à chaque zone</li>
+            <li data-fr="Déployer la mise en page complète" data-en="Deploy the finished layout">Déployer la mise en page complète</li>
+          </ul>
+          <a class="btn" href="https://scribehow.com/embed-preview/Creating_and_Deploying_a_Holiday_Layout_in_Yodeck__FI1bfSWWR3C6Hh5_3Ai2Kw?as=video&amp;size=flexible&amp;voice=shimmer&amp;scaleMode=contain" target="_blank" rel="noopener" data-fr="Ouvrir en plein écran ↗" data-en="Open full screen ↗">Ouvrir en plein écran ↗</a>
+        </div>
+        <div class="screen" data-tilt data-par="14">
+          <div class="glare"></div>
+          <div class="screen-bar"><span class="tally"></span><span class="id" data-fr="Canal 04 — Mise en page" data-en="Channel 04 — Layout">Canal 04 — Mise en page</span><span class="fmt">16:9</span></div>
+          <div class="tube"><span class="flash"></span>
+            <iframe src="https://scribehow.com/embed-preview/Creating_and_Deploying_a_Holiday_Layout_in_Yodeck__FI1bfSWWR3C6Hh5_3Ai2Kw?as=video&amp;size=flexible&amp;voice=shimmer&amp;scaleMode=contain" title="Tutoriel : créer et déployer une mise en page dans Yodeck" loading="lazy" allowfullscreen></iframe>
+          </div>
+          <div class="screen-foot"><span data-fr="Tutoriel guidé · narration" data-en="Guided tutorial · narration">Tutoriel guidé · narration</span><span>SCRIBE</span></div>
+        </div>
+      </div>
+    </article>
+
+    <article class="module" id="m5" data-ch="05">
+      <div class="mod-grid">
+        <div>
+          <div class="mod-num" data-par="-30">05<i>/05</i></div>
+          <h2 data-split data-fr="Créer une liste de lecture et l'afficher à l'écran" data-en="Build a playlist and put it on screen">Créer une liste de lecture et l'afficher à l'écran</h2>
+          <p class="mod-src">Creating and Scheduling Playlists in Yodeck</p>
+          <p class="desc" data-fr="La liste de lecture enchaîne plusieurs contenus en boucle. C'est le format à utiliser dès qu'un écran doit montrer plus d'une chose." data-en="A playlist loops through several contents. Use this format as soon as a screen has to show more than one thing.">La liste de lecture enchaîne plusieurs contenus en boucle. C'est le format à utiliser dès qu'un écran doit montrer plus d'une chose.</p>
+          <ul class="steps">
+            <li data-fr="Créer la liste et y ajouter les contenus" data-en="Create the playlist and add content">Créer la liste et y ajouter les contenus</li>
+            <li data-fr="Ordonner les éléments et régler les durées" data-en="Order the items and set durations">Ordonner les éléments et régler les durées</li>
+            <li data-fr="Planifier les jours et les heures de diffusion" data-en="Schedule the days and times">Planifier les jours et les heures de diffusion</li>
+            <li data-fr="Assigner la liste à un écran ou un groupe" data-en="Assign the playlist to a screen or group">Assigner la liste à un écran ou un groupe</li>
+          </ul>
+          <a class="btn" href="https://scribehow.com/embed-preview/Creating_and_Scheduling_Playlists_in_Yodeck__-zj6LYInTfCZiZI_Qt4KVA?as=video&amp;size=flexible&amp;voice=shimmer&amp;scaleMode=contain" target="_blank" rel="noopener" data-fr="Ouvrir en plein écran ↗" data-en="Open full screen ↗">Ouvrir en plein écran ↗</a>
+        </div>
+        <div class="screen" data-tilt data-par="14">
+          <div class="glare"></div>
+          <div class="screen-bar"><span class="tally"></span><span class="id" data-fr="Canal 05 — Liste de lecture" data-en="Channel 05 — Playlist">Canal 05 — Liste de lecture</span><span class="fmt">16:9</span></div>
+          <div class="tube"><span class="flash"></span>
+            <iframe src="https://scribehow.com/embed-preview/Creating_and_Scheduling_Playlists_in_Yodeck__-zj6LYInTfCZiZI_Qt4KVA?as=video&amp;size=flexible&amp;voice=shimmer&amp;scaleMode=contain" title="Tutoriel : créer et planifier des listes de lecture dans Yodeck" loading="lazy" allowfullscreen></iframe>
+          </div>
+          <div class="screen-foot"><span data-fr="Tutoriel guidé · narration" data-en="Guided tutorial · narration">Tutoriel guidé · narration</span><span>SCRIBE</span></div>
+        </div>
+      </div>
+    </article>
+
+  </div>
+</main>
+
+<section class="ref">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <h2 data-fr="Aide-mémoire" data-en="Quick reference">Aide-mémoire</h2>
+      <span data-fr="Quel format pour quel besoin" data-en="Which format for which need" data-scramble>Quel format pour quel besoin</span>
+    </div>
+    <div class="table-scroll rv">
+    <table>
+      <thead><tr>
+        <th data-fr="Type" data-en="Type">Type</th>
+        <th data-fr="Quand l'utiliser" data-en="When to use it">Quand l'utiliser</th>
+        <th data-fr="Recommandations" data-en="Recommendations">Recommandations</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td data-fr="Image" data-en="Image">Image</td>
+          <td data-fr="Message ponctuel, affiche, consigne, annonce" data-en="One-off message, poster, instruction, announcement">Message ponctuel, affiche, consigne, annonce</td>
+          <td data-fr="1920 × 1080 px, paysage. JPG ou PNG. Texte gros : l'écran se lit à plusieurs mètres." data-en="1920 × 1080 px, landscape. JPG or PNG. Big text: the screen is read from several metres away.">1920 × 1080 px, paysage. JPG ou PNG. Texte gros : l'écran se lit à plusieurs mètres.</td>
+        </tr>
+        <tr>
+          <td data-fr="Vidéo" data-en="Video">Vidéo</td>
+          <td data-fr="Démonstration, capsule de sécurité, message de la direction" data-en="Demo, safety clip, message from management">Démonstration, capsule de sécurité, message de la direction</td>
+          <td data-fr="MP4 (H.264), 1920 × 1080. Prévoir sans le son : les écrans du plancher sont souvent muets." data-en="MP4 (H.264), 1920 × 1080. Plan for no sound: shop floor screens are often muted.">MP4 (H.264), 1920 × 1080. Prévoir sans le son : les écrans du plancher sont souvent muets.</td>
+        </tr>
+        <tr>
+          <td data-fr="Page web" data-en="Web page">Page web</td>
+          <td data-fr="Contenu vivant qui change tout seul (tableau de bord, indicateurs)" data-en="Live content that changes on its own (dashboard, KPIs)">Contenu vivant qui change tout seul (tableau de bord, indicateurs)</td>
+          <td data-fr="Adresse complète en https. Vérifier que la page ne demande pas de connexion." data-en="Full https address. Check that the page does not ask for a login.">Adresse complète en https. Vérifier que la page ne demande pas de connexion.</td>
+        </tr>
+        <tr>
+          <td data-fr="Mise en page" data-en="Layout">Mise en page</td>
+          <td data-fr="Plusieurs informations à montrer en même temps sur un seul écran" data-en="Several pieces of information to show at once on one screen">Plusieurs informations à montrer en même temps sur un seul écran</td>
+          <td data-fr="Trois zones maximum. Au-delà, l'écran devient illisible de loin." data-en="Three zones maximum. Beyond that the screen is unreadable from a distance.">Trois zones maximum. Au-delà, l'écran devient illisible de loin.</td>
+        </tr>
+        <tr>
+          <td data-fr="Liste de lecture" data-en="Playlist">Liste de lecture</td>
+          <td data-fr="Rotation de plusieurs contenus sur la journée" data-en="Rotating several contents through the day">Rotation de plusieurs contenus sur la journée</td>
+          <td data-fr="10 à 15 secondes par image. Retirer les éléments périmés à chaque mise à jour." data-en="10 to 15 seconds per image. Remove outdated items at every update.">10 à 15 secondes par image. Retirer les éléments périmés à chaque mise à jour.</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="note rv" data-fr="Rien ne change sur l'écran tant que la modification n'a pas été poussée vers l'appareil. Après une publication, laissez quelques minutes puis allez vérifier physiquement le résultat sur l'écran concerné." data-en="Nothing changes on the screen until the change has been pushed to the device. After publishing, wait a few minutes then go and check the result on the screen itself.">Rien ne change sur l'écran tant que la modification n'a pas été poussée vers l'appareil. Après une publication, laissez quelques minutes puis allez vérifier physiquement le résultat sur l'écran concerné.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p data-fr="Formation Yodeck — Atelier Gérard Beaulieu" data-en="Yodeck Training — Atelier Gérard Beaulieu">Formation Yodeck — Atelier Gérard Beaulieu</p>
+    <p data-fr="Document interne · touche M pour la mire" data-en="Internal document · press M for colour bars">Document interne · touche M pour la mire</p>
+  </div>
+</footer>
+
+</div><!-- /scroller -->
+<div id="spacer"></div>
+
+<script>
+(function(){
+"use strict";
+var REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+var FINE   = matchMedia('(pointer:fine)').matches && innerWidth > 900;
+var root   = document.documentElement;
+var p2 = function(n){ return String(n).padStart(2,'0'); };
+
+/* ════════ 1. SHADER DE FOND (WebGL écrit à la main) ════════ */
+var glOK = false, gl, prog, uni = {}, cvs = document.getElementById('gl'), SCALE = 0.62;
+var VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+var FS = [
+'precision mediump float;',
+'uniform vec2 u_res;uniform float u_time;uniform vec2 u_mouse;uniform float u_scroll;',
+'float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
+'float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);',
+' return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}',
+'float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p*=2.03;a*=.5;}return v;}',
+'void main(){',
+' vec2 uv=gl_FragCoord.xy/u_res.xy;',
+' float ar=u_res.x/u_res.y;',
+' vec2 p=vec2(uv.x*ar,uv.y);',
+' float t=u_time*0.045;',
+' float n=fbm(p*2.3+vec2(t,-t*0.55)+u_scroll*0.9);',
+' float n2=fbm(p*5.4-vec2(t*1.6,t*0.9));',
+' float band=smoothstep(0.42,0.0,abs(fract(uv.y*1.15-u_time*0.055)-0.5)-0.355);',
+' float d=distance(p,vec2(u_mouse.x*ar,u_mouse.y));',
+' float glow=exp(-d*4.2);',
+' vec3 deep=vec3(0.020,0.030,0.045);',
+' vec3 steel=vec3(0.050,0.078,0.104);',
+' vec3 amber=vec3(1.0,0.690,0.125);',
+' vec3 cool=vec3(0.247,0.769,0.918);',
+' vec3 col=mix(deep,steel,n);',
+' col+=amber*pow(n,3.0)*0.115;',
+' col+=amber*glow*(0.155+0.10*n2);',
+' col+=cool*band*0.030*n2;',
+' col*=1.0-0.055*step(1.0,mod(gl_FragCoord.y,3.0));',
+' col+=(hash(gl_FragCoord.xy+u_time)-0.5)*0.020;',
+' float v=smoothstep(1.20,0.22,distance(uv,vec2(0.5)));',
+' col*=v*0.92+0.08;',
+' gl_FragColor=vec4(col,1.0);',
+'}'].join('\n');
+
+function sh(type,src){ var s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+function initGL(){
+  if(REDUCE) return false;
+  try{
+    gl = cvs.getContext('webgl',{antialias:false,alpha:false,depth:false,powerPreference:'low-power'})
+      || cvs.getContext('experimental-webgl');
+    if(!gl) return false;
+    prog = gl.createProgram();
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS));
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
+    gl.linkProgram(prog);
+    if(!gl.getProgramParameter(prog,gl.LINK_STATUS)) return false;
+    gl.useProgram(prog);
+    var buf=gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+    var loc=gl.getAttribLocation(prog,'p');
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+    uni.res=gl.getUniformLocation(prog,'u_res');
+    uni.time=gl.getUniformLocation(prog,'u_time');
+    uni.mouse=gl.getUniformLocation(prog,'u_mouse');
+    uni.scroll=gl.getUniformLocation(prog,'u_scroll');
+    return true;
+  }catch(e){ return false; }
+}
+function sizeGL(){
+  if(!glOK) return;
+  cvs.width  = Math.max(2, Math.floor(innerWidth  * SCALE));
+  cvs.height = Math.max(2, Math.floor(innerHeight * SCALE));
+  gl.viewport(0,0,cvs.width,cvs.height);
+}
+glOK = initGL();
+if(glOK){ sizeGL(); addEventListener('resize', sizeGL, {passive:true}); }
+else { cvs.style.display='none'; root.classList.add('nogl'); }
+
+/* ════════ 2. SOURIS ════════ */
+var M={x:.5,y:.5,tx:.5,ty:.5,px:innerWidth/2,py:innerHeight/2,rx:0,ry:0};
+addEventListener('pointermove',function(e){
+  M.tx=e.clientX/innerWidth; M.ty=e.clientY/innerHeight; M.px=e.clientX; M.py=e.clientY;
+},{passive:true});
+var dot=document.getElementById('curDot'), ret=document.getElementById('curRet'), txt=document.getElementById('curTxt');
+
+/* ════════ 3. DÉFILEMENT INERTIEL ════════ */
+var scroller=document.getElementById('scroller'), spacer=document.getElementById('spacer');
+var SS = FINE && !REDUCE;
+var sy=0, sTarget=0, sVel=0;
+function syncHeight(){ if(SS) spacer.style.height = scroller.offsetHeight+'px'; }
+if(SS){
+  root.classList.add('ss');
+  syncHeight();
+  if('ResizeObserver' in window) new ResizeObserver(syncHeight).observe(scroller);
+  addEventListener('resize', syncHeight, {passive:true});
+  addEventListener('load', syncHeight);
+  setTimeout(syncHeight, 1500);
+}
+
+/* ════════ 4. BOUCLE ════════ */
+var t0=performance.now(), heroH=innerHeight;
+function frame(now){
+  var t=(now-t0)/1000;
+  M.x+=(M.tx-M.x)*.09; M.y+=(M.ty-M.y)*.09;
+  root.style.setProperty('--mx',M.x.toFixed(4));
+  root.style.setProperty('--my',M.y.toFixed(4));
+
+  if(SS){
+    sTarget = scrollY;
+    var prev = sy;
+    sy += (sTarget-sy)*0.105;
+    sVel = sy-prev;
+    var sk = Math.max(-1.1, Math.min(1.1, sVel*0.045));
+    scroller.style.transform = 'translate3d(0,'+(-sy).toFixed(2)+'px,0) skewY('+sk.toFixed(3)+'deg)';
+  } else { sy = scrollY; }
+
+  root.style.setProperty('--hp', Math.max(0,Math.min(1, sy/(innerHeight*0.9))).toFixed(3));
+
+  if(FINE){
+    M.rx+=(M.px-M.rx)*.16; M.ry+=(M.py-M.ry)*.16;
+    dot.style.transform='translate('+M.px+'px,'+M.py+'px) translate(-50%,-50%)';
+    txt.style.transform='translate('+M.px+'px,'+M.py+'px) translate(24px,18px)';
+    ret.style.transform='translate('+M.rx+'px,'+M.ry+'px) translate(-50%,-50%)';
+  }
+  if(glOK){
+    gl.uniform2f(uni.res,cvs.width,cvs.height);
+    gl.uniform1f(uni.time,t);
+    gl.uniform2f(uni.mouse,M.x,1-M.y);
+    gl.uniform1f(uni.scroll, sy/Math.max(1,document.body.scrollHeight));
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+if(FINE){
+  document.querySelectorAll('a,button,.screen,.pane').forEach(function(el){
+    el.addEventListener('pointerenter',function(){ret.classList.add('hot')});
+    el.addEventListener('pointerleave',function(){ret.classList.remove('hot')});
+  });
+  setInterval(function(){
+    txt.textContent=String(Math.round(M.px)).padStart(4,'0')+' · '+String(Math.round(M.py)).padStart(4,'0');
+  },90);
+}else{ document.querySelectorAll('.cur').forEach(function(c){c.style.display='none'}); }
+
+/* ════════ 5. MUR ════════ */
+var panes=[].slice.call(document.querySelectorAll('.pane'));
+if(FINE && !REDUCE){
+  var boxes=[];
+  function measure(){ boxes=panes.map(function(p){return p.getBoundingClientRect()}); }
+  measure(); addEventListener('resize',measure,{passive:true});
+  addEventListener('pointermove',function(){
+    measure();
+    var best=-1,bd=250;
+    for(var i=0;i<boxes.length;i++){
+      var b=boxes[i],d=Math.hypot(M.px-(b.left+b.width/2),M.py-(b.top+b.height/2));
+      if(d<bd){bd=d;best=i;}
+    }
+    for(var j=0;j<panes.length;j++) panes[j].classList.toggle('hot',j===best);
+  },{passive:true});
+  setInterval(function(){
+    if(sy > innerHeight) return;
+    var p=panes[Math.floor(Math.random()*panes.length)];
+    p.classList.add('flick'); setTimeout(function(){p.classList.remove('flick')},400);
+  },3200);
+}
+document.querySelectorAll('.wave i').forEach(function(b,i){b.style.animationDelay=(i*.09)+'s'});
+var clockEl=document.getElementById('clock');
+setInterval(function(){var d=new Date();clockEl.textContent=p2(d.getHours())+':'+p2(d.getMinutes())+':'+p2(d.getSeconds())},1000);
+
+/* ════════ 6. TILT + BOUTONS ════════ */
+if(FINE && !REDUCE){
+  document.querySelectorAll('[data-tilt]').forEach(function(card){
+    card.addEventListener('pointermove',function(e){
+      var b=card.getBoundingClientRect(),px=(e.clientX-b.left)/b.width,py=(e.clientY-b.top)/b.height;
+      card.style.transition='transform .12s linear';
+      card.style.setProperty('--ry',((px-.5)*7).toFixed(2)+'deg');
+      card.style.setProperty('--rx',((py-.5)*-5).toFixed(2)+'deg');
+      card.style.setProperty('--gx',(px*100).toFixed(1)+'%');
+      card.style.setProperty('--gy',(py*100).toFixed(1)+'%');
+    },{passive:true});
+    card.addEventListener('pointerleave',function(){
+      card.style.transition='transform .55s cubic-bezier(.2,.8,.2,1)';
+      card.style.setProperty('--rx','0deg');card.style.setProperty('--ry','0deg');
+    });
+  });
+  document.querySelectorAll('.btn').forEach(function(b){
+    b.addEventListener('pointermove',function(e){
+      var r=b.getBoundingClientRect();
+      b.style.transform='translate('+((e.clientX-r.left-r.width/2)*.18).toFixed(1)+'px,'+((e.clientY-r.top-r.height/2)*.3).toFixed(1)+'px)';
+    },{passive:true});
+    b.addEventListener('pointerleave',function(){b.style.transform=''});
+  });
+}
+
+/* ════════ 7. TITRES CARACTÈRE PAR CARACTÈRE ════════ */
+function splitChars(el){
+  var words=el.textContent.split(' '), out='', n=0;
+  words.forEach(function(w,wi){
+    out+='<span class="w">';
+    for(var i=0;i<w.length;i++){
+      out+='<span class="c" style="transition-delay:'+(0.16+n*0.018).toFixed(3)+'s">'+
+           (w[i]==='&'?'&amp;':w[i]==='<'?'&lt;':w[i])+'</span>';
+      n++;
+    }
+    out+='</span>'+(wi<words.length-1?'<span class="c">&nbsp;</span>':'');
+    n++;
+  });
+  el.innerHTML=out;
+}
+function splitAll(){ if(!REDUCE) document.querySelectorAll('[data-split]').forEach(splitChars); }
+
+/* ════════ 8. RÉVÉLATIONS ════════ */
+var ioR,ioM;
+if('IntersectionObserver' in window){
+  ioR=new IntersectionObserver(function(en){en.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');ioR.unobserve(e.target);}})},{threshold:.14});
+  document.querySelectorAll('.rv').forEach(function(el){ioR.observe(el)});
+  ioM=new IntersectionObserver(function(en){en.forEach(function(e){
+    if(e.isIntersecting) e.target.classList.add('seen');
+    e.target.classList.toggle('live', e.isIntersecting && e.intersectionRatio>.3);
+  })},{threshold:[0,.2,.3,1]});
+  document.querySelectorAll('.module').forEach(function(m){ioM.observe(m)});
+}else{
+  document.querySelectorAll('.rv').forEach(function(e){e.classList.add('in')});
+  document.querySelectorAll('.module').forEach(function(m){m.classList.add('seen')});
+}
+
+/* ════════ 9. PARALLAXE / RAIL / MOUCHARD ════════ */
+var rail=document.querySelectorAll('.rail a'), fill=document.getElementById('railFill');
+var mods=document.querySelectorAll('.module'), pars=document.querySelectorAll('[data-par]');
+var topProg=document.getElementById('topProg'), bugCh=document.getElementById('bugCh');
+function onScroll(){
+  var doc=(SS?spacer.offsetHeight:document.body.scrollHeight)-innerHeight;
+  topProg.style.width=((scrollY/Math.max(doc,1))*100).toFixed(2)+'%';
+  if(!REDUCE && FINE){
+    for(var i=0;i<pars.length;i++){
+      var el=pars[i],r=el.getBoundingClientRect();
+      if(r.bottom<-250||r.top>innerHeight+250) continue;
+      var pr=(r.top+r.height/2-innerHeight/2)/innerHeight;
+      el.style.transform='translateY('+(pr*parseFloat(el.dataset.par)).toFixed(1)+'px)';
+    }
+  }
+  if(mods.length){
+    var act=-1;
+    mods.forEach(function(m,i){var r=m.getBoundingClientRect();if(r.top<innerHeight*.55&&r.bottom>innerHeight*.25)act=i;});
+    var f=mods[0].getBoundingClientRect().top, l=mods[mods.length-1].getBoundingClientRect().bottom;
+    var span=(l-f), p=span>0?Math.max(0,Math.min(1,(innerHeight*.5-f)/span)):0;
+    fill.style.height=(p*100)+'%';
+    rail.forEach(function(a,i){a.classList.toggle('act',i===act)});
+    bugCh.textContent = act>=0 ? 'CH '+mods[act].dataset.ch : 'CH 00';
+  }
+}
+addEventListener('scroll',onScroll,{passive:true});
+addEventListener('resize',onScroll,{passive:true});
+setInterval(onScroll, 120);
+
+var tcEl=document.getElementById('bugTc'),fr=0;
+setInterval(function(){fr=(fr+1)%25;var d=new Date();
+  tcEl.textContent=p2(d.getHours())+':'+p2(d.getMinutes())+':'+p2(d.getSeconds())+':'+p2(fr)},40);
+
+/* ════════ 10. VOLET SUR NAVIGATION ════════ */
+var wipe=document.getElementById('wipe');
+document.querySelectorAll('.topbar nav a,.rail a').forEach(function(a){
+  a.addEventListener('click',function(){
+    if(REDUCE) return;
+    wipe.classList.remove('go'); void wipe.offsetWidth; wipe.classList.add('go');
+    setTimeout(function(){wipe.classList.remove('go')},900);
+  });
+});
+
+/* ════════ 11. COMPTEURS + DÉCODAGE ════════ */
+function runCounters(){
+  document.querySelectorAll('[data-count]').forEach(function(el){
+    var end=parseInt(el.dataset.count,10),pad=parseInt(el.dataset.pad||'0',10),t0=null;
+    function step(ts){
+      if(!t0)t0=ts;
+      var k=Math.min((ts-t0)/1200,1),e=1-Math.pow(1-k,3),v=Math.round(end*e);
+      el.textContent=pad?String(v).padStart(pad,'0'):String(v);
+      if(k<1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}
+var CH='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789·/#%&';
+function scramble(el){
+  if(REDUCE) return;
+  var fin=el.textContent,len=fin.length,i=0;
+  var iv=setInterval(function(){
+    var out='';
+    for(var j=0;j<len;j++) out += j<i ? fin[j] : (fin[j]===' '?' ':CH[Math.floor(Math.random()*CH.length)]);
+    el.textContent=out; i+=Math.max(1,len/22);
+    if(i>=len){el.textContent=fin;clearInterval(iv);}
+  },28);
+}
+
+/* ════════ 12. TITRE PRINCIPAL ════════ */
+var h1=document.getElementById('h1');
+function lineify(html){
+  h1.innerHTML=html.split(/<br\s*\/?>/i).map(function(l){return '<span class="ln"><i>'+l+'</i></span>'}).join('');
+  h1.classList.remove('rise'); void h1.offsetWidth;
+  requestAnimationFrame(function(){h1.classList.add('rise')});
+}
+
+/* ════════ 13. MIRE ════════ */
+var mire=document.getElementById('mire');
+addEventListener('keydown',function(e){
+  if(e.key==='m'||e.key==='M'){ mire.classList.add('on'); setTimeout(function(){mire.classList.remove('on')},1100); }
+});
+
+/* ════════ 14. FR / EN ════════ */
+var TICK={
+  fr:['Image','Vidéo','Page web','Mise en page','Liste de lecture','Planifier','Déployer','Vérifier à l\'écran'],
+  en:['Image','Video','Web page','Layout','Playlist','Schedule','Deploy','Check on screen']
+};
+var tickEl=document.getElementById('tick');
+var i18n=document.querySelectorAll('[data-fr]');
+var btn=document.getElementById('langBtn'),code=document.getElementById('langCode'),ring=btn.querySelector('.fg');
+var lang='fr',timer=null,paused=false,PERIOD=10000;
+function paint(){
+  root.lang=lang;
+  for(var i=0;i<i18n.length;i++){
+    var el=i18n[i],v=el.getAttribute('data-'+lang);
+    if(v===null) continue;
+    if(el===h1){ lineify(v); continue; }
+    el.innerHTML=v;
+  }
+  code.textContent=lang.toUpperCase();
+  btn.setAttribute('aria-label',lang==='fr'?'Langue : français. Cliquer pour figer ou changer.':'Language: English. Click to freeze or switch.');
+  var one=TICK[lang].map(function(t){return '<span>'+t+'</span>'}).join('');
+  tickEl.innerHTML=one+one;
+  splitAll();
+  document.querySelectorAll('[data-scramble]').forEach(scramble);
+  syncHeight();
+}
+function swap(){
+  lang = lang==='fr'?'en':'fr';
+  if(REDUCE){paint();return;}
+  document.body.classList.add('chg');
+  setTimeout(function(){paint();document.body.classList.remove('chg')},210);
+}
+function restartRing(){ if(REDUCE)return; ring.style.animation='none'; void ring.offsetWidth; ring.style.animation=''; }
+function start(){stop();restartRing();timer=setInterval(function(){swap();restartRing()},PERIOD)}
+function stop(){if(timer){clearInterval(timer);timer=null}}
+btn.addEventListener('click',function(){
+  if(!paused){paused=true;stop();btn.classList.add('paused');swap();}
+  else{paused=false;btn.classList.remove('paused');start();}
+});
+document.addEventListener('visibilitychange',function(){if(document.hidden)stop();else if(!paused)start()});
+
+/* ════════ 15. DÉMARRAGE ════════ */
+var BOOT=[
+  ['Initialisation du réseau','OK'],
+  ['Détection des écrans','5 TROUVÉS'],
+  ['Compilation du shader', glOK?'GPU OK':'CPU'],
+  ['Chargement des canaux','01–05'],
+  ['Synchronisation FR / EN','OK'],
+  ['Signal de diffusion','STABLE']
+];
+var bootEl=document.getElementById('boot'),linesEl=document.getElementById('bootLines'),
+    barEl=document.getElementById('bootBar'),pctEl=document.getElementById('bootPct'),booted=false;
+function go(){
+  if(booted) return; booted=true;
+  bootEl.classList.add('done');
+  document.body.classList.remove('booting');
+  setTimeout(function(){bootEl.style.display='none'},1000);
+  document.getElementById('wall').classList.add('up');
+  document.getElementById('bug').classList.add('in');
+  paint(); runCounters(); onScroll(); syncHeight();
+}
+if(REDUCE){
+  bootEl.style.display='none'; document.body.classList.remove('booting');
+  document.getElementById('wall').classList.add('up');
+  document.getElementById('bug').classList.add('in');
+  paint(); runCounters(); onScroll();
+}else{
+  BOOT.forEach(function(b){
+    var d=document.createElement('div'); d.className='boot-line';
+    d.innerHTML='<span>&gt; '+b[0]+'</span><b>'+b[1]+'</b>';
+    linesEl.appendChild(d);
+  });
+  var kids=linesEl.children,idx=0;
+  var bi=setInterval(function(){
+    if(idx<kids.length){kids[idx].classList.add('on');idx++;}
+    var pc=Math.round((idx/kids.length)*100);
+    barEl.style.right=(100-pc)+'%'; pctEl.textContent=pc;
+    if(idx>=kids.length){clearInterval(bi);setTimeout(go,460);}
+  },290);
+  bootEl.addEventListener('click',go);
+  addEventListener('keydown',function(){ if(!booted) go(); });
+}
+})();
+</script>
+
+</body>
+</html>
