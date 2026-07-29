@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AGB — Suivi hebdomadaire production</title>
+<style>
+:root{
+  --acier-900:#12181D;
+  --acier-700:#2B3640;
+  --acier-500:#5B6873;
+  --acier-300:#AEB8C0;
+  --acier-100:#E4E8EB;
+  --acier-050:#F1F4F6;
+  --blanc:#FFFFFF;
+  --cours:#E29321;
+  --cours-fonce:#B87413;
+  --temps:#2E9E5B;
+  --temps-fonce:#217544;
+  --retard:#D03A31;
+  --retard-fonce:#9E2A23;
+  --trait:#C9D1D7;
+  --mono:ui-monospace,"SFMono-Regular","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+  --sans:"Segoe UI",Roboto,-apple-system,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--acier-050);
+  color:var(--acier-900);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.45;
+  padding:0 0 60px;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px}
+
+/* ---------- Cartouche d'en-tete ---------- */
+header.cartouche{
+  background:var(--acier-900);
+  color:var(--blanc);
+  border-bottom:4px solid var(--cours);
+}
+.cartouche-in{
+  max-width:1180px;margin:0 auto;padding:16px 18px;
+  display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;justify-content:space-between;
+}
+.marque{display:flex;flex-direction:column;gap:2px}
+.marque .nom{font-size:20px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.marque .sous{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--acier-300)}
+.champs{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.champ{display:flex;flex-direction:column;gap:4px}
+.champ label{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--acier-300)}
+.champ input{
+  font-family:var(--mono);font-size:14px;
+  background:#1D252C;color:#fff;border:1px solid #3A464F;border-radius:3px;
+  padding:7px 9px;min-width:150px;
+}
+.champ input:focus{outline:2px solid var(--cours);outline-offset:1px}
+.badge-semaine{
+  background:var(--cours);color:#12181D;padding:7px 16px;border-radius:3px;white-space:nowrap;text-align:center;
+}
+.badge-semaine .etiq{
+  display:block;font-family:var(--sans);font-size:10px;font-weight:700;
+  letter-spacing:.24em;text-transform:uppercase;opacity:.72;
+}
+.badge-semaine .jour{
+  display:block;font-family:var(--mono);font-size:22px;font-weight:700;letter-spacing:.02em;margin-top:1px;
+}
+
+/* ---------- Sections ---------- */
+h2.titre{
+  font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--acier-500);
+  margin:28px 0 10px;display:flex;align-items:center;gap:12px;
+}
+h2.titre::after{content:"";flex:1;height:1px;background:var(--trait)}
+
+/* ---------- Tableau de saisie ---------- */
+.carte{background:var(--blanc);border:1px solid var(--trait);border-radius:4px;overflow:hidden}
+table.saisie{width:100%;border-collapse:collapse}
+table.saisie th{
+  background:var(--acier-700);color:#fff;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:600;padding:9px 8px;text-align:center;border-right:1px solid #3A464F;
+}
+table.saisie th:first-child{text-align:left}
+table.saisie th .sous{display:block;font-size:9px;letter-spacing:.06em;color:var(--acier-300);
+  text-transform:none;font-weight:400;margin-top:2px}
+th.c-total{border-bottom:3px solid #FFFFFF}
+th.c-cours{border-bottom:3px solid var(--cours)}
+th.c-temps{border-bottom:3px solid var(--temps)}
+th.c-retard{border-bottom:3px solid var(--retard)}
+th.c-done{border-bottom:3px solid var(--acier-300)}
+table.saisie td{border-top:1px solid var(--acier-100);border-right:1px solid var(--acier-100);
+  padding:10px 8px;vertical-align:middle;text-align:center}
+table.saisie td:last-child,table.saisie th:last-child{border-right:none}
+td.dept{
+  width:138px;background:var(--acier-050);font-weight:700;font-size:13px;
+  letter-spacing:.1em;text-transform:uppercase;text-align:left;
+}
+td.dept .maj{display:block;font-weight:400;font-size:10px;letter-spacing:.04em;
+  text-transform:none;color:var(--acier-500);margin-top:5px;font-family:var(--mono)}
+input.nb{
+  width:100%;max-width:96px;text-align:center;
+  font-family:var(--mono);font-size:22px;font-weight:700;
+  border:1px solid var(--trait);border-radius:3px;padding:8px 4px;background:#FCFDFD;color:var(--acier-900);
+  -moz-appearance:textfield;
+}
+input.nb::-webkit-outer-spin-button,input.nb::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input.nb:focus{outline:2px solid var(--acier-700);outline-offset:1px;background:#fff}
+td.col-total input{border-bottom:3px solid var(--acier-700)}
+td.col-done  input{border-bottom:3px solid var(--acier-300)}
+td.col-temps input{border-bottom:3px solid var(--temps)}
+.derive{
+  display:inline-block;min-width:52px;font-family:var(--mono);font-size:22px;font-weight:700;
+  padding:6px 10px;border-radius:3px;
+}
+.derive.cours{background:#FDF3E3;color:var(--cours-fonce)}
+.derive.retard{background:#FBEDEC;color:var(--retard-fonce)}
+.derive.nul{background:var(--acier-050);color:var(--acier-300)}
+td.pct{width:96px;background:var(--acier-050);font-family:var(--mono);font-weight:700;font-size:20px}
+.hint{font-size:12px;color:var(--acier-500);margin:9px 2px 0;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.hint select{font-family:var(--mono);font-size:12px;padding:4px 6px;border:1px solid var(--trait);
+  border-radius:3px;background:#fff;color:var(--acier-900)}
+.alerte{
+  margin:10px 0 0;padding:9px 12px;border-left:3px solid var(--retard);background:#FDF2F1;
+  font-size:13px;font-family:var(--mono);color:var(--retard-fonce);border-radius:0 3px 3px 0;
+}
+.info{
+  margin:10px 0 0;padding:9px 12px;border-left:3px solid var(--temps);background:#EAF6EF;
+  font-size:13px;font-family:var(--mono);color:var(--temps-fonce);border-radius:0 3px 3px 0;
+}
+.info.attention{border-left-color:var(--cours);background:#FDF3E3;color:var(--cours-fonce)}
+body.depot::after{
+  content:"Dépose le fichier Excel pour charger les semaines";
+  position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+  background:rgba(18,24,29,.86);color:#fff;font-size:20px;font-weight:700;letter-spacing:.06em;
+  border:6px dashed var(--cours);
+}
+
+/* ---------- Barre d'actions ---------- */
+.actions{display:flex;flex-wrap:wrap;gap:9px;margin:16px 0 0;align-items:center}
+button{
+  font-family:var(--sans);font-size:13px;font-weight:600;letter-spacing:.04em;
+  border:1px solid var(--acier-700);background:var(--blanc);color:var(--acier-900);
+  padding:9px 15px;border-radius:3px;cursor:pointer;
+}
+button:hover{background:var(--acier-100)}
+button:focus-visible{outline:2px solid var(--cours);outline-offset:2px}
+button.principal{background:var(--acier-900);color:#fff;border-color:var(--acier-900)}
+button.principal:hover{background:var(--acier-700)}
+button.discret{border-color:var(--trait);color:var(--acier-500)}
+.sep{width:1px;align-self:stretch;background:var(--trait);margin:0 4px}
+.etat{font-size:12px;font-family:var(--mono);color:var(--acier-500);margin-left:auto}
+
+/* ---------- Diagrammes ---------- */
+#zoneGraphes{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:12px}
+.graphe{background:var(--blanc);border:1px solid var(--trait);border-radius:4px;padding:10px}
+.graphe svg{width:100%;height:auto;display:block}
+.graphe .barre-outils{display:flex;justify-content:flex-end;margin-top:6px}
+.graphe .barre-outils button{font-size:11px;padding:5px 10px}
+.vide{
+  background:var(--blanc);border:1px dashed var(--trait);border-radius:4px;
+  padding:34px;text-align:center;color:var(--acier-500);font-size:14px;
+}
+
+/* ---------- Historique ---------- */
+table.hist{width:100%;border-collapse:collapse;font-size:13px}
+table.hist th{background:var(--acier-050);text-align:left;padding:7px 10px;font-size:10px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--acier-500);border-bottom:1px solid var(--trait)}
+table.hist td{padding:7px 10px;border-bottom:1px solid var(--acier-100);font-family:var(--mono);font-size:12px}
+table.hist tr.actif td{background:#FFF8EC}
+table.hist button{padding:3px 9px;font-size:11px}
+
+footer{margin-top:34px;font-size:11px;color:var(--acier-500);text-align:center;font-family:var(--mono)}
+
+@media print{
+  /* imprime les couleurs exactement comme à l'écran */
+  *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
+  @page{size:landscape;margin:10mm}
+  body{background:#fff;padding:0}
+  .wrap{max-width:none;padding:0 4px}
+  /* on masque seulement ce qui n'a pas de sens sur papier */
+  .actions,.no-print,footer{display:none!important}
+  /* en-tête, tableau et diagrammes conservés tels quels, en couleur */
+  header.cartouche{background:var(--acier-900);color:#fff;border-bottom:4px solid var(--cours)}
+  h2.titre{break-after:avoid;margin-top:16px}
+  .carte{break-inside:avoid}
+  #zoneGraphes{grid-template-columns:repeat(3,1fr);gap:12px}
+  .graphe{break-inside:avoid}
+}
+@media screen and (max-width:760px){
+  table.saisie,table.saisie tbody,table.saisie tr,table.saisie td{display:block;width:auto}
+  table.saisie thead{display:none}
+  table.saisie tr{border-top:2px solid var(--acier-700)}
+  table.saisie td{display:flex;justify-content:space-between;align-items:center;text-align:right}
+  table.saisie td::before{content:attr(data-lib);font-size:10px;letter-spacing:.14em;
+    font-weight:700;color:var(--acier-500);text-align:left}
+  td.dept{display:block}
+  td.dept::before{content:none}
+  input.nb{max-width:110px}
+}
+</style>
+</head>
+<body>
+
+<header class="cartouche">
+  <div class="cartouche-in">
+    <div class="marque">
+      <span class="nom">Atelier Gérard Beaulieu</span>
+      <span class="sous">Suivi hebdomadaire de production</span>
+    </div>
+    <div class="champs no-print">
+      <div class="champ">
+        <label for="dateSemaine">Date de la semaine</label>
+        <input type="date" id="dateSemaine" title="N'importe quelle date de la semaine — ramenée automatiquement au lundi">
+      </div>
+      <div class="champ">
+        <label for="superviseur">Rempli par</label>
+        <input type="text" id="superviseur" placeholder="Nom du superviseur" autocomplete="name">
+      </div>
+    </div>
+    <div class="badge-semaine" id="badgeSemaine"><span class="etiq">Semaine du</span><span class="jour">—</span></div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <h2 class="titre">Saisie de la semaine</h2>
+  <div class="carte">
+    <table class="saisie">
+      <thead>
+        <tr>
+          <th style="width:138px">Département</th>
+          <th class="c-total">Jobs total<span class="sous">à saisir</span></th>
+          <th class="c-cours">En cours<span class="sous">calculé</span></th>
+          <th class="c-done">Terminés<span class="sous">à saisir</span></th>
+          <th class="c-temps">Terminés à temps<span class="sous">à saisir</span></th>
+          <th class="c-retard">En retard<span class="sous">calculé</span></th>
+          <th style="width:96px">% à temps</th>
+        </tr>
+      </thead>
+      <tbody id="corpsTableau"></tbody>
+    </table>
+  </div>
+
+  <div class="hint">
+    <span>Tu saisis 3 nombres par département — le reste se calcule. En cours = total − terminés, en retard = terminés − à temps.</span>
+    <span class="no-print">Tu peux aussi importer la feuille Excel des superviseurs, ou la déposer n'importe où sur la page.</span>
+  </div>
+  <div id="zoneAlertes"></div>
+  <div id="rapportImport"></div>
+
+  <div class="actions no-print">
+    <button class="principal" id="btnGenerer">Générer les diagrammes</button>
+    <button id="btnExcel">Importer le fichier Excel</button>
+    <input type="file" id="fichierExcel" accept=".xlsx,.csv" hidden>
+    <span class="sep"></span>
+    <button class="discret" id="btnImprimer">Imprimer / PDF</button>
+    <button class="discret" id="btnVider">Vider la semaine</button>
+    <span class="etat" id="etat"></span>
+  </div>
+
+  <h2 class="titre" id="titreGraphes">Diagrammes par département</h2>
+  <div id="zoneGraphes">
+    <div class="vide">Remplis le tableau, puis clique sur « Générer les diagrammes ».</div>
+  </div>
+
+  <h2 class="titre no-print">Semaines enregistrées</h2>
+  <div class="carte no-print">
+    <table class="hist">
+      <thead>
+        <tr><th>Semaine</th><th>Coupe</th><th>Soud. gross</th><th>Soud. petit</th><th>Peinture</th><th>Bathurst</th><th>Dernière mise à jour</th><th></th></tr>
+      </thead>
+      <tbody id="corpsHist"></tbody>
+    </table>
+  </div>
+
+  <footer>AGB — fichier autonome, aucune installation requise. Les données restent dans ce navigateur tant qu'elles ne sont pas exportées.</footer>
+</div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   1. CONSTANTES
+   ========================================================= */
+// 5 départements repris de l'onglet SAISIE du fichier Excel.
+//   cle   : identifiant interne (sans espace, sert aux id HTML et au stockage)
+//   nom   : libellé affiché dans le tableau et les diagrammes
+//   norme : forme normalisée du nom Excel, pour retrouver la ligne à l'import
+const DEPARTEMENTS = [
+  {cle:"COUPE",         nom:"COUPE",                norme:"COUPE"},
+  {cle:"SOUDAGE_GROSS", nom:"SOUDAGE (gross shop)", norme:"SOUDAGE GROSS SHOP"},
+  {cle:"SOUDAGE_PETIT", nom:"SOUDAGE (petit shop)", norme:"SOUDAGE PETIT SHOP"},
+  {cle:"PEINTURE_EXT",  nom:"PEINTURE (externe)",   norme:"PEINTURE EXTERNE"},
+  {cle:"BATHURST",      nom:"BATHURST",             norme:"BATHURST"}
+];
+
+// Données de départ reprises telles quelles du fichier Excel (semaine du 2026-07-20).
+const SEMAINE_INITIALE = "2026-07-20";
+const DONNEES_INITIALES = {
+  COUPE:         {total:7, termines:7, aTemps:7, par:"jonathan"},
+  SOUDAGE_GROSS: {total:6, termines:6, aTemps:5, par:"gaetan/timmy"},
+  SOUDAGE_PETIT: {total:6, termines:6, aTemps:6, par:"eric"},
+  PEINTURE_EXT:  {total:8, termines:8, aTemps:7, par:"allen"},
+  BATHURST:      {total:0, termines:0, aTemps:0, par:"david"}
+};
+
+const COULEURS = {
+  cours:  {clair:"#E29321", fonce:"#B87413"},
+  temps:  {clair:"#2E9E5B", fonce:"#217544"},
+  retard: {clair:"#D03A31", fonce:"#9E2A23"}
+};
+const CLE_STOCKAGE = "agb_suivi_hebdo_v2";
+const CLE_V1 = "agb_suivi_hebdo_v1";
+const MOIS = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+
+/* =========================================================
+   2. STOCKAGE (repli mémoire si localStorage bloqué)
+   ========================================================= */
+let memoire = null;
+function lireBase(){
+  if(memoire) return memoire;
+  try{
+    const brut = localStorage.getItem(CLE_STOCKAGE);
+    memoire = brut ? JSON.parse(brut) : migrerV1();
+  }catch(e){ memoire = {semaines:{}}; }
+  if(!memoire || !memoire.semaines) memoire = {semaines:{}};
+  return memoire;
+}
+// reprend les anciennes saisies par listes de numéros et les convertit en compteurs
+function migrerV1(){
+  try{
+    const brut = localStorage.getItem(CLE_V1);
+    if(!brut) return {semaines:{}};
+    const v1 = JSON.parse(brut);
+    const v2 = {semaines:{}};
+    Object.keys(v1.semaines || {}).forEach(cle => {
+      const src = v1.semaines[cle];
+      const dst = {debut:cle, departements:{}};
+      DEPARTEMENTS.forEach(d => {
+        const b = (src.departements||{})[d.cle] || {};
+        const nc = (b.enCours||[]).length, nt = (b.aTemps||[]).length, nr = (b.enRetard||[]).length;
+        dst.departements[d.cle] = {total:nc+nt+nr, termines:nt+nr, aTemps:nt, par:b.par||"", le:b.le||""};
+      });
+      v2.semaines[cle] = dst;
+    });
+    return v2;
+  }catch(e){ return {semaines:{}}; }
+}
+function ecrireBase(){
+  try{ localStorage.setItem(CLE_STOCKAGE, JSON.stringify(memoire)); }catch(e){}
+}
+
+/* =========================================================
+   3. DATES / SEMAINE ISO
+   ========================================================= */
+function lundiDe(d){
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+  return x;
+}
+function versISO(d){
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function depuisISO(s){
+  const p = String(s||"").split("-");
+  if(p.length !== 3) return null;
+  const d = new Date(+p[0], +p[1]-1, +p[2]);
+  return isNaN(d) ? null : d;
+}
+// date du lundi, en clair : « 20 juillet 2026 »
+function dateLisible(d){
+  return d.getDate()+" "+MOIS[d.getMonth()]+" "+d.getFullYear();
+}
+
+/* =========================================================
+   4. ÉTAT COURANT
+   ========================================================= */
+let cleSemaine = "";
+
+function semaineCourante(){
+  const base = lireBase();
+  if(!base.semaines[cleSemaine]) base.semaines[cleSemaine] = {debut: cleSemaine, departements:{}};
+  const s = base.semaines[cleSemaine];
+  DEPARTEMENTS.forEach(d => {
+    if(!s.departements[d.cle]) s.departements[d.cle] = {total:0, termines:0, aTemps:0, par:"", le:""};
+  });
+  return s;
+}
+
+// seule source de vérité pour les 3 barres
+function calculer(bloc){
+  const total    = Math.max(0, +bloc.total    || 0);
+  const termines = Math.max(0, +bloc.termines || 0);
+  const aTemps   = Math.max(0, +bloc.aTemps   || 0);
+  const enCours  = Math.max(0, total - termines);
+  const enRetard = Math.max(0, termines - aTemps);
+  const pct = termines ? Math.round(aTemps / termines * 100) : null;
+  return {total, termines, aTemps, enCours, enRetard, pct};
+}
+
+/* =========================================================
+   5. TABLEAU DE SAISIE
+   ========================================================= */
+const CHAMPS = [
+  {cle:"total",    classe:"col-total", lib:"JOBS TOTAL"},
+  {cle:"termines", classe:"col-done",  lib:"TERMINÉS"},
+  {cle:"aTemps",   classe:"col-temps", lib:"TERMINÉS À TEMPS"}
+];
+
+function construireTableau(){
+  const corps = document.getElementById("corpsTableau");
+  corps.innerHTML = "";
+  DEPARTEMENTS.forEach(d => {
+    const dep = d.cle;
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      '<td class="dept">'+d.nom+'<span class="maj" id="maj-'+dep+'"></span></td>' +
+      '<td class="col-total" data-lib="JOBS TOTAL"><input class="nb" type="number" min="0" step="1" id="in-'+dep+'-total" data-dep="'+dep+'" data-cle="total"></td>' +
+      '<td data-lib="EN COURS"><span class="derive cours" id="d-'+dep+'-enCours">0</span></td>' +
+      '<td class="col-done" data-lib="TERMINÉS"><input class="nb" type="number" min="0" step="1" id="in-'+dep+'-termines" data-dep="'+dep+'" data-cle="termines"></td>' +
+      '<td class="col-temps" data-lib="TERMINÉS À TEMPS"><input class="nb" type="number" min="0" step="1" id="in-'+dep+'-aTemps" data-dep="'+dep+'" data-cle="aTemps"></td>' +
+      '<td data-lib="EN RETARD"><span class="derive retard" id="d-'+dep+'-enRetard">0</span></td>' +
+      '<td class="pct" data-lib="% À TEMPS" id="pct-'+dep+'">—</td>';
+    corps.appendChild(tr);
+  });
+  corps.querySelectorAll("input.nb").forEach(inp => {
+    inp.addEventListener("input", () => enregistrerChamp(inp));
+    inp.addEventListener("focus", () => inp.select());
+  });
+}
+
+function enregistrerChamp(inp){
+  const s = semaineCourante();
+  const bloc = s.departements[inp.dataset.dep];
+  bloc[inp.dataset.cle] = Math.max(0, parseInt(inp.value,10) || 0);
+  bloc.par = document.getElementById("superviseur").value.trim();
+  bloc.le  = new Date().toISOString();
+  ecrireBase();
+  rafraichirCalculs();
+  majEtat("Enregistré " + new Date().toLocaleTimeString("fr-CA",{hour:"2-digit",minute:"2-digit"}));
+}
+
+function chargerDansTableau(){
+  const s = semaineCourante();
+  DEPARTEMENTS.forEach(d => {
+    const dep = d.cle;
+    CHAMPS.forEach(c => {
+      const v = s.departements[dep][c.cle];
+      document.getElementById("in-"+dep+"-"+c.cle).value = v ? v : (v === 0 ? "" : "");
+    });
+  });
+  rafraichirCalculs();
+}
+
+function rafraichirCalculs(){
+  const s = semaineCourante();
+  const alertes = [];
+  DEPARTEMENTS.forEach(d => {
+    const dep = d.cle;
+    const b = s.departements[dep];
+    const r = calculer(b);
+
+    const eC = document.getElementById("d-"+dep+"-enCours");
+    eC.textContent = r.enCours;
+    eC.className = "derive " + (r.enCours ? "cours" : "nul");
+
+    const eR = document.getElementById("d-"+dep+"-enRetard");
+    eR.textContent = r.enRetard;
+    eR.className = "derive " + (r.enRetard ? "retard" : "nul");
+
+    const p = document.getElementById("pct-"+dep);
+    p.textContent = r.pct === null ? "—" : r.pct + " %";
+    p.style.color = r.pct === null ? "var(--acier-300)"
+                  : r.pct >= 90 ? "var(--temps)"
+                  : r.pct >= 75 ? "var(--cours-fonce)" : "var(--retard)";
+
+    document.getElementById("maj-"+dep).textContent =
+      b.le ? (b.par ? b.par+" · " : "") + new Date(b.le).toLocaleDateString("fr-CA") : "";
+
+    if(r.termines > r.total) alertes.push(d.nom+" : terminés ("+r.termines+") dépasse le total ("+r.total+")");
+    if(r.aTemps  > r.termines) alertes.push(d.nom+" : à temps ("+r.aTemps+") dépasse les terminés ("+r.termines+")");
+  });
+  document.getElementById("zoneAlertes").innerHTML =
+    alertes.length ? '<div class="alerte">'+alertes.join("<br>")+"</div>" : "";
+}
+
+/* =========================================================
+   6. DIAGRAMMES SVG
+   ========================================================= */
+function echapper(t){
+  return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function construireSVG(dep, bloc, libelleSemaine){
+  const r = calculer(bloc);
+  const barres = [
+    {lib:"EN COURS",  val:r.enCours,  c:COULEURS.cours},
+    {lib:"À TEMPS",   val:r.aTemps,   c:COULEURS.temps},
+    {lib:"EN RETARD", val:r.enRetard, c:COULEURS.retard}
+  ];
+  const maxVal = Math.max(1, ...barres.map(b => b.val));
+
+  const L = 420, margeG = 46, margeD = 16;
+  const yTitre = 26, yPlan = 60, hPlan = 180;
+  const yBase  = yPlan + hPlan;      // 240
+  const yEtiq  = yBase + 24;
+  const yChiffre = yBase + 58;
+  const H = yChiffre + 16;
+
+  const largeurZone  = (L - margeG - margeD) / 3;
+  const largeurBarre = Math.min(88, largeurZone - 24);
+
+  let svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+L+' '+H+'" font-family="Segoe UI, Roboto, Arial, sans-serif">';
+  svg += '<rect x="0" y="0" width="'+L+'" height="'+H+'" fill="#FFFFFF"/>';
+
+  // titre + total de la semaine
+  svg += '<text x="'+margeG+'" y="'+yTitre+'" font-size="17" font-weight="700" letter-spacing="2" fill="#12181D">'+dep+'</text>';
+  svg += '<text x="'+(L-margeD)+'" y="'+(yTitre-8)+'" font-size="10" text-anchor="end" fill="#5B6873" letter-spacing="1">'+echapper(libelleSemaine)+'</text>';
+  svg += '<text x="'+(L-margeD)+'" y="'+(yTitre+7)+'" font-size="11.5" text-anchor="end" fill="#12181D" font-weight="700">TOTAL : '+r.total+' JOBS</text>';
+  svg += '<line x1="'+margeG+'" y1="'+(yTitre+16)+'" x2="'+(L-margeD)+'" y2="'+(yTitre+16)+'" stroke="#C9D1D7" stroke-width="1"/>';
+
+  // grille horizontale + axe
+  const pas = maxVal <= 5 ? 1 : maxVal <= 10 ? 2 : maxVal <= 25 ? 5 : Math.ceil(maxVal/5);
+  for(let v = 0; v <= maxVal; v += pas){
+    const y = yBase - (v / maxVal) * hPlan;
+    svg += '<line x1="'+margeG+'" y1="'+y+'" x2="'+(L-margeD)+'" y2="'+y+'" stroke="'+(v===0?"#12181D":"#E4E8EB")+'" stroke-width="'+(v===0?1.5:1)+'"/>';
+    svg += '<text x="'+(margeG-8)+'" y="'+(y+4)+'" font-size="10" text-anchor="end" fill="#5B6873" font-family="monospace">'+v+'</text>';
+  }
+
+  // barres
+  barres.forEach((b,i) => {
+    const cx = margeG + largeurZone * i + largeurZone / 2;
+    const x  = cx - largeurBarre / 2;
+    const h  = (b.val / maxVal) * hPlan;
+    const y  = yBase - h;
+
+    if(b.val > 0){
+      svg += '<rect x="'+x+'" y="'+y+'" width="'+largeurBarre+'" height="'+h+'" fill="'+b.c.clair+'"/>';
+      svg += '<rect x="'+x+'" y="'+y+'" width="'+largeurBarre+'" height="4" fill="'+b.c.fonce+'"/>';
+    }else{
+      svg += '<line x1="'+x+'" y1="'+yBase+'" x2="'+(x+largeurBarre)+'" y2="'+yBase+'" stroke="'+b.c.clair+'" stroke-width="3"/>';
+    }
+
+    // étiquette puis le nombre, sous la barre
+    svg += '<text x="'+cx+'" y="'+yEtiq+'" font-size="9.5" font-weight="700" letter-spacing="1.2" text-anchor="middle" fill="'+b.c.fonce+'">'+b.lib+'</text>';
+    svg += '<text x="'+cx+'" y="'+yChiffre+'" font-size="30" font-weight="700" text-anchor="middle" fill="'+(b.val ? b.c.fonce : "#AEB8C0")+'" font-family="monospace">'+b.val+'</text>';
+  });
+
+  svg += '</svg>';
+  return svg;
+}
+
+function genererDiagrammes(){
+  const s = semaineCourante();
+  const zone = document.getElementById("zoneGraphes");
+  const d = depuisISO(cleSemaine);
+  const libelle = d ? "SEMAINE DU " + dateLisible(d).toUpperCase() : "";
+
+  zone.innerHTML = "";
+  DEPARTEMENTS.forEach(d => {
+    const div = document.createElement("div");
+    div.className = "graphe";
+    div.innerHTML = construireSVG(d.nom, s.departements[d.cle], libelle) +
+      '<div class="barre-outils no-print"><button data-dep="'+d.cle+'">Télécharger PNG</button></div>';
+    zone.appendChild(div);
+  });
+  zone.querySelectorAll(".barre-outils button").forEach(b => {
+    b.addEventListener("click", () => exporterPNG(b.dataset.dep, b.closest(".graphe").querySelector("svg")));
+  });
+
+  try{ document.getElementById("titreGraphes").scrollIntoView({behavior:"smooth", block:"start"}); }catch(e){}
+  majEtat("Diagrammes générés");
+}
+
+function exporterPNG(dep, svg){
+  const vb = svg.getAttribute("viewBox").split(" ").map(Number);
+  const echelle = 2;
+  const source = new XMLSerializer().serializeToString(svg);
+  const img = new Image();
+  img.onload = function(){
+    const c = document.createElement("canvas");
+    c.width = vb[2]*echelle; c.height = vb[3]*echelle;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0,0,c.width,c.height);
+    ctx.drawImage(img,0,0,c.width,c.height);
+    c.toBlob(blob => telecharger(blob, "AGB_"+dep+"_semaine-du-"+cleSemaine+".png"));
+  };
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+}
+
+/* =========================================================
+   7. TÉLÉCHARGEMENT
+   ========================================================= */
+function telecharger(blob, nom){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = nom;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/* =========================================================
+   7b. LECTURE DU FICHIER EXCEL DES SUPERVISEURS
+   Un .xlsx est une archive ZIP de fichiers XML : on la lit
+   directement, sans aucune bibliothèque externe.
+   ========================================================= */
+function lireZIP(tampon){
+  const vue = new DataView(tampon), oct = new Uint8Array(tampon);
+  let eocd = -1;
+  for(let i = oct.length - 22; i >= 0 && i > oct.length - 66000; i--){
+    if(vue.getUint32(i, true) === 0x06054b50){ eocd = i; break; }
+  }
+  if(eocd < 0) throw new Error("Ce fichier n'est pas un classeur Excel lisible.");
+  const nb = vue.getUint16(eocd + 10, true);
+  let pos = vue.getUint32(eocd + 16, true);
+  const entrees = {};
+  for(let n = 0; n < nb; n++){
+    if(vue.getUint32(pos, true) !== 0x02014b50) break;
+    const methode    = vue.getUint16(pos + 10, true);
+    const tailleComp = vue.getUint32(pos + 20, true);
+    const lNom   = vue.getUint16(pos + 28, true);
+    const lExtra = vue.getUint16(pos + 30, true);
+    const lComm  = vue.getUint16(pos + 32, true);
+    const local  = vue.getUint32(pos + 42, true);
+    const nom = new TextDecoder().decode(oct.subarray(pos + 46, pos + 46 + lNom));
+    const lNomL   = vue.getUint16(local + 26, true);
+    const lExtraL = vue.getUint16(local + 28, true);
+    const debut = local + 30 + lNomL + lExtraL;
+    entrees[nom] = {methode, donnees: oct.subarray(debut, debut + tailleComp)};
+    pos += 46 + lNom + lExtra + lComm;
+  }
+  return entrees;
+}
+
+async function texteEntree(entree){
+  if(!entree) return "";
+  if(entree.methode === 0) return new TextDecoder().decode(entree.donnees);
+  if(typeof DecompressionStream === "undefined")
+    throw new Error("Ce navigateur ne peut pas ouvrir de .xlsx. Utilise Chrome ou Edge, ou enregistre la feuille en .csv.");
+  const flux = new Blob([entree.donnees]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return await new Response(flux).text();
+}
+
+function colonneVersIndex(lettres){
+  let n = 0;
+  for(let i = 0; i < lettres.length; i++) n = n * 26 + (lettres.charCodeAt(i) - 64);
+  return n - 1;
+}
+
+function lireFeuille(xml, chaines){
+  const doc = new DOMParser().parseFromString(xml, "application/xml");
+  const lignes = [];
+  const rows = doc.getElementsByTagName("row");
+  for(let i = 0; i < rows.length; i++){
+    const cellules = [];
+    const cs = rows[i].getElementsByTagName("c");
+    for(let j = 0; j < cs.length; j++){
+      const c = cs[j];
+      const ref = c.getAttribute("r") || "";
+      const idx = colonneVersIndex(ref.replace(/[^A-Z]/g,"")) ;
+      const type = c.getAttribute("t");
+      let valeur = "";
+      if(type === "inlineStr"){
+        const is = c.getElementsByTagName("t")[0];
+        valeur = is ? is.textContent : "";
+      }else{
+        const v = c.getElementsByTagName("v")[0];
+        valeur = v ? v.textContent : "";
+        if(type === "s") valeur = chaines[+valeur] || "";
+      }
+      if(idx >= 0) cellules[idx] = valeur;
+    }
+    lignes.push(cellules);
+  }
+  return lignes;
+}
+
+async function lireClasseur(fichier){
+  const zip = lireZIP(await fichier.arrayBuffer());
+  const analyse = t => new DOMParser().parseFromString(t, "application/xml");
+
+  const chaines = [];
+  const xmlSST = await texteEntree(zip["xl/sharedStrings.xml"]);
+  if(xmlSST){
+    const si = analyse(xmlSST).getElementsByTagName("si");
+    for(let i = 0; i < si.length; i++){
+      const ts = si[i].getElementsByTagName("t");
+      let s = "";
+      for(let k = 0; k < ts.length; k++) s += ts[k].textContent;
+      chaines.push(s);
+    }
+  }
+
+  // nom de feuille -> fichier XML, via les relations du classeur
+  const cibles = {};
+  const xmlRels = await texteEntree(zip["xl/_rels/workbook.xml.rels"]);
+  if(xmlRels){
+    const rs = analyse(xmlRels).getElementsByTagName("Relationship");
+    for(let i = 0; i < rs.length; i++){
+      const cible = (rs[i].getAttribute("Target") || "").replace(/^\/?xl\//, "").replace(/^\//, "");
+      cibles[rs[i].getAttribute("Id")] = "xl/" + cible;
+    }
+  }
+  const nommees = [];
+  const xmlWb = await texteEntree(zip["xl/workbook.xml"]);
+  if(xmlWb){
+    const sh = analyse(xmlWb).getElementsByTagName("sheet");
+    for(let i = 0; i < sh.length; i++){
+      let rid = sh[i].getAttribute("r:id");
+      if(!rid) for(const a of sh[i].attributes) if(a.localName === "id") rid = a.value;
+      if(rid && cibles[rid]) nommees.push({nom: normaliser(sh[i].getAttribute("name")), chemin: cibles[rid]});
+    }
+  }
+
+  // la feuille SAISIE fait foi ; sinon on parcourt tout le classeur
+  let chemins = nommees.filter(f => f.nom === "SAISIE").map(f => f.chemin);
+  if(!chemins.length) chemins = nommees.length ? nommees.map(f => f.chemin)
+        : Object.keys(zip).filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n)).sort();
+
+  const resultat = [];
+  for(const chemin of chemins){
+    if(zip[chemin]) resultat.push(lireFeuille(await texteEntree(zip[chemin]), chaines));
+  }
+  return resultat;
+}
+
+function lireCSV(texte){
+  const sep = (texte.split("\n")[0].match(/;/g)||[]).length > (texte.split("\n")[0].match(/,/g)||[]).length ? ";" : ",";
+  const lignes = [];
+  let champ = "", ligne = [], guillemets = false;
+  for(let i = 0; i < texte.length; i++){
+    const ch = texte[i];
+    if(guillemets){
+      if(ch === '"'){ if(texte[i+1] === '"'){ champ += '"'; i++; } else guillemets = false; }
+      else champ += ch;
+    }else if(ch === '"') guillemets = true;
+    else if(ch === sep){ ligne.push(champ); champ = ""; }
+    else if(ch === "\n"){ ligne.push(champ); lignes.push(ligne); ligne = []; champ = ""; }
+    else if(ch !== "\r") champ += ch;
+  }
+  ligne.push(champ);
+  if(ligne.length > 1 || ligne[0] !== "") lignes.push(ligne);
+  return [lignes];
+}
+
+/* --- interprétation des colonnes --- */
+function normaliser(t){
+  return String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toUpperCase().replace(/[^A-Z0-9%]+/g," ").trim();
+}
+function repererColonnes(ligne){
+  const carte = {};
+  (ligne||[]).forEach((cel,i) => {
+    const t = normaliser(cel);
+    if(!t) return;
+    if(t.indexOf("DATE") === 0)                       carte.date = i;
+    else if(t.indexOf("DEPARTEMENT") === 0)           carte.dep = i;
+    else if(t.indexOf("JOBS TOTAL") === 0 || t === "TOTAL") carte.total = i;
+    else if(t.indexOf("TERMINES A TEMPS") === 0 || t.indexOf("A TEMPS") === 0) carte.aTemps = i;
+    else if(t.indexOf("TERMINES") === 0)              carte.termines = i;
+    else if(t.indexOf("REMPLI PAR") === 0)            carte.par = i;
+  });
+  return (carte.dep !== undefined && carte.total !== undefined) ? carte : null;
+}
+function lireDate(valeur){
+  if(valeur === undefined || valeur === null || valeur === "") return null;
+  const t = String(valeur).trim();
+  if(/^\d+(\.\d+)?$/.test(t)){                       // numéro de série Excel
+    const n = parseFloat(t);
+    if(n < 20000 || n > 80000) return null;
+    const d = new Date(Date.UTC(1899,11,30) + Math.round(n) * 86400000);
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  }
+  let m = t.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+  m = t.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+  if(m) return new Date(+m[3], +m[2]-1, +m[1]);      // format jour/mois/année
+  const d = new Date(t);
+  return isNaN(d) ? null : d;
+}
+function lireNombre(valeur){
+  if(valeur === undefined || valeur === null || String(valeur).trim() === "") return null;
+  const n = parseFloat(String(valeur).replace(",","."));
+  return isNaN(n) ? null : Math.max(0, Math.round(n));
+}
+// la date peut être saisie une seule fois au-dessus du tableau
+function dateDeLaFeuille(lignes){
+  for(const ligne of lignes){
+    if(!ligne) continue;
+    for(let i = 0; i < ligne.length; i++){
+      if(normaliser(ligne[i]).indexOf("DATE DE LA SEMAINE") !== 0) continue;
+      for(let j = i + 1; j < Math.min(ligne.length, i + 5); j++){
+        const d = lireDate(ligne[j]);
+        if(d) return d;
+      }
+    }
+  }
+  return null;
+}
+
+/* --- import --- */
+async function importerFichier(fichier){
+  let feuilles;
+  if(/\.csv$/i.test(fichier.name)) feuilles = lireCSV(await fichier.text());
+  else feuilles = await lireClasseur(fichier);
+
+  const base = lireBase();
+  let blocs = 0, ignorees = 0, sansDate = 0;
+  const semainesVues = [];
+
+  feuilles.forEach(lignes => {
+    const dateFeuille = dateDeLaFeuille(lignes);
+    let carte = null;
+    lignes.forEach(ligne => {
+      if(!carte){ carte = repererColonnes(ligne); return; }        // ligne d'en-tête
+      const nomNorme = normaliser(ligne[carte.dep]);
+      const dConf = DEPARTEMENTS.find(x => x.norme === nomNorme);
+      if(!dConf) return;
+      const dep = dConf.cle;
+
+      const total    = lireNombre(ligne[carte.total]);
+      const termines = carte.termines !== undefined ? lireNombre(ligne[carte.termines]) : null;
+      const aTemps   = carte.aTemps   !== undefined ? lireNombre(ligne[carte.aTemps])   : null;
+      if(total === null && termines === null && aTemps === null) return;   // ligne vide
+
+      const date = (carte.date !== undefined ? lireDate(ligne[carte.date]) : null) || dateFeuille;
+      if(!date){ sansDate++; ignorees++; return; }
+
+      const cle = versISO(lundiDe(date));
+      if(!base.semaines[cle]) base.semaines[cle] = {debut: cle, departements:{}};
+      base.semaines[cle].departements[dep] = {
+        total: total || 0,
+        termines: termines || 0,
+        aTemps: aTemps || 0,
+        par: carte.par !== undefined ? String(ligne[carte.par]||"").trim() : "",
+        le: new Date().toISOString()
+      };
+      blocs++;
+      if(semainesVues.indexOf(cle) < 0) semainesVues.push(cle);
+    });
+  });
+
+  if(!blocs){
+    const msg = sansDate
+      ? "Il manque la date : entre la DATE DE LA SEMAINE dans la case du haut de l'onglet SAISIE, puis réessaie."
+      : "Aucune ligne exploitable. Vérifie que l'onglet SAISIE contient les colonnes DÉPARTEMENT, JOBS TOTAL, TERMINÉS, TERMINÉS À TEMPS.";
+    afficherRapport(msg, true);
+    return;
+  }
+
+  ecrireBase();
+  semainesVues.sort();
+  document.getElementById("dateSemaine").value = semainesVues[semainesVues.length - 1];
+  changerSemaine();
+
+  let msg = blocs + " ligne(s) chargée(s) · " + semainesVues.length + " semaine(s) · affichage de la semaine du " + dateLisible(depuisISO(cleSemaine));
+  if(sansDate) msg += " · " + sansDate + " ligne(s) ignorée(s) faute de date";
+  afficherRapport(msg, false);
+}
+
+function afficherRapport(texte, probleme){
+  document.getElementById("rapportImport").innerHTML =
+    '<div class="info' + (probleme ? " attention" : "") + '">' + texte + "</div>";
+}
+
+/* =========================================================
+   8. HISTORIQUE
+   ========================================================= */
+function construireHistorique(){
+  const base = lireBase();
+  const corps = document.getElementById("corpsHist");
+  const cles = Object.keys(base.semaines).sort().reverse();
+  corps.innerHTML = "";
+  if(!cles.length){
+    corps.innerHTML = '<tr><td colspan="8" style="color:var(--acier-500)">Aucune semaine enregistrée pour l\'instant.</td></tr>';
+    return;
+  }
+  cles.forEach(cle => {
+    const s = base.semaines[cle];
+    const d = depuisISO(cle);
+    let derniere = "";
+    const cellules = DEPARTEMENTS.map(d => {
+      const b = (s.departements||{})[d.cle] || {};
+      if(b.le && b.le > derniere) derniere = b.le;
+      const r = calculer(b);
+      return "<td>"+r.total+" jobs · "+(r.pct === null ? "—" : r.pct+" %")+"</td>";
+    }).join("");
+    const tr = document.createElement("tr");
+    if(cle === cleSemaine) tr.className = "actif";
+    tr.innerHTML = "<td><b>Semaine du "+(d ? dateLisible(d) : cle)+"</b></td>" + cellules +
+      "<td>"+(derniere ? new Date(derniere).toLocaleString("fr-CA",{dateStyle:"short",timeStyle:"short"}) : "—")+"</td>" +
+      '<td style="text-align:right"><button data-cle="'+cle+'">Ouvrir</button></td>';
+    corps.appendChild(tr);
+  });
+  corps.querySelectorAll("button[data-cle]").forEach(b => {
+    b.addEventListener("click", () => {
+      document.getElementById("dateSemaine").value = b.dataset.cle;
+      changerSemaine();
+    });
+  });
+}
+
+/* =========================================================
+   9. DIVERS
+   ========================================================= */
+function majEtat(txt){
+  const e = document.getElementById("etat");
+  e.textContent = txt;
+  clearTimeout(majEtat.t);
+  majEtat.t = setTimeout(() => { e.textContent = ""; }, 4000);
+}
+
+function changerSemaine(){
+  const saisie = document.getElementById("dateSemaine");
+  const lundi = lundiDe(depuisISO(saisie.value) || new Date());
+  saisie.value = versISO(lundi);
+  cleSemaine = versISO(lundi);
+  document.getElementById("badgeSemaine").innerHTML =
+    '<span class="etiq">Semaine du</span><span class="jour">' + dateLisible(lundi) + "</span>";
+  semaineCourante();
+  ecrireBase();
+  chargerDansTableau();
+  construireHistorique();
+  document.getElementById("zoneGraphes").innerHTML =
+    '<div class="vide">Remplis le tableau, puis clique sur « Générer les diagrammes ».</div>';
+  document.getElementById("rapportImport").innerHTML = "";
+}
+
+/* =========================================================
+   10. AMORÇAGE — charge la semaine du fichier Excel une seule fois
+   ========================================================= */
+function semerDonnees(){
+  const base = lireBase();
+  if(base.semaines[SEMAINE_INITIALE]) return;   // déjà présente : on ne réécrase rien
+  const departements = {};
+  DEPARTEMENTS.forEach(d => {
+    const v = DONNEES_INITIALES[d.cle] || {total:0, termines:0, aTemps:0, par:""};
+    departements[d.cle] = {total:v.total, termines:v.termines, aTemps:v.aTemps, par:v.par, le:new Date().toISOString()};
+  });
+  base.semaines[SEMAINE_INITIALE] = {debut:SEMAINE_INITIALE, departements};
+  ecrireBase();
+}
+
+/* =========================================================
+   11. DÉMARRAGE
+   ========================================================= */
+construireTableau();
+semerDonnees();
+document.getElementById("dateSemaine").value = SEMAINE_INITIALE;
+
+try{
+  const nom = localStorage.getItem(CLE_STOCKAGE + "_nom");
+  if(nom) document.getElementById("superviseur").value = nom;
+}catch(e){}
+
+changerSemaine();
+genererDiagrammes();   // affiche d'emblée les 5 diagrammes remplis
+
+document.getElementById("superviseur").addEventListener("input", e => {
+  try{ localStorage.setItem(CLE_STOCKAGE + "_nom", e.target.value); }catch(err){}
+});
+document.getElementById("dateSemaine").addEventListener("change", changerSemaine);
+document.getElementById("btnGenerer").addEventListener("click", genererDiagrammes);
+document.getElementById("btnImprimer").addEventListener("click", () => window.print());
+
+/* --- import du fichier Excel --- */
+async function traiterFichier(fichier){
+  if(!fichier) return;
+  majEtat("Lecture de " + fichier.name + "…");
+  try{
+    await importerFichier(fichier);
+    majEtat("Import terminé");
+  }catch(err){
+    afficherRapport(err.message || "Fichier illisible.", true);
+    majEtat("");
+  }
+}
+document.getElementById("btnExcel").addEventListener("click", () => document.getElementById("fichierExcel").click());
+document.getElementById("fichierExcel").addEventListener("change", async e => {
+  await traiterFichier(e.target.files[0]);
+  e.target.value = "";
+});
+let compteurDepot = 0;
+window.addEventListener("dragenter", e => {
+  if(!e.dataTransfer || Array.from(e.dataTransfer.types).indexOf("Files") < 0) return;
+  compteurDepot++; document.body.classList.add("depot");
+});
+window.addEventListener("dragleave", () => { if(--compteurDepot <= 0){ compteurDepot = 0; document.body.classList.remove("depot"); } });
+window.addEventListener("dragover", e => e.preventDefault());
+window.addEventListener("drop", async e => {
+  e.preventDefault();
+  compteurDepot = 0; document.body.classList.remove("depot");
+  if(e.dataTransfer.files.length) await traiterFichier(e.dataTransfer.files[0]);
+});
+document.getElementById("btnVider").addEventListener("click", () => {
+  if(!confirm("Effacer toutes les données de cette semaine ?")) return;
+  const base = lireBase();
+  delete base.semaines[cleSemaine];
+  ecrireBase();
+  changerSemaine();
+  majEtat("Semaine vidée");
+});
+</script>
+</body>
+</html>
