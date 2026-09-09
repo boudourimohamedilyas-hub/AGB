@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comparaison des durées : pré-assemblage, amélioration, ancien projet</title>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --card: #eceae4;
+    --text: #1c1c1a;
+    --text-2: #5f5e5a;
+    --text-3: #8a8880;
+    --border: rgba(20,20,18,0.12);
+    --accent: #185fa5;
+    --accent-bg: #e6f1fb;
+    --accent-border: #b5d4f4;
+    --c-pre: #2a78d6;
+    --c-ame: #2e9e77;
+    --c-anc: #a8a294;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem 1rem;
+  }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 2rem;
+  }
+  /* navigation par diapositives */
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .arrow {
+    font: inherit;
+    font-size: 16px;
+    line-height: 1;
+    width: 34px;
+    height: 34px;
+    flex: none;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .arrow:hover { background: var(--card); color: var(--text); }
+  .arrow:focus-visible, .pills button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 auto; }
+  .pills button {
+    font: inherit;
+    font-size: 13px;
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .pills button:hover { background: var(--card); }
+  .pills button.active {
+    background: var(--accent-bg);
+    color: var(--accent);
+    border-color: var(--accent-border);
+    font-weight: 600;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .stat { background: var(--card); border-radius: var(--radius); padding: 1rem; }
+  .stat .label { font-size: 12.5px; color: var(--text-3); margin-bottom: 2px; }
+  .stat .value { font-size: 22px; font-weight: 600; }
+  .stat .value.small { font-size: 15px; line-height: 1.4; }
+  .stat .sub { font-size: 12.5px; color: var(--text-3); }
+  .up { color: #a8443a; }
+  .down { color: #2e7d5b; }
+
+  .chart-wrap { position: relative; width: 100%; height: 330px; }
+
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+    margin-top: 1rem;
+  }
+  .leg {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 0.7rem 0.9rem;
+    border-left: 4px solid var(--c-anc);
+  }
+  .leg.pre { border-left-color: var(--c-pre); }
+  .leg.ame { border-left-color: var(--c-ame); }
+  .leg .name { font-size: 13px; font-weight: 600; }
+  .leg .det { font-size: 12.5px; color: var(--text-3); }
+
+  .credit {
+    margin-top: 1.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-3);
+    text-align: right;
+  }
+
+  @media (max-width: 560px) {
+    .container { padding: 1.25rem; }
+    .chart-wrap { height: 300px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    <button class="arrow" id="prev" aria-label="Étape précédente">‹</button>
+    <div class="pills" id="pills"></div>
+    <button class="arrow" id="next" aria-label="Étape suivante">›</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="label">Étape affichée</div>
+      <div class="value" id="statPhase">—</div>
+      <div class="sub" id="statRank">—</div>
+    </div>
+    <div class="stat">
+      <div class="label">Pré-assemblage vs ancien projet</div>
+      <div class="value small" id="statPre">—</div>
+      <div class="sub" id="statPreSub">—</div>
+    </div>
+    <div class="stat">
+      <div class="label">Amélioration vs ancien projet</div>
+      <div class="value small" id="statAme">—</div>
+      <div class="sub" id="statAmeSub">—</div>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <canvas id="chart" role="img" aria-label="Graphique à barres verticales comparant la durée moyenne du pré-assemblage, des projets avec amélioration et des anciens projets pour l'étape sélectionnée"></canvas>
+  </div>
+
+  <div class="legend">
+    <div class="leg pre"><div class="name">Pré-assemblage</div><div class="det" id="legPre">—</div></div>
+    <div class="leg ame"><div class="name">Projet avec amélioration</div><div class="det" id="legAme">—</div></div>
+    <div class="leg"><div class="name">Ancien projet</div><div class="det" id="legAnc">—</div></div>
+  </div>
+
+  <p class="credit">Fait par Ilyas</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const GROUPES = ["Pré-assemblage", "Projet avec amélioration", "Ancien projet"];
+const COULEURS = ["#2a78d6", "#2e9e77", "#a8a294"];
+
+// moy = heures moyennes par projet, med = médiane, n = projets retenus
+const etapes = [
+  {nom:"Séquence 1", d:[{moy:16.44,med:15.00,n:5},{moy:17.17,med:15.17,n:8},{moy:14.05,med:12.25,n:106}]},
+  {nom:"Séquence 2", d:[{moy:5.77,med:5.00,n:5},{moy:5.67,med:5.79,n:8},{moy:6.79,med:5.33,n:106}]},
+  {nom:"Séquence 3", d:[{moy:24.75,med:27.67,n:5},{moy:19.23,med:22.33,n:8},{moy:24.90,med:23.17,n:103}]},
+  {nom:"Test 1",     d:[{moy:3.00,med:2.00,n:5},{moy:5.69,med:2.33,n:8},{moy:4.06,med:3.00,n:103}]},
+  {nom:"Séquence 4", d:[{moy:15.80,med:15.25,n:5},{moy:21.54,med:20.62,n:8},{moy:17.98,med:17.25,n:102}]},
+  {nom:"Test 2",     d:[{moy:2.55,med:2.83,n:5},{moy:6.98,med:3.77,n:8},{moy:6.07,med:5.25,n:101}]},
+  {nom:"Test 3",     d:[{moy:7.81,med:8.00,n:5},{moy:7.78,med:5.00,n:9},{moy:7.72,med:5.25,n:97}]},
+  {nom:"Séquence 5", d:[{moy:28.82,med:23.50,n:5},{moy:25.92,med:25.67,n:9},{moy:20.50,med:21.33,n:95}]},
+  {nom:"Cycle complet", d:[{moy:104.94,med:96.67,n:5},{moy:111.13,med:111.72,n:8},{moy:101.64,med:99.00,n:90}]}
+];
+
+let index = 0;
+
+/* --- boutons de navigation --- */
+const pills = document.getElementById("pills");
+etapes.forEach((e, i) => {
+  const b = document.createElement("button");
+  b.textContent = e.nom;
+  b.addEventListener("click", () => { index = i; refresh(); });
+  pills.appendChild(b);
+});
+document.getElementById("prev").addEventListener("click", () => {
+  index = (index - 1 + etapes.length) % etapes.length; refresh();
+});
+document.getElementById("next").addEventListener("click", () => {
+  index = (index + 1) % etapes.length; refresh();
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft") { index = (index - 1 + etapes.length) % etapes.length; refresh(); }
+  if (e.key === "ArrowRight") { index = (index + 1) % etapes.length; refresh(); }
+});
+
+/* --- valeurs au-dessus des barres --- */
+const etiquettes = {
+  id: "etiquettes",
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.font = "600 13px 'Segoe UI', system-ui, sans-serif";
+    ctx.fillStyle = "#1c1c1a";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    chart.getDatasetMeta(0).data.forEach((bar, i) => {
+      const v = chart.data.datasets[0].data[i];
+      ctx.fillText(v.toFixed(1) + " h", bar.x, bar.y - 6);
+    });
+    ctx.restore();
+  }
+};
+
+const chart = new Chart(document.getElementById("chart"), {
+  type: "bar",
+  data: {
+    labels: GROUPES,
+    datasets: [{ data: [], backgroundColor: COULEURS, borderRadius: 4, maxBarThickness: 92 }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: { padding: { top: 26 } },
+    animation: { duration: 450 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: c => c.parsed.y.toFixed(2) + " h en moyenne",
+          afterLabel: c => {
+            const g = etapes[index].d[c.dataIndex];
+            return "Médiane " + g.med.toFixed(2) + " h · " + g.n + " projets";
+          }
+        }
+      }
+    },
+    scales: {
+      x: { ticks: { color: "#5f5e5a", font: { size: 13 } }, grid: { display: false } },
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: "Heures", color: "#8a8880" },
+        ticks: { color: "#8a8880" },
+        grid: { color: "#e1e0d9" }
+      }
+    }
+  },
+  plugins: [etiquettes]
+});
+
+/* --- mise à jour --- */
+function ecart(valeur, reference) {
+  const diff = valeur - reference;
+  const pct = (diff / reference) * 100;
+  const signe = diff >= 0 ? "+" : "−";
+  return {
+    texte: signe + Math.abs(diff).toFixed(2) + " h (" + signe + Math.abs(pct).toFixed(0) + " %)",
+    classe: diff >= 0 ? "up" : "down",
+    sens: diff >= 0 ? "plus long que l'ancien projet" : "plus court que l'ancien projet"
+  };
+}
+
+function refresh() {
+  const e = etapes[index];
+  const vals = e.d.map(g => g.moy);
+
+  pills.querySelectorAll("button").forEach((b, i) => b.classList.toggle("active", i === index));
+
+  chart.data.datasets[0].data = vals;
+  chart.update();
+
+  document.getElementById("statPhase").textContent = e.nom;
+  const iMax = vals.indexOf(Math.max(...vals));
+  const iMin = vals.indexOf(Math.min(...vals));
+  document.getElementById("statRank").textContent =
+    "Le plus long : " + GROUPES[iMax] + " · le plus court : " + GROUPES[iMin];
+
+  const pre = ecart(vals[0], vals[2]);
+  const ame = ecart(vals[1], vals[2]);
+  const elPre = document.getElementById("statPre");
+  elPre.textContent = pre.texte; elPre.className = "value small " + pre.classe;
+  document.getElementById("statPreSub").textContent = pre.sens;
+  const elAme = document.getElementById("statAme");
+  elAme.textContent = ame.texte; elAme.className = "value small " + ame.classe;
+  document.getElementById("statAmeSub").textContent = ame.sens;
+
+  const det = g => "Médiane " + g.med.toFixed(2) + " h · " + g.n + " projets mesurés";
+  document.getElementById("legPre").textContent = det(e.d[0]);
+  document.getElementById("legAme").textContent = det(e.d[1]);
+  document.getElementById("legAnc").textContent = det(e.d[2]);
+}
+
+refresh();
+</script>
+</body>
+</html>
