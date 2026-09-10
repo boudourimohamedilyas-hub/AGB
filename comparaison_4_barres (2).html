@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comparaison des durées par étape</title>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --card: #eceae4;
+    --text: #1c1c1a;
+    --text-2: #5f5e5a;
+    --text-3: #8a8880;
+    --border: rgba(20,20,18,0.12);
+    --accent: #185fa5;
+    --accent-bg: #e6f1fb;
+    --accent-border: #b5d4f4;
+    --c1: #2a78d6;
+    --c2: #7fb3e8;
+    --c3: #2e9e77;
+    --c4: #a8a294;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem 1rem;
+  }
+  .container {
+    max-width: 940px;
+    margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 2rem;
+  }
+
+  .nav { display: flex; align-items: center; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .arrow {
+    font: inherit; font-size: 16px; line-height: 1;
+    width: 34px; height: 34px; flex: none;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: transparent; color: var(--text-2); cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .arrow:hover { background: var(--card); color: var(--text); }
+  .arrow:focus-visible, .pills button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 auto; }
+  .pills button {
+    font: inherit; font-size: 13px; padding: 7px 14px;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: transparent; color: var(--text-2); cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .pills button:hover { background: var(--card); }
+  .pills button.active {
+    background: var(--accent-bg); color: var(--accent);
+    border-color: var(--accent-border); font-weight: 600;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .stat { background: var(--card); border-radius: var(--radius); padding: 1rem; }
+  .stat .label { font-size: 12.5px; color: var(--text-3); margin-bottom: 2px; }
+  .stat .value { font-size: 20px; font-weight: 600; }
+  .stat .value.small { font-size: 15px; line-height: 1.4; }
+  .stat .sub { font-size: 12.5px; color: var(--text-3); }
+  .up { color: #a8443a; }
+  .down { color: #2e7d5b; }
+
+  .chart-wrap { position: relative; width: 100%; height: 360px; }
+
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+    gap: 10px;
+    margin-top: 1rem;
+  }
+  .leg { background: var(--card); border-radius: var(--radius); padding: 0.7rem 0.9rem; border-left: 4px solid; }
+  .leg .name { font-size: 13px; font-weight: 600; }
+  .leg .det { font-size: 12.5px; color: var(--text-3); }
+
+  .credit {
+    margin-top: 1.75rem; padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 13px; color: var(--text-3); text-align: right;
+  }
+
+  @media (max-width: 560px) {
+    .container { padding: 1.25rem; }
+    .chart-wrap { height: 320px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="nav">
+    <button class="arrow" id="prev" aria-label="Étape précédente">‹</button>
+    <div class="pills" id="pills"></div>
+    <button class="arrow" id="next" aria-label="Étape suivante">›</button>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="chart-wrap">
+    <canvas id="chart" role="img" aria-label="Graphique à barres verticales comparant la durée moyenne de quatre familles de projets pour l'étape sélectionnée"></canvas>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <p class="credit">Fait par Ilyas</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const GROUPES = [
+  { nom: "Pré-assemblage (new model)",   court: ["Pré-assemblage", "(new model)"],    couleur: "#2a78d6" },
+  { nom: "Pré-assemblage ancien modèle", court: ["Pré-assemblage", "ancien modèle"],  couleur: "#7fb3e8" },
+  { nom: "Projet avec amélioration",     court: ["Projet avec", "amélioration"],      couleur: "#2e9e77" },
+  { nom: "Ancien projet",                court: ["Ancien projet"],                    couleur: "#a8a294" }
+];
+const REF = 3; // l'ancien projet sert de référence pour les écarts
+
+// moy = heures moyennes par projet, med = médiane, n = projets réellement mesurés
+const etapes = [
+  {nom:"Séquence 1", d:[{moy:16.51,med:14.33,n:4},{moy:16.17,med:16.17,n:1},{moy:17.17,med:15.17,n:8},{moy:14.05,med:12.25,n:106}]},
+  {nom:"Séquence 2", d:[{moy:6.75,med:6.00,n:4},{moy:1.83,med:1.83,n:1},{moy:5.67,med:5.79,n:8},{moy:6.79,med:5.33,n:106}]},
+  {nom:"Séquence 3", d:[{moy:22.65,med:22.38,n:4},{moy:33.17,med:33.17,n:1},{moy:19.23,med:22.33,n:8},{moy:24.90,med:23.17,n:103}]},
+  {nom:"Test 1",     d:[{moy:3.27,med:2.47,n:4},{moy:1.92,med:1.92,n:1},{moy:5.69,med:2.33,n:8},{moy:4.06,med:3.00,n:103}]},
+  {nom:"Séquence 4", d:[{moy:16.68,med:16.04,n:4},{moy:12.25,med:12.25,n:1},{moy:21.54,med:20.62,n:8},{moy:17.98,med:17.25,n:102}]},
+  {nom:"Test 2",     d:[{moy:2.48,med:2.84,n:4},{moy:2.83,med:2.83,n:1},{moy:6.98,med:3.77,n:8},{moy:6.07,med:5.25,n:101}]},
+  {nom:"Test 3",     d:[{moy:8.52,med:8.83,n:4},{moy:5.00,med:5.00,n:1},{moy:7.78,med:5.00,n:9},{moy:7.72,med:5.25,n:97}]},
+  {nom:"Séquence 5", d:[{moy:30.15,med:26.00,n:4},{moy:23.50,med:23.50,n:1},{moy:25.92,med:25.67,n:9},{moy:20.50,med:21.33,n:95}]},
+  {nom:"Cycle complet", d:[{moy:107.01,med:103.50,n:4},{moy:96.67,med:96.67,n:1},{moy:111.13,med:111.72,n:8},{moy:101.64,med:99.00,n:90}]}
+];
+
+let index = 0;
+
+/* --- boutons de navigation --- */
+const pills = document.getElementById("pills");
+etapes.forEach((e, i) => {
+  const b = document.createElement("button");
+  b.textContent = e.nom;
+  b.addEventListener("click", () => { index = i; refresh(); });
+  pills.appendChild(b);
+});
+const bouger = pas => { index = (index + pas + etapes.length) % etapes.length; refresh(); };
+document.getElementById("prev").addEventListener("click", () => bouger(-1));
+document.getElementById("next").addEventListener("click", () => bouger(1));
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft") bouger(-1);
+  if (e.key === "ArrowRight") bouger(1);
+});
+
+/* --- cartes de statistiques et de légende --- */
+const stats = document.getElementById("stats");
+stats.innerHTML =
+  '<div class="stat"><div class="label">Étape affichée</div>' +
+  '<div class="value" id="statPhase">—</div><div class="sub" id="statRank">—</div></div>' +
+  GROUPES.filter((g, i) => i !== REF).map((g, i) =>
+    '<div class="stat"><div class="label">' + g.nom + ' vs ancien projet</div>' +
+    '<div class="value small" id="ec' + i + '">—</div>' +
+    '<div class="sub" id="ecs' + i + '">—</div></div>').join("");
+
+const legend = document.getElementById("legend");
+legend.innerHTML = GROUPES.map((g, i) =>
+  '<div class="leg" style="border-left-color:' + g.couleur + '">' +
+  '<div class="name">' + g.nom + '</div><div class="det" id="lg' + i + '">—</div></div>').join("");
+
+/* --- valeurs au-dessus des barres --- */
+const etiquettes = {
+  id: "etiquettes",
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.font = "600 13px 'Segoe UI', system-ui, sans-serif";
+    ctx.fillStyle = "#1c1c1a";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    chart.getDatasetMeta(0).data.forEach((bar, i) => {
+      ctx.fillText(chart.data.datasets[0].data[i].toFixed(1) + " h", bar.x, bar.y - 6);
+    });
+    ctx.restore();
+  }
+};
+
+const chart = new Chart(document.getElementById("chart"), {
+  type: "bar",
+  data: {
+    labels: GROUPES.map(g => g.court),
+    datasets: [{ data: [], backgroundColor: GROUPES.map(g => g.couleur), borderRadius: 4, maxBarThickness: 78 }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: { padding: { top: 26 } },
+    animation: { duration: 450 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        displayColors: false,
+        callbacks: {
+          label: c => c.parsed.y.toFixed(2) + " h en moyenne",
+          afterLabel: c => {
+            const g = etapes[index].d[c.dataIndex];
+            return g.n === 1 ? "Un seul projet mesuré (j6540-9)"
+                             : "Médiane " + g.med.toFixed(2) + " h · " + g.n + " projets";
+          }
+        }
+      }
+    },
+    scales: {
+      x: { ticks: { color: "#5f5e5a", font: { size: 12.5 } }, grid: { display: false } },
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: "Heures", color: "#8a8880" },
+        ticks: { color: "#8a8880" },
+        grid: { color: "#e1e0d9" }
+      }
+    }
+  },
+  plugins: [etiquettes]
+});
+
+/* --- mise à jour --- */
+function ecart(valeur, reference) {
+  const diff = valeur - reference;
+  const signe = diff >= 0 ? "+" : "−";
+  return {
+    texte: signe + Math.abs(diff).toFixed(2) + " h (" + signe + Math.abs(diff / reference * 100).toFixed(0) + " %)",
+    classe: diff >= 0 ? "up" : "down",
+    sens: diff >= 0 ? "plus long que l'ancien projet" : "plus court que l'ancien projet"
+  };
+}
+
+function refresh() {
+  const e = etapes[index];
+  const vals = e.d.map(g => g.moy);
+
+  pills.querySelectorAll("button").forEach((b, i) => b.classList.toggle("active", i === index));
+
+  chart.data.datasets[0].data = vals;
+  chart.update();
+
+  document.getElementById("statPhase").textContent = e.nom;
+  document.getElementById("statRank").textContent =
+    "Le plus long : " + GROUPES[vals.indexOf(Math.max(...vals))].nom +
+    " · le plus court : " + GROUPES[vals.indexOf(Math.min(...vals))].nom;
+
+  let k = 0;
+  GROUPES.forEach((g, i) => {
+    document.getElementById("lg" + i).textContent = e.d[i].n === 1
+      ? "Projet unique j6540-9 · " + e.d[i].moy.toFixed(2) + " h"
+      : "Médiane " + e.d[i].med.toFixed(2) + " h · " + e.d[i].n + " projets mesurés";
+    if (i === REF) return;
+    const r = ecart(vals[i], vals[REF]);
+    const el = document.getElementById("ec" + k);
+    el.textContent = r.texte;
+    el.className = "value small " + r.classe;
+    document.getElementById("ecs" + k).textContent = r.sens;
+    k++;
+  });
+}
+
+refresh();
+</script>
+</body>
+</html>
