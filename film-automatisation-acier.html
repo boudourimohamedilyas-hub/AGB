@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Réquisition d'acier — la transformation</title>
+<style>
+  :root {
+    --bg: #03050c; --glass: rgba(8, 14, 30, .72); --edge: rgba(120, 220, 255, .22);
+    --ink: #e8f1ff; --muted: #8ea3c4; --cyan: #3ef0ff; --violet: #b18cff; --red: #ff4d6d; --amber: #ffb547; --green: #4dffa6;
+    --mono: "Cascadia Code", Consolas, "SF Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif; overflow: hidden; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+  canvas.free { cursor: grab; }
+  /* scanlines + vignette (effet écran holographique) */
+  .fx { position: fixed; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px),
+                radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%); }
+  .hud-tl { position: fixed; left: 22px; top: 18px; pointer-events: none; }
+  .brand { font: 600 11px/1 var(--mono); letter-spacing: 3px; color: var(--cyan); opacity: .85; }
+  .chap { margin-top: 10px; font: 600 12px/1 var(--mono); letter-spacing: 2px; color: var(--muted); }
+  .title { margin-top: 6px; font-size: 26px; font-weight: 700; letter-spacing: .3px; text-shadow: 0 0 18px rgba(62,240,255,.35); min-height: 34px; }
+  .title .cur { display: inline-block; width: 10px; height: 22px; background: var(--cyan); margin-left: 4px; vertical-align: -3px; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .corner { position: fixed; width: 26px; height: 26px; border-color: rgba(62,240,255,.45); border-style: solid; pointer-events: none; }
+  .c1 { left: 10px; top: 10px; border-width: 2px 0 0 2px; } .c2 { right: 10px; top: 10px; border-width: 2px 2px 0 0; }
+  .c3 { left: 10px; bottom: 10px; border-width: 0 0 2px 2px; } .c4 { right: 10px; bottom: 10px; border-width: 0 2px 2px 0; }
+
+  aside { position: fixed; right: 22px; top: 22px; width: 392px; max-height: calc(100% - 130px); overflow: auto; background: var(--glass);
+    border: 1px solid var(--edge); border-radius: 16px; padding: 18px 18px 16px; backdrop-filter: blur(10px);
+    box-shadow: 0 0 40px rgba(62,240,255,.08), inset 0 0 30px rgba(62,240,255,.04); }
+  .sec { margin-bottom: 14px; transition: opacity .5s, transform .5s; }
+  .sec.hide { opacity: 0; transform: translateY(8px); }
+  .tag { display: inline-block; font: 700 10.5px/1 var(--mono); letter-spacing: 2px; padding: 4px 8px; border-radius: 4px; margin-bottom: 7px; }
+  .t-avant { color: var(--red); background: rgba(255,77,109,.12); border: 1px solid rgba(255,77,109,.35); }
+  .t-apres { color: var(--cyan); background: rgba(62,240,255,.10); border: 1px solid rgba(62,240,255,.35); }
+  .t-log { color: var(--violet); background: rgba(177,140,255,.10); border: 1px solid rgba(177,140,255,.35); }
+  .t-ex { color: var(--amber); background: rgba(255,181,71,.10); border: 1px solid rgba(255,181,71,.35); }
+  .t-ok { color: var(--green); background: rgba(77,255,166,.10); border: 1px solid rgba(77,255,166,.35); }
+  .sec p { margin: 0; }
+  .formula { font: 13px/1.6 var(--mono); color: #e3d6ff; background: rgba(0,0,0,.35); border: 1px solid rgba(177,140,255,.25); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; }
+  .term { font: 12.5px/1.65 var(--mono); background: rgba(0,0,0,.4); border: 1px solid rgba(255,181,71,.22); border-radius: 8px; padding: 8px 10px; }
+  .term div { opacity: 0; transform: translateX(-6px); transition: opacity .35s, transform .35s; white-space: pre-wrap; }
+  .term div.on { opacity: 1; transform: none; }
+  .ok { color: var(--green); } .ko { color: var(--red); }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat { border: 1px solid var(--edge); border-radius: 10px; padding: 9px 10px; background: rgba(62,240,255,.03); }
+  .stat b { display: block; font: 700 22px/1.1 var(--mono); color: var(--cyan); }
+  .stat.red b { color: var(--red); }
+  .stat span { font-size: 11.5px; color: var(--muted); }
+  .cmp { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .cmp td { padding: 6px 6px; border-bottom: 1px solid rgba(120,220,255,.12); vertical-align: top; }
+  .cmp td:first-child { color: var(--muted); width: 30%; }
+  .cmp td:nth-child(2) { color: #ffb0bd; } .cmp td:nth-child(3) { color: #a8f7ff; }
+
+  .bar { position: fixed; left: 22px; right: 22px; bottom: 18px; display: flex; gap: 10px; align-items: center; }
+  .bar button { font: 600 12.5px/1 var(--mono); color: var(--ink); background: rgba(8,14,30,.8); border: 1px solid var(--edge); border-radius: 8px; padding: 9px 12px; cursor: pointer; letter-spacing: .5px; }
+  .bar button:hover { border-color: var(--cyan); box-shadow: 0 0 12px rgba(62,240,255,.25); }
+  .bar button.on { background: rgba(62,240,255,.14); border-color: var(--cyan); }
+  .timeline { flex: 1; height: 30px; position: relative; display: flex; gap: 3px; cursor: pointer; }
+  .seg { position: relative; height: 100%; background: rgba(120,220,255,.07); border: 1px solid rgba(120,220,255,.15); border-radius: 4px; overflow: hidden; }
+  .seg i { position: absolute; inset: 0; width: 0; background: linear-gradient(90deg, rgba(62,240,255,.25), rgba(177,140,255,.45)); }
+  .seg span { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); font: 600 10.5px/1 var(--mono); color: var(--muted); white-space: nowrap; pointer-events: none; }
+  .seg.cur { border-color: rgba(62,240,255,.6); }
+  .seg.cur span { color: var(--ink); }
+  .time { font: 600 12px/1 var(--mono); color: var(--muted); width: 92px; text-align: right; }
+  .hint { position: fixed; left: 22px; bottom: 60px; font: 11px/1 var(--mono); color: var(--muted); letter-spacing: 1px; pointer-events: none; }
+  @media (max-width: 900px) {
+    aside { top: auto; bottom: 64px; left: 10px; right: 10px; width: auto; max-height: 42vh; padding: 12px; }
+    .title { font-size: 19px; }
+    .seg span { display: none; }
+    .hint { display: none; }
+    .time { display: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="fx"></div>
+<div class="corner c1"></div><div class="corner c2"></div><div class="corner c3"></div><div class="corner c4"></div>
+
+<div class="hud-tl">
+  <div class="brand">AGB // NOYAU ACIER · SIMULATION</div>
+  <div class="chap" id="chap"></div>
+  <div class="title"><span id="title"></span><span class="cur"></span></div>
+</div>
+
+<aside id="card"></aside>
+
+<div class="hint" id="hint">ESPACE lecture/pause · ← → chapitre · MODE LIBRE : glisser pour tourner, molette pour zoomer, clic sur un bloc</div>
+<div class="bar">
+  <button id="bPrev" title="Chapitre précédent">◀◀</button>
+  <button id="bPlay" title="Lecture / pause">❚❚</button>
+  <button id="bNext" title="Chapitre suivant">▶▶</button>
+  <div class="timeline" id="timeline"></div>
+  <span class="time" id="time"></span>
+  <button id="bFree" title="Explorer librement">MODE LIBRE</button>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// =====================================================================================
+//  DONNÉES : blocs Excel (avant) et blocs Airtable (après), positions dans l'espace
+// =====================================================================================
+const COL = { red: '#ff4d6d', amber: '#ffb547', slate: '#9fb3d1', cyan: '#3ef0ff', violet: '#b18cff', blue: '#5aa9ff', green: '#4dffa6', orange: '#ff9b4a' };
+const TYPE = {
+  saisie: { c: COL.amber, tag: 'SAISIE MANUELLE' }, calc: { c: COL.slate, tag: 'CALCUL EXCEL' }, decision: { c: COL.amber, tag: 'DÉCISION À L’ŒIL' },
+  terrain: { c: COL.cyan, tag: 'GESTE TERRAIN' }, auto: { c: COL.violet, tag: 'AUTOMATISATION' }, data: { c: COL.blue, tag: 'DONNÉE CALCULÉE' }, sam: { c: COL.orange, tag: 'POUR SAM' }
+};
+const N = (id, t, x, y, z, label, sub, bug) => ({ id, t, p: { x, y, z }, label, sub, bug: !!bug, old: ['saisie', 'calc', 'decision'].includes(t) });
+const NODES = [
+  // ---- Excel : zone gauche, 3 étages
+  N('planning', 'saisie', -980, -240, -40, 'Planning', 'matrice 63 tôles × 90 colonnes', 1),
+  N('chelsea', 'saisie', -760, -240, 160, 'Chelsea · BOM × QTY', '× 3 codé en dur', 1),
+  N('verif', 'saisie', -560, -240, -60, 'Verification', 'comptage en colonnes'),
+  N('prextra', 'saisie', -1120, -240, 170, 'Stock Prextra retapé', 'pour Comparison'),
+  N('recu', 'saisie', -860, -240, -250, 'Reçus retapés', 'colonne REÇU'),
+  N('minmax_b', 'saisie', -620, -240, -260, 'MIN / MAX', 'tapés, jamais ajustés'),
+  N('summary', 'calc', -900, 0, -60, 'Summary Total', 'déduit par date', 1),
+  N('weekly', 'calc', -690, 0, 150, 'Weekly Usage', 'signes inversés', 1),
+  N('comp', 'calc', -520, 0, -110, 'Comparison + Visual', 'colonnes codées en dur'),
+  N('syscomp', 'calc', -1100, 0, 90, 'SYSTEM COMPARISON', 'calcul Ilyas vs calcul Sam', 1),
+  N('ivr', 'calc', -640, 0, -280, 'Inventory Reconc.', 'ARRAYFORMULA cassée', 1),
+  N('jmr', 'calc', -900, 0, 240, 'Besoins / conso par job', 'tapés à la main'),
+  N('orders', 'calc', -1060, 0, -230, 'Orders & Receipts', 'statuts contradictoires', 1),
+  N('eye', 'decision', -880, 240, 0, 'Décision à l’œil', 'Sam relit Summary Total'),
+  N('notes', 'decision', -660, 240, 90, 'Purchases · notes tapées', '« 10  PLSTHA-…  3064 »'),
+  // ---- Airtable : zone droite, 6 niveaux qui descendent dans le sens du calcul
+  N('cedule', 'terrain', 430, -430, 0, 'Cédule Workstreams', 'job + Actual Start'),
+  N('coupe', 'terrain', 650, -430, -60, 'Coupe DONE', 'Saint-Quentin · Bathurst · Maritime'),
+  N('count', 'terrain', 870, -430, 50, 'Comptage du vendredi', 'tablette, 63 lignes'),
+  N('recep', 'terrain', 1090, -430, -30, 'Réception', 'Status → Order received'),
+  N('A1', 'auto', 430, -260, 40, 'A1 · Besoins par job', 'BOM tôles × qté'),
+  N('A3', 'auto', 650, -260, -50, 'A3 · Sortie des tôles', 'quand la coupe est DONE'),
+  N('A7', 'auto', 870, -260, 50, 'A7 · Ajustement', 'compté − théorique'),
+  N('R2', 'auto', 1090, -260, -40, 'R2 · Entrée en stock', 'une seule fois par PO'),
+  N('bes', 'data', 470, -90, 0, 'Besoins job', 'job × tôle · Restant'),
+  N('mvt', 'data', 760, -90, -40, 'Mouvements de stock', 'Stock = Σ mouvements'),
+  N('minmax', 'data', 1050, -90, 40, 'MIN / MAX auto', 'conso réelle 12 semaines'),
+  N('lignes', 'data', 1250, -90, -30, 'Lignes acier', 'qté + poids par PO'),
+  N('mat', 'data', 760, 80, 0, 'Matériaux · 63 tôles', 'Projeté · À commander'),
+  N('R1', 'auto', 640, 250, 40, 'R1 · Réquisition 6 h', '1re date de manque → MAX'),
+  N('A9', 'auto', 940, 250, -40, 'A9 · Alerte manque', 'projeté < 0 avant la coupe'),
+  N('purch', 'sam', 520, 420, 30, 'Purchases · New Request', 'au format de Sam'),
+  N('achats', 'sam', 790, 420, -40, 'Sam approuve', 'Order placed + n° PO'),
+  N('mail', 'sam', 1060, 420, 40, 'Courriel de 6 h', 'à commander · retards')
+];
+// on écarte un peu la zone Excel pour qu'elle se lise mieux
+for (const n of NODES) if (n.old) { n.p.x = -820 + (n.p.x + 820) * 1.35; n.p.z *= 1.35; }
+const byId = Object.fromEntries(NODES.map(n => [n.id, n]));
+const OLD_EDGES = [['planning', 'summary'], ['verif', 'summary'], ['summary', 'eye'], ['minmax_b', 'eye'], ['summary', 'syscomp'], ['syscomp', 'eye'],
+  ['verif', 'weekly'], ['recu', 'weekly'], ['verif', 'comp'], ['prextra', 'comp'], ['chelsea', 'eye'], ['jmr', 'ivr'], ['verif', 'ivr'], ['orders', 'syscomp'], ['eye', 'notes']];
+const NEW_EDGES = [['cedule', 'A1'], ['A1', 'bes'], ['coupe', 'A3'], ['bes', 'A3'], ['A3', 'mvt'], ['count', 'A7'], ['A7', 'mvt'], ['recep', 'R2'], ['R2', 'mvt'],
+  ['mvt', 'minmax'], ['mvt', 'mat'], ['bes', 'mat'], ['minmax', 'mat'], ['lignes', 'mat'], ['mat', 'R1'], ['mat', 'A9'], ['R1', 'purch'], ['R1', 'lignes'],
+  ['purch', 'achats'], ['achats', 'recep'], ['mat', 'mail'], ['A9', 'mail']];
+
+// =====================================================================================
+//  LE FILM : un chapitre par changement. Tous les chiffres viennent de ton fichier
+//  ou des scripts testés (R1, R2) — rien d'inventé.
+// =====================================================================================
+const CH = [
+  { key: 'intro', title: 'Le système actuel', len: 10 },
+  { key: 'jobs', title: 'Les jobs', len: 13, old: ['planning'], neu: ['cedule'],
+    avant: 'La matrice Planning : chaque job retapé dans une colonne. 84 jobs pour 90 colonnes, donc 6 doublons. J6840-16 compté 3 fois et J6802-1 2 fois : environ 144 tôles déduites en trop.',
+    apres: 'La cédule Workstreams que la planif utilise déjà. Une ligne = un job, avec sa date Actual Start. Plus rien à retaper.',
+    logique: 'Date de besoin des tôles = Actual Start du job\n1 job = 1 ligne → un doublon est signalé tout de suite',
+    ex: ['Excel : J6840-16 en BS, CM et DE', '      → 48 + 48 + 48 = 144 tôles déduites', '<ok>Airtable : J6840-16 = 1 ligne → 48 tôles</ok>'],
+    ok: 'Ta table Workstreams actuelle + une automatisation qui signale un n° de job en double (Airtable n’impose pas l’unicité tout seul).' },
+  { key: 'besoin', title: 'Le besoin en tôles', len: 13, old: ['chelsea', 'jmr'], neu: ['A1', 'bes'],
+    avant: 'Chelsea multiplie la BOM par la quantité avec un × 3 codé en dur à partir de la ligne 5. Les besoins par job sont tapés à la main.',
+    apres: 'A1 calcule les tôles de chaque job dès qu’il entre dans la cédule. Le programmeur peut corriger avec les tôles réelles après imbrication.',
+    logique: 'Besoin = Qté par unité (BOM tôles) × Qté du job\nRestant = Besoin − déjà sorti',
+    ex: ['ATLANTA-L64 : PLSTHA-01884824000 (3/16 48x240)', 'BOM : 6 par unité · job de 1 unité', '<ok>Besoin = 6 × 1 = 6 tôles</ok>'],
+    ok: 'Automatisation Airtable « Run script » (script A1 du doc).' },
+  { key: 'sortie', title: 'La sortie du stock', len: 13, old: ['summary'], neu: ['coupe', 'A3'],
+    avant: 'Summary Total enlève seulement les jobs datés APRÈS le dernier comptage. Tout job daté avant est supposé coupé, même s’il est en retard.',
+    apres: 'Les tôles sortent quand la coupe du job passe à DONE, à Saint-Quentin, Bathurst ou Maritime : c’est AGB qui envoie l’acier.',
+    logique: 'Besoin ouvert tant que Statut coupe ≠ DONE\nÀ DONE : mouvement « Consommation » = − Restant',
+    ex: ['Comptage du 2 oct. :', '46 colonnes de jobs datées le 2 oct. ou avant', '<ko>→ supposées coupées, en retard ou non</ko>', '<ok>Airtable : sorties seulement à coupe DONE</ok>'],
+    ok: 'Champ « Statut coupe » dans la cédule + automatisation déclenchée à DONE (script A3).' },
+  { key: 'stock', title: 'Le stock', len: 13, old: ['weekly', 'ivr'], neu: ['mvt'],
+    avant: 'Weekly Usage a des signes inversés d’un bloc à l’autre, et l’onglet de réconciliation pointe sur des lignes vides : aucun des deux ne donne la vraie consommation.',
+    apres: 'Un seul journal : chaque sortie, réception ou ajustement est une ligne. Le stock est la somme du journal.',
+    logique: 'Stock = Σ mouvements\nConso de la semaine = ancien + reçu − nouveau',
+    ex: ['ancien 10 · reçu 5 · nouveau 12', '<ko>Excel bloc A : 10 − 12 − 5 = −7</ko>', '<ko>Excel bloc B : 12 − 10 − 5 = −3</ko>', '<ok>Airtable : 10 + 5 − 12 = 3 tôles</ok>'],
+    ok: 'Table « Mouvements de stock » + un champ rollup SUM dans Matériaux.' },
+  { key: 'comptage', title: 'Le comptage', len: 12, old: ['verif'], neu: ['count', 'A7'],
+    avant: 'Verification : une colonne par semaine dans une matrice de 100 colonnes, recopiée ensuite dans les autres onglets.',
+    apres: 'Le vendredi, la tablette affiche les 63 tôles avec le théorique déjà figé. On tape le compté, l’écart se corrige seul.',
+    logique: 'Ajustement = Compté − Théorique\nÉcart au-delà du seuil → alerte',
+    ex: ['Théorique 23 · compté 21', '<ok>Mouvement −2 → stock = 21</ok>'],
+    ok: 'Page d’interface tablette + automatisation A7.' },
+  { key: 'reception', title: 'Les réceptions', len: 12, old: ['recu', 'orders'], neu: ['recep', 'R2', 'lignes'],
+    avant: 'Les reçus sont retapés dans chaque bloc ; Orders & Receipts a des lignes « PENDING » marquées « Fully Received ».',
+    apres: 'Dans Purchases, on passe la commande à « Order received » : chaque ligne entre en stock, une seule fois.',
+    logique: 'Order received → + Qté de chaque ligne\nCase « Stock reçu » cochée → jamais deux fois',
+    ex: ['Commande : 30 + 13 tôles', '<ok>→ 2 mouvements : +30 et +13</ok>', '<ok>Statut rechangé → 0 mouvement de plus</ok>'],
+    ok: 'Ta table Purchases (statut Order received) + script R2, testé.' },
+  { key: 'minmax', title: 'MIN / MAX', len: 12, old: ['minmax_b'], neu: ['minmax'],
+    avant: 'MIN et MAX tapés une fois, jamais ajustés. La colonne « à commander » est vide.',
+    apres: 'MIN et MAX se recalculent chaque jour avec la consommation réelle des 12 dernières semaines. Sam peut forcer une valeur.',
+    logique: 'MIN = conso/sem × (délai fournisseur + sécurité)\nMAX = MIN + conso/sem × semaines entre commandes',
+    ex: ['Exemple : 6 tôles/sem · délai 2 sem · sécurité 1 sem', 'MIN = 6 × (2 + 1) = 18', '<ok>MAX = 18 + 6 × 2 = 30</ok>'],
+    ok: 'Champs formule + rollup filtré sur 12 semaines, dans Matériaux.' },
+  { key: 'calcul', title: 'Un seul calcul', len: 13, old: ['syscomp', 'comp', 'prextra'], neu: ['mat'],
+    avant: 'Ilyas et Sam calculent chacun le même solde, puis comparent ; SYSTEM COMPARISON est décalé d’une ligne à partir de la ligne 51.',
+    apres: 'Un seul calcul par tôle, visible par tout le monde, toujours à jour.',
+    logique: 'Projeté = Stock + En commande − Besoins 3 semaines\nÀ commander si Projeté < MIN',
+    ex: ['Stock 40 + en commande 20 − besoins 45', '= 15 · MIN 10', '<ok>15 ≥ 10 → rien à commander</ok>'],
+    ok: 'Formules dans la table Matériaux (aucun script).' },
+  { key: 'commande', title: 'La commande d’acier', len: 15, old: ['eye', 'notes'], neu: ['R1', 'A9', 'purch', 'achats', 'mail'],
+    avant: 'Aucune quantité calculée : Sam décide à l’œil, puis tape chaque ligne dans les notes de Purchases.',
+    apres: 'Chaque matin à 6 h, R1 crée la demande « New Request » au format de Sam. Sam approuve, A9 avertit d’un manque, un courriel résume tout.',
+    logique: '1. 1re date où stock + en commande − besoins < MIN\n2. Qté = MAX − (dispo − besoins), arrondie au multiple\n3. Poids = qté × pi² × lb/pi²',
+    ex: ['PLSTHA-01886009600 · stock 5 · MIN 4 · MAX 20', 'besoins : 3 (11 oct.) + 6 (13 oct.)', '5 − 3 = 2 < 4 → manque le 11 oct.', 'Qté = 20 − (5 − 9) = 24 → 25 (multiple 5)', '<ok>11 octobre · 25 PLSTHA-01886009600 · 7660 lb</ok>'],
+    ok: 'Automatisation planifiée 6 h + script R1 (testé) + action « Send email ».' },
+  { key: 'final', title: 'Le nouveau système', len: 14 }
+];
+let acc = 0; for (const c of CH) { c.start = acc; acc += c.len; }
+const TOTAL = acc;
+// Moments clés dans un chapitre (secondes depuis le début du chapitre)
+const K = { focusOld: 1.6, shatter: 4.2, travel: 4.8, focusNew: 6.9, build: 6.9, buildStep: 0.5, reveal: 8.2 };
+
+// Quand chaque bloc se brise / apparaît
+for (const n of NODES) { n.breakAt = Infinity; n.buildAt = Infinity; }
+for (const c of CH) {
+  (c.old || []).forEach((id, i) => { byId[id].breakAt = c.start + K.shatter + i * 0.28; byId[id].ch = c; });
+  (c.neu || []).forEach((id, i) => { byId[id].buildAt = c.start + K.build + i * K.buildStep; byId[id].ch = c; byId[id].from = c.old; });
+}
+
+// =====================================================================================
+//  MOTEUR 3D (canvas, sans dépendance)
+// =====================================================================================
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+let W, H, DPR, FOCAL;
+function resize() {
+  DPR = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR; g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  FOCAL = Math.min(W, H * 1.4) * 0.95;
+}
+addEventListener('resize', resize); resize();
+const narrow = () => W < 900;
+
+const lerp = (a, b, t) => a + (b - a) * t, clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const ease = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const eOut = x => 1 - Math.pow(1 - x, 3);
+function rnd(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+const hex = (h, a) => { const v = parseInt(h.slice(1), 16); return `rgba(${v >> 16},${(v >> 8) & 255},${v & 255},${a})`; };
+const centroid = ids => { const p = { x: 0, y: 0, z: 0 }; ids.forEach(id => { p.x += byId[id].p.x; p.y += byId[id].p.y; p.z += byId[id].p.z; }); return { x: p.x / ids.length, y: p.y / ids.length, z: p.z / ids.length }; };
+
+let cam = { x: -800, y: 0, z: 0, d: 2300, yaw: -0.6, pitch: 0.35 };
+function project(p) {
+  const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const x = p.x - cam.x, y = p.y - cam.y, z = p.z - cam.z;
+  const x1 = x * cy - z * sy, z1 = x * sy + z * cy;
+  const y2 = y * cp - z1 * sp, z2 = y * sp + z1 * cp + cam.d;
+  if (z2 < 60) return null;
+  const f = FOCAL / z2;
+  const ox = narrow() ? W / 2 : (W - 420) / 2 + 10, oy = narrow() ? H * 0.32 : H / 2 + 10;
+  return { x: ox + x1 * f, y: oy + y2 * f, f, z: z2 };
+}
+
+// ---- Trajectoire caméra : images clés calculées depuis les chapitres
+const KEYS = [];
+(function buildKeys() {
+  const oldC = centroid(NODES.filter(n => n.old).map(n => n.id)), newC = centroid(NODES.filter(n => !n.old).map(n => n.id));
+  KEYS.push({ t: 0, c: { ...oldC, d: 1900, yaw: -0.85, pitch: 0.5 } });
+  KEYS.push({ t: 8.5, c: { ...oldC, d: 1450, yaw: -0.3, pitch: 0.42 } });
+  CH.forEach((c, i) => {
+    if (!c.old) return;
+    const o = centroid(c.old), n = centroid(c.neu), v = (i % 2 ? 1 : -1) * 0.18;
+    const dOld = 820 + 140 * (c.old.length - 1), dNew = 900 + 170 * (c.neu.length - 1);
+    KEYS.push({ t: c.start + K.focusOld, c: { ...o, d: dOld, yaw: -0.32 + v, pitch: 0.52 } });
+    KEYS.push({ t: c.start + K.shatter, c: { ...o, d: dOld * 0.88, yaw: -0.22 + v, pitch: 0.46 } });
+    KEYS.push({ t: c.start + K.focusNew, c: { ...n, d: dNew, yaw: 0.28 - v, pitch: 0.24 } });
+    KEYS.push({ t: c.start + c.len - 0.2, c: { ...n, d: dNew * 0.92, yaw: 0.42 - v, pitch: 0.2 } });
+  });
+  const fin = CH[CH.length - 1];
+  KEYS.push({ t: fin.start + 2.4, c: { ...newC, d: 2300, yaw: 0.15, pitch: 0.3 } });
+  KEYS.push({ t: fin.start + fin.len, c: { ...newC, d: 2100, yaw: 0.95, pitch: 0.34 } });
+})();
+function camAt(t) {
+  if (t <= KEYS[0].t) return { ...KEYS[0].c };
+  for (let i = 1; i < KEYS.length; i++) {
+    if (t <= KEYS[i].t) {
+      const a = KEYS[i - 1], b = KEYS[i], u = ease((t - a.t) / (b.t - a.t));
+      const o = {}; for (const k in a.c) o[k] = lerp(a.c[k], b.c[k], u); return o;
+    }
+  }
+  return { ...KEYS[KEYS.length - 1].c };
+}
+
+// ---- Décor : étoiles, nébuleuse, sol holographique
+const R0 = rnd(7);
+const STARS = Array.from({ length: 900 }, () => {
+  const th = R0() * Math.PI * 2, ph = Math.acos(2 * R0() - 1), r = 3500 + R0() * 4000;
+  return { x: r * Math.sin(ph) * Math.cos(th), y: r * Math.cos(ph) * 0.6, z: r * Math.sin(ph) * Math.sin(th), s: R0() * 1.4 + 0.3, tw: R0() * 6 };
+});
+function drawBackground(t) {
+  g.fillStyle = '#03050c'; g.fillRect(0, 0, W, H);
+  const neb = [[0.28, 0.35, '#5a2bff', 0.12], [0.72, 0.62, '#00c2ff', 0.10], [0.5, 0.9, '#ff2d7a', 0.06]];
+  for (const [x, y, c, a] of neb) {
+    const cx = W * x + Math.sin(t * 0.07 + x * 9) * 60, cy = H * y + Math.cos(t * 0.05 + y * 7) * 40;
+    const gr = g.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.55);
+    gr.addColorStop(0, hex(c, a)); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  }
+  for (const s of STARS) {
+    const q = project(s); if (!q) continue;
+    const a = 0.35 + 0.35 * Math.sin(t * 1.3 + s.tw);
+    g.fillStyle = `rgba(200,225,255,${a})`; g.fillRect(q.x, q.y, s.s, s.s);
+  }
+  // sol : grille néon sous le système
+  const Y = 640, span = 2600, step = 200;
+  for (let i = -span; i <= span; i += step) {
+    for (const [a, b] of [[{ x: i, y: Y, z: -span }, { x: i, y: Y, z: span }], [{ x: -span, y: Y, z: i }, { x: span, y: Y, z: i }]]) {
+      const pa = project(a), pb = project(b); if (!pa || !pb) continue;
+      const fade = clamp(1 - Math.abs(i) / span, 0, 1);
+      g.strokeStyle = `rgba(62,240,255,${0.10 * fade})`; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(pa.x, pa.y); g.lineTo(pb.x, pb.y); g.stroke();
+    }
+  }
+}
+
+// ---- Cartes holographiques
+const CW = 200, CH_ = 54;   // taille d'une carte en unités du monde
+function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function fit(text, max) { if (g.measureText(text).width <= max) return text; while (text.length > 1 && g.measureText(text + '…').width > max) text = text.slice(0, -1); return text + '…'; }
+
+function drawCard(n, q, alpha, opt) {
+  alpha *= clamp((q.z - 260) / 420, 0, 1);   // flou de proximité : ce qui frôle la caméra s'efface
+  if (alpha <= 0.01) return { x: -9, y: -9, w: 0, h: 0 };
+  const f = Math.min(q.f, 1.7), w = CW * f, h = CH_ * f, x = q.x - w / 2, y = q.y - h / 2;
+  const col = n.bug ? COL.red : TYPE[n.t].c;
+  g.save(); g.globalAlpha = alpha;
+  if (opt.build < 1) {   // matérialisation : la carte se construit de haut en bas, ligne de balayage
+    g.beginPath(); g.rect(x - 4, y - 4, w + 8, (h + 8) * opt.build); g.clip();
+  }
+  const glow = (opt.focus ? 26 : 12) * f;
+  g.shadowColor = hex(col, opt.focus ? 0.8 : 0.45); g.shadowBlur = glow;
+  rr(x, y, w, h, 8 * f); g.fillStyle = n.old ? 'rgba(28,10,18,.82)' : 'rgba(6,18,36,.84)'; g.fill();
+  g.shadowBlur = 0;
+  g.strokeStyle = hex(col, opt.focus ? 1 : 0.7); g.lineWidth = Math.max(1, 1.4 * f); g.stroke();
+  // coins de visée
+  g.strokeStyle = hex(col, 0.95); g.lineWidth = Math.max(1, 2 * f); const k = 10 * f;
+  g.beginPath(); g.moveTo(x, y + k); g.lineTo(x, y); g.lineTo(x + k, y); g.moveTo(x + w - k, y + h); g.lineTo(x + w, y + h); g.lineTo(x + w, y + h - k); g.stroke();
+  // texte
+  const fs = 14 * f;
+  if (fs > 6) {
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+    g.font = `700 ${8.5 * f}px Consolas, monospace`; g.fillStyle = hex(col, 0.9);
+    g.fillText(n.bug ? 'ERREUR · ' + TYPE[n.t].tag : TYPE[n.t].tag, x + 12 * f, y + 14 * f);
+    g.font = `600 ${fs}px "Segoe UI", system-ui, sans-serif`; g.fillStyle = '#eef5ff';
+    g.fillText(fit(n.label, w - 24 * f), x + 12 * f, y + 32 * f);
+    g.font = `${11 * f}px "Segoe UI", system-ui, sans-serif`; g.fillStyle = n.bug ? '#ffb3c0' : '#9fb3d1';
+    g.fillText(fit(n.sub, w - 24 * f), x + 12 * f, y + 47 * f);
+  }
+  if (opt.build < 1) {   // ligne de balayage de construction
+    const sy = y + (h + 8) * opt.build - 4;
+    g.fillStyle = hex(COL.cyan, 0.9); g.fillRect(x - 10 * f, sy, w + 20 * f, 2);
+    g.fillStyle = hex(COL.cyan, 0.18); g.fillRect(x - 10 * f, sy - 10 * f, w + 20 * f, 10 * f);
+  }
+  g.restore();
+  // effet glitch : tranches décalées rouge / cyan
+  if (opt.glitch > 0) {
+    const r = rnd(Math.floor(opt.time * 14) + n.p.x | 0);
+    g.save(); g.globalAlpha = alpha * opt.glitch;
+    for (let i = 0; i < 4; i++) {
+      const sy = y + r() * h, sh = (3 + r() * 9) * f, dx = (r() - 0.5) * 26 * f * opt.glitch;
+      g.fillStyle = i % 2 ? 'rgba(255,40,90,.55)' : 'rgba(40,240,255,.45)';
+      g.fillRect(x + dx, sy, w, sh);
+    }
+    g.restore();
+  }
+  return { x, y, w, h };
+}
+
+// ---- Éclats quand un bloc Excel se brise
+const SHARDS = {};
+function shardsOf(n) {
+  if (SHARDS[n.id]) return SHARDS[n.id];
+  const r = rnd(n.id.length * 97 + n.p.x * 3 | 0), list = [];
+  for (let i = 0; i < 26; i++) {
+    const ox = (r() - 0.5) * CW, oy = (r() - 0.5) * CH_;
+    const sp = 120 + r() * 380, th = Math.atan2(oy, ox) + (r() - 0.5) * 1.2;
+    list.push({ ox, oy, vx: Math.cos(th) * sp, vy: Math.sin(th) * sp - 120, vz: (r() - 0.5) * 420, rot: r() * 6, vr: (r() - 0.5) * 10,
+      a: [r() * 6.28, r() * 6.28, r() * 6.28], s: 6 + r() * 16 });
+  }
+  return SHARDS[n.id] = list;
+}
+function drawShards(n, dt) {
+  if (dt < 0 || dt > 2.6) return;
+  const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), col = n.bug ? COL.red : TYPE[n.t].c;
+  for (const s of shardsOf(n)) {
+    const px = n.p.x + s.ox * cy + s.vx * dt * cy, pz = n.p.z - s.ox * sy - s.vx * dt * sy + s.vz * dt;
+    const py = n.p.y + s.oy + s.vy * dt + 260 * dt * dt;
+    const q = project({ x: px, y: py, z: pz }); if (!q) continue;
+    const a = clamp(1 - dt / 2.6, 0, 1), rot = s.rot + s.vr * dt, sz = s.s * q.f;
+    g.beginPath();
+    for (let k = 0; k < 3; k++) { const ang = rot + s.a[k]; const X = q.x + Math.cos(ang) * sz, Y = q.y + Math.sin(ang) * sz; k ? g.lineTo(X, Y) : g.moveTo(X, Y); }
+    g.closePath(); g.fillStyle = hex(col, 0.55 * a); g.fill(); g.strokeStyle = hex('#ffffff', 0.5 * a); g.lineWidth = 1; g.stroke();
+  }
+}
+// flash + onde de choc
+function drawBurst(q, dt, col, big) {
+  if (!q || dt < 0 || dt > 1.2) return;
+  const r = (big ? 170 : 150) * Math.min(q.f, 1.7) * eOut(dt / 1.2), a = 1 - dt / 1.2;
+  g.strokeStyle = hex(col, 0.6 * a * a); g.lineWidth = 1 + 3 * a; g.beginPath(); g.arc(q.x, q.y, r, 0, Math.PI * 2); g.stroke();
+  const gr = g.createRadialGradient(q.x, q.y, 0, q.x, q.y, r * 0.8);
+  gr.addColorStop(0, hex('#ffffff', 0.5 * a * a)); gr.addColorStop(0.3, hex(col, 0.3 * a)); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(q.x, q.y, r * 0.8, 0, Math.PI * 2); g.fill();
+}
+
+// ---- Rayons d'énergie entre blocs et flux de données
+function beam(a, b, col, alpha, t, dashed, speed) {
+  if (!a || !b || alpha <= 0.01) return;
+  g.save(); g.globalAlpha = alpha;
+  if (dashed) g.setLineDash([6, 7]);
+  g.strokeStyle = hex(col, dashed ? 0.45 : 0.28); g.lineWidth = dashed ? 1.2 : 5 * Math.min(a.f, b.f); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+  if (!dashed) { g.strokeStyle = hex(col, 0.85); g.lineWidth = 1.3; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); }
+  g.setLineDash([]);
+  const n = dashed ? 1 : 3;
+  for (let k = 0; k < n; k++) {
+    const u = (t * speed + k / n + (a.x * 0.001)) % 1, x = lerp(a.x, b.x, u), y = lerp(a.y, b.y, u), r = (dashed ? 2 : 3.2) * Math.max(0.6, Math.min(a.f, b.f));
+    const gr = g.createRadialGradient(x, y, 0, x, y, r * 4); gr.addColorStop(0, hex('#ffffff', 0.95)); gr.addColorStop(0.35, hex(col, 0.8)); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r * 4, 0, Math.PI * 2); g.fill();
+  }
+  g.restore();
+}
+// Flux de transfert : les éclats du bloc Excel voyagent vers le bloc Airtable qui le remplace
+function transfer(from, to, t0, t1, t, seed) {
+  if (t < t0 || t > t1 + 0.6) return;
+  const r = rnd(seed), A = from.p, B = to.p;
+  const ctrl = { x: (A.x + B.x) / 2, y: Math.min(A.y, B.y) - 380, z: (A.z + B.z) / 2 + 200 };
+  for (let i = 0; i < 26; i++) {
+    const delay = r() * 0.9, u = clamp((t - t0 - delay) / (t1 - t0 - 0.4), 0, 1);
+    if (u <= 0 || u >= 1) continue;
+    const e = ease(u), m = 1 - e;
+    const P = { x: m * m * A.x + 2 * m * e * ctrl.x + e * e * B.x + (r() - 0.5) * 60 * Math.sin(u * 3.14),
+                y: m * m * A.y + 2 * m * e * ctrl.y + e * e * B.y, z: m * m * A.z + 2 * m * e * ctrl.z + e * e * B.z };
+    const q = project(P); if (!q) continue;
+    const s = (2 + r() * 2.5) * q.f * 1.6;
+    const gr = g.createRadialGradient(q.x, q.y, 0, q.x, q.y, s * 4);
+    gr.addColorStop(0, 'rgba(255,255,255,.95)'); gr.addColorStop(0.4, hex(u < 0.5 ? COL.red : COL.cyan, 0.8)); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(q.x, q.y, s * 4, 0, Math.PI * 2); g.fill();
+  }
+}
+
+// =====================================================================================
+//  ÉTAT DU FILM À L'INSTANT t (tout se recalcule depuis t : on peut avancer / reculer)
+// =====================================================================================
+let t = 0, playing = true, free = false, last = performance.now(), hits = [], selected = null;
+const freeCam = { ...cam };
+
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (playing && !free) { t += dt; if (t >= TOTAL) { t = TOTAL; playing = false; setPlay(); } }
+  if (free) cam = freeCam; else cam = camAt(t);
+
+  drawBackground(now / 1000);
+  const T = now / 1000;
+  const chap = chapterAt(t);
+  const focusIds = new Set([...(chap.old || []), ...(chap.neu || [])]);
+
+  // rayons Excel (pointillés) tant que les deux blocs existent
+  for (const [a, b] of OLD_EDGES) {
+    const A = byId[a], B = byId[b]; const al = Math.min(aliveOld(A), aliveOld(B));
+    if (al > 0) beam(project(A.p), project(B.p), COL.amber, al * 0.8, T, true, 0.12);
+  }
+  // rayons Airtable quand les deux blocs sont construits
+  for (const [a, b] of NEW_EDGES) {
+    const A = byId[a], B = byId[b]; const on = clamp((t - Math.max(A.buildAt, B.buildAt) - 1.0) / 0.8, 0, 1);
+    if (on > 0) beam(project(A.p), project(B.p), TYPE[A.t].c, on, T, false, 0.45);
+  }
+  // transferts Excel → Airtable
+  for (const c of CH) if (c.old) c.old.forEach((o, i) => c.neu.forEach((nn, j) =>
+    transfer(byId[o], byId[nn], c.start + K.shatter + 0.15, byId[nn].buildAt + 0.2, t, i * 31 + j * 7 + c.start)));
+
+  // blocs (du plus loin au plus proche)
+  hits = [];
+  const list = NODES.map(n => ({ n, q: project(n.p) })).filter(o => o.q).sort((a, b) => b.q.z - a.q.z);
+  for (const { n, q } of list) {
+    if (n.old) {
+      const al = aliveOld(n);
+      if (al > 0) {
+        const near = focusIds.has(n.id) && !free;
+        const pre = near ? clamp((t - chap.start - K.focusOld) / (K.shatter - K.focusOld), 0, 1) : 0;
+        const glitch = n.bug ? 0.25 + 0.75 * pre : pre * 0.8;
+        const fadeDim = chap.old && !near && !free ? 0.28 : 1;
+        hits.push({ n, ...drawCard(n, q, al * fadeDim, { build: 1, glitch, time: T, focus: near }) });
+      }
+      drawShards(n, t - n.breakAt);
+      drawBurst(q, t - n.breakAt, COL.red, false);
+    } else {
+      const b = clamp((t - n.buildAt) / 1.1, 0, 1);
+      if (b > 0) {
+        const near = focusIds.has(n.id) && !free;
+        const dim = chap.neu && !near && !free ? 0.55 : 1;
+        hits.push({ n, ...drawCard(n, q, clamp(b * 1.6, 0, 1) * dim, { build: eOut(b), glitch: 0, time: T, focus: near || selected === n }) });
+      }
+      drawBurst(q, t - n.buildAt - 0.15, TYPE[n.t].c, true);
+    }
+  }
+  updateHud(chap);
+  requestAnimationFrame(frame);
+}
+function aliveOld(n) { return t < n.breakAt ? 1 : t < n.breakAt + 0.12 ? 1 : 0; }
+function chapterAt(x) { for (let i = CH.length - 1; i >= 0; i--) if (x >= CH[i].start) return CH[i]; return CH[0]; }
+
+// =====================================================================================
+//  HUD : titre tapé, carte d'explication, ligne du temps
+// =====================================================================================
+const elTitle = document.getElementById('title'), elChap = document.getElementById('chap'), card = document.getElementById('card');
+let shownChap = null, shownPhase = -1;
+function phaseOf(c) {
+  const s = t - c.start;
+  if (!c.old) return 0;
+  return s < K.shatter ? 1 : s < K.reveal ? 2 : 3;
+}
+const fmtEx = l => l.replace(/<ok>(.*?)<\/ok>/, '<span class="ok">✓ $1</span>').replace(/<ko>(.*?)<\/ko>/, '<span class="ko">✗ $1</span>');
+function cardHtml(c) {
+  if (c.key === 'intro') return `
+    <div class="sec"><span class="tag t-avant">ANALYSE · PLANNING_INVENTORY.XLSX</span>
+      <p>Le système actuel : des saisies à la main qui alimentent des milliers de formules, et une décision d’achat prise à l’œil.</p></div>
+    <div class="stats">
+      <div class="stat red"><b data-count="18">0</b><span>onglets à tenir</span></div>
+      <div class="stat red"><b data-count="7377">0</b><span>formules Excel</span></div>
+      <div class="stat red"><b data-count="13">0</b><span>erreurs de formule trouvées</span></div>
+      <div class="stat red"><b data-count="2">0</b><span>personnes calculent le même chiffre</span></div>
+    </div>
+    <div class="sec" style="margin-top:14px"><p style="color:var(--muted)">Chaque chapitre zoome sur un morceau, le casse, et montre ce qui le remplace avec un exemple chiffré.</p></div>`;
+  if (c.key === 'final') return `
+    <div class="sec"><span class="tag t-apres">RÉSULTAT</span><p>Tout le calcul tourne seul. Il reste 4 gestes terrain, et Sam reçoit sa commande d’acier prête chaque matin.</p></div>
+    <table class="cmp">
+      <tr><td></td><td>Avant</td><td>Après</td></tr>
+      <tr><td>Pages</td><td>18 onglets</td><td>3 pages Airtable</td></tr>
+      <tr><td>Formules</td><td>7 377</td><td>14 champs calculés</td></tr>
+      <tr><td>Saisie</td><td>matrice 63 × 90 + comptages + reçus + MIN/MAX</td><td>cédule, coupe DONE, comptage, réception</td></tr>
+      <tr><td>Sortie du stock</td><td>par date du job</td><td>quand la coupe est DONE</td></tr>
+      <tr><td>Calcul</td><td>Ilyas et Sam, chacun le sien</td><td>un seul, pour tout le monde</td></tr>
+      <tr><td>Commande</td><td>tapée dans les notes</td><td>New Request prête à 6 h</td></tr>
+    </table>
+    <div class="sec" style="margin-top:14px"><span class="tag t-ok">RÉALISABLE</span><p>Tout repose sur des fonctions standard d’Airtable : tables liées, rollups, formules, automatisations « Run script », interfaces, envoi de courriel.</p></div>`;
+  return `
+    <div class="sec" data-ph="1"><span class="tag t-avant">AVANT · CE QUI CASSE</span><p>${c.avant}</p></div>
+    <div class="sec" data-ph="2"><span class="tag t-apres">APRÈS · CE QUI LE REMPLACE</span><p>${c.apres}</p></div>
+    <div class="sec" data-ph="3"><span class="tag t-log">LA LOGIQUE</span><div class="formula">${c.logique}</div></div>
+    <div class="sec" data-ph="3"><span class="tag t-ex">EXEMPLE</span><div class="term">${c.ex.map(l => `<div>${fmtEx(l)}</div>`).join('')}</div></div>
+    <div class="sec" data-ph="3"><span class="tag t-ok">RÉALISABLE AVEC</span><p>${c.ok}</p></div>`;
+}
+function updateHud(c) {
+  if (selected && free) return;
+  const idx = CH.indexOf(c);
+  if (shownChap !== c) {
+    shownChap = c; shownPhase = -1;
+    card.innerHTML = cardHtml(c);
+    elChap.textContent = `CHAPITRE ${String(idx).padStart(2, '0')} / ${String(CH.length - 1).padStart(2, '0')}`;
+  }
+  // titre tapé lettre par lettre
+  const n = Math.floor((t - c.start) * 28);
+  const txt = c.title.slice(0, clamp(n, 0, c.title.length));
+  if (elTitle.textContent !== txt) elTitle.textContent = txt;
+  // apparition progressive des sections
+  const ph = phaseOf(c);
+  card.querySelectorAll('.sec[data-ph]').forEach(s => s.classList.toggle('hide', +s.dataset.ph > ph && !free));
+  // lignes de l'exemple, une par une
+  const lines = card.querySelectorAll('.term div');
+  const s = t - c.start - K.reveal - 0.6;
+  lines.forEach((l, i) => l.classList.toggle('on', free || s > i * 0.9));
+  // compteurs
+  card.querySelectorAll('[data-count]').forEach(b => {
+    const v = +b.dataset.count, u = clamp((t - c.start - 0.8) / 3.5, 0, 1);
+    b.textContent = Math.round(v * eOut(u)).toLocaleString('fr-CA');
+  });
+  // ligne du temps
+  segs.forEach((sg, i) => {
+    const C = CH[i], u = clamp((t - C.start) / C.len, 0, 1);
+    sg.fill.style.width = (u * 100) + '%'; sg.el.classList.toggle('cur', C === c);
+  });
+  const sec = Math.floor(t), tot = Math.floor(TOTAL);
+  document.getElementById('time').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} / ${Math.floor(tot / 60)}:${String(tot % 60).padStart(2, '0')}`;
+}
+
+// ligne du temps
+const tl = document.getElementById('timeline');
+const segs = CH.map(c => {
+  const el = document.createElement('div'); el.className = 'seg'; el.style.flex = c.len;
+  const fill = document.createElement('i'); const lab = document.createElement('span'); lab.textContent = c.title;
+  el.append(fill, lab); tl.append(el);
+  el.onclick = e => { const r = el.getBoundingClientRect(); seek(c.start + c.len * clamp((e.clientX - r.left) / r.width, 0, 1)); };
+  return { el, fill };
+});
+function seek(x) { t = clamp(x, 0, TOTAL); if (free) toggleFree(false); shownPhase = -1; }
+function setPlay() { document.getElementById('bPlay').textContent = playing ? '❚❚' : '▶'; }
+document.getElementById('bPlay').onclick = () => { if (free) toggleFree(false); if (t >= TOTAL) t = 0; playing = !playing; setPlay(); };
+const jump = d => { const i = CH.indexOf(chapterAt(t)); seek(CH[clamp(i + d, 0, CH.length - 1)].start + 0.01); playing = true; setPlay(); };
+document.getElementById('bPrev').onclick = () => jump(t - chapterAt(t).start > 1.5 ? 0 : -1);
+document.getElementById('bNext').onclick = () => jump(1);
+addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); document.getElementById('bPlay').click(); }
+  if (e.code === 'ArrowRight') jump(1);
+  if (e.code === 'ArrowLeft') jump(-1);
+});
+
+// ---- mode libre : la caméra est à toi, clic sur un bloc = son explication
+const INFO = Object.fromEntries(CH.filter(c => c.old).flatMap(c => [...c.old, ...c.neu].map(id => [id, c])));
+function toggleFree(on) {
+  free = on; document.getElementById('bFree').classList.toggle('on', free); cv.classList.toggle('free', free);
+  if (free) { Object.assign(freeCam, cam); playing = false; setPlay(); }
+  else { selected = null; shownChap = null; }
+}
+document.getElementById('bFree').onclick = () => toggleFree(!free);
+let drag = null;
+cv.addEventListener('pointerdown', e => { if (!free) return; drag = { x: e.clientX, y: e.clientY, moved: false }; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+  freeCam.yaw += dx * 0.005; freeCam.pitch = clamp(freeCam.pitch + dy * 0.004, -0.2, 1.1); drag.x = e.clientX; drag.y = e.clientY;
+});
+cv.addEventListener('pointerup', e => {
+  if (drag && !drag.moved) {
+    const h = [...hits].reverse().find(r => e.clientX >= r.x && e.clientX <= r.x + r.w && e.clientY >= r.y && e.clientY <= r.y + r.h);
+    if (h) {
+      selected = h.n; const c = INFO[h.n.id];
+      if (c) { card.innerHTML = cardHtml(c); card.querySelectorAll('.sec').forEach(s => s.classList.remove('hide')); card.querySelectorAll('.term div').forEach(l => l.classList.add('on'));
+        elTitle.textContent = c.title; elChap.textContent = 'MODE LIBRE · ' + h.n.label.toUpperCase();
+        freeCam.x = h.n.p.x; freeCam.y = h.n.p.y; freeCam.z = h.n.p.z; freeCam.d = 900; }
+    }
+  }
+  drag = null;
+});
+cv.addEventListener('wheel', e => { if (!free) return; e.preventDefault(); freeCam.d = clamp(freeCam.d * Math.exp(e.deltaY * 0.001), 500, 4200); }, { passive: false });
+
+window.__film = { seek: x => { seek(x); playing = false; setPlay(); } };
+setPlay();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
