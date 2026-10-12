@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nouveau système — réquisition d'acier</title>
+<style>
+  :root {
+    --bg: #02040a; --glass: rgba(6, 12, 26, .70); --edge: rgba(120, 220, 255, .20);
+    --ink: #eaf3ff; --muted: #8ea3c4; --cyan: #3ef0ff; --violet: #b18cff; --red: #ff4d6d; --amber: #ffb547; --green: #4dffa6;
+    --mono: "Cascadia Code", Consolas, "SF Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif; overflow: hidden; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+  /* image de cinéma : bandes, lignes d'écran, vignette */
+  .fx { position: fixed; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.015) 0 1px, transparent 1px 3px),
+                radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,.65) 100%); }
+  .band { position: fixed; left: 0; right: 0; height: 5vh; background: #000; pointer-events: none; }
+  .band.top { top: 0; } .band.bot { bottom: 0; }
+
+  .head { position: fixed; left: 28px; top: calc(5vh + 14px); pointer-events: none; }
+  .kicker { font: 600 11.5px/1 var(--mono); letter-spacing: 4px; color: var(--cyan); text-shadow: 0 0 12px rgba(62,240,255,.6); }
+  .title { margin-top: 8px; font: 700 30px/1.1 "Segoe UI", system-ui, sans-serif; letter-spacing: .4px; text-shadow: 0 0 22px rgba(62,240,255,.35); white-space: pre; }
+  .title .s { color: var(--cyan); opacity: .8; }
+
+  aside { position: fixed; right: 24px; top: calc(5vh + 14px); width: 390px; max-height: calc(100% - 10vh - 70px); overflow: auto; background: var(--glass);
+    border: 1px solid var(--edge); border-radius: 16px; padding: 18px 18px 16px; backdrop-filter: blur(12px);
+    box-shadow: 0 0 50px rgba(62,240,255,.07), inset 0 0 30px rgba(62,240,255,.04); transition: opacity .6s, transform .6s; scrollbar-width: none; }
+  aside.out { opacity: 0; transform: translateX(24px); }
+  .sec { margin-bottom: 14px; transition: opacity .6s, transform .6s, filter .6s; }
+  .sec.hide { opacity: 0; transform: translateY(10px); filter: blur(4px); }
+  .tag { display: inline-block; font: 700 10.5px/1 var(--mono); letter-spacing: 2px; padding: 4px 8px; border-radius: 4px; margin-bottom: 7px; }
+  .t-avant { color: var(--red); background: rgba(255,77,109,.12); border: 1px solid rgba(255,77,109,.35); }
+  .t-apres { color: var(--cyan); background: rgba(62,240,255,.10); border: 1px solid rgba(62,240,255,.35); }
+  .t-log { color: var(--violet); background: rgba(177,140,255,.10); border: 1px solid rgba(177,140,255,.35); }
+  .t-ex { color: var(--amber); background: rgba(255,181,71,.10); border: 1px solid rgba(255,181,71,.35); }
+  .t-ok { color: var(--green); background: rgba(77,255,166,.10); border: 1px solid rgba(77,255,166,.35); }
+  .sec p { margin: 0; }
+  .formula { font: 13px/1.6 var(--mono); color: #e3d6ff; background: rgba(0,0,0,.35); border: 1px solid rgba(177,140,255,.25); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; }
+  .term { font: 12.5px/1.65 var(--mono); background: rgba(0,0,0,.4); border: 1px solid rgba(255,181,71,.22); border-radius: 8px; padding: 8px 10px; }
+  .term div { opacity: 0; transform: translateX(-6px); transition: opacity .35s, transform .35s; white-space: pre-wrap; }
+  .term div.on { opacity: 1; transform: none; }
+  .ok { color: var(--green); } .ko { color: var(--red); }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat { border: 1px solid var(--edge); border-radius: 10px; padding: 9px 10px; background: rgba(62,240,255,.03); }
+  .stat b { display: block; font: 700 22px/1.1 var(--mono); color: var(--cyan); }
+  .stat.red b { color: var(--red); }
+  .stat span { font-size: 11.5px; color: var(--muted); }
+  .cmp { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .cmp td { padding: 6px; border-bottom: 1px solid rgba(120,220,255,.12); vertical-align: top; }
+  .cmp td:first-child { color: var(--muted); width: 30%; }
+  .cmp td:nth-child(2) { color: #ffb0bd; } .cmp td:nth-child(3) { color: #a8f7ff; }
+
+  /* lecteur : un bouton + une ligne, comme une vidéo */
+  .player { position: fixed; left: 24px; right: 24px; bottom: calc(5vh + 12px); display: flex; align-items: center; gap: 14px; }
+  #bPlay { width: 40px; height: 40px; flex: none; border-radius: 50%; border: 1px solid rgba(62,240,255,.5); background: rgba(6,12,26,.7);
+    color: var(--ink); cursor: pointer; display: grid; place-items: center; box-shadow: 0 0 18px rgba(62,240,255,.2); }
+  #bPlay:hover { box-shadow: 0 0 26px rgba(62,240,255,.45); }
+  #bPlay svg { width: 14px; height: 14px; fill: currentColor; }
+  .track { position: relative; flex: 1; height: 22px; cursor: pointer; touch-action: none; }
+  .track::before { content: ''; position: absolute; left: 0; right: 0; top: 10px; height: 2px; background: rgba(150,200,255,.18); border-radius: 2px; }
+  .fill { position: absolute; left: 0; top: 10px; height: 2px; width: 0; background: linear-gradient(90deg, var(--cyan), var(--violet)); box-shadow: 0 0 10px rgba(62,240,255,.8); border-radius: 2px; }
+  .knob { position: absolute; top: 6px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 12px var(--cyan), 0 0 3px #fff; }
+  @media (max-width: 900px) {
+    aside { top: auto; bottom: calc(5vh + 64px); left: 10px; right: 10px; width: auto; max-height: 40vh; padding: 12px; }
+    .title { font-size: 21px; }
+    .head { left: 16px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="fx"></div>
+<div class="band top"></div><div class="band bot"></div>
+
+<div class="head">
+  <div class="kicker">NOUVEAU SYSTÈME</div>
+  <div class="title" id="title"></div>
+</div>
+
+<aside id="card"></aside>
+
+<div class="player">
+  <button id="bPlay" aria-label="Lecture / pause"></button>
+  <div class="track" id="track"><div class="fill" id="fill"></div><div class="knob" id="knob"></div></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const COL = { red: '#ff4d6d', amber: '#ffb547', slate: '#9fb3d1', cyan: '#3ef0ff', violet: '#b18cff', blue: '#5aa9ff', green: '#4dffa6', orange: '#ff9b4a' };
+const TYPE = {
+  saisie: { c: COL.amber, tag: 'SAISIE MANUELLE' }, calc: { c: COL.slate, tag: 'CALCUL EXCEL' }, decision: { c: COL.amber, tag: 'DÉCISION À L’ŒIL' },
+  terrain: { c: COL.cyan, tag: 'GESTE TERRAIN' }, auto: { c: COL.violet, tag: 'AUTOMATISATION' }, data: { c: COL.blue, tag: 'DONNÉE CALCULÉE' }, sam: { c: COL.orange, tag: 'POUR SAM' }
+};
+const N = (id, t, x, y, z, label, sub, bug) => ({ id, t, p: { x, y, z }, label, sub, bug: !!bug, old: ['saisie', 'calc', 'decision'].includes(t) });
+const NODES = [
+  // ---- Excel : zone gauche, 3 étages
+  N('planning', 'saisie', -980, -240, -40, 'Planning', 'matrice 63 tôles × 90 colonnes', 1),
+  N('chelsea', 'saisie', -760, -240, 160, 'Chelsea · BOM × QTY', '× 3 codé en dur', 1),
+  N('verif', 'saisie', -560, -240, -60, 'Verification', 'comptage en colonnes'),
+  N('prextra', 'saisie', -1120, -240, 170, 'Stock Prextra retapé', 'pour Comparison'),
+  N('recu', 'saisie', -860, -240, -250, 'Reçus retapés', 'colonne REÇU'),
+  N('minmax_b', 'saisie', -620, -240, -260, 'MIN / MAX', 'tapés, jamais ajustés'),
+  N('summary', 'calc', -900, 0, -60, 'Summary Total', 'déduit par date', 1),
+  N('weekly', 'calc', -690, 0, 150, 'Weekly Usage', 'signes inversés', 1),
+  N('comp', 'calc', -520, 0, -110, 'Comparison + Visual', 'colonnes codées en dur'),
+  N('syscomp', 'calc', -1100, 0, 90, 'SYSTEM COMPARISON', 'calcul Ilyas vs calcul Sam', 1),
+  N('ivr', 'calc', -640, 0, -280, 'Inventory Reconc.', 'ARRAYFORMULA cassée', 1),
+  N('jmr', 'calc', -900, 0, 240, 'Besoins / conso par job', 'tapés à la main'),
+  N('orders', 'calc', -1060, 0, -230, 'Orders & Receipts', 'statuts contradictoires', 1),
+  N('eye', 'decision', -880, 240, 0, 'Décision à l’œil', 'Sam relit Summary Total'),
+  N('notes', 'decision', -660, 240, 90, 'Purchases · notes tapées', '« 10  PLSTHA-…  3064 »'),
+  // ---- Airtable : zone droite, 6 niveaux qui descendent dans le sens du calcul
+  N('cedule', 'terrain', 430, -430, 0, 'Cédule Workstreams', 'job + Actual Start'),
+  N('coupe', 'terrain', 650, -430, -60, 'Coupe DONE', 'Saint-Quentin · Bathurst · Maritime'),
+  N('count', 'terrain', 870, -430, 50, 'Comptage du vendredi', 'tablette, 63 lignes'),
+  N('recep', 'terrain', 1090, -430, -30, 'Réception', 'Status → Order received'),
+  N('A1', 'auto', 430, -260, 40, 'A1 · Tôles du job', 'copie + avis à Sam'),
+  N('A3', 'auto', 650, -260, -50, 'A3 · Sortie des tôles', 'quand la coupe est DONE'),
+  N('A7', 'auto', 870, -260, 50, 'A7 · Ajustement', 'compté − théorique'),
+  N('R2', 'auto', 1090, -260, -40, 'R2 · Entrée en stock', 'une seule fois par PO'),
+  N('bes', 'data', 470, -90, 0, 'Besoins job', 'job × tôle · Restant'),
+  N('mvt', 'data', 760, -90, -40, 'Mouvements de stock', 'Stock = Σ mouvements'),
+  N('minmax', 'data', 1050, -90, 40, 'MIN / MAX auto', 'conso réelle 12 semaines'),
+  N('lignes', 'data', 1250, -90, -30, 'Lignes acier', 'qté + poids par PO'),
+  N('mat', 'data', 760, 80, 0, 'Matériaux · 63 tôles', 'Projeté · À commander'),
+  N('R1', 'auto', 640, 250, 40, 'R1 · Réquisition 6 h', '1re date de manque → MAX'),
+  N('A9', 'auto', 940, 250, -40, 'A9 · Alerte manque', 'projeté < 0 avant la coupe'),
+  N('purch', 'sam', 520, 420, 30, 'Purchases · New Request', 'au format de Sam'),
+  N('achats', 'sam', 790, 420, -40, 'Sam approuve', 'Order placed + n° PO'),
+  N('mail', 'sam', 1060, 420, 40, 'Courriel de 6 h', 'à commander · retards')
+];
+// on écarte un peu la zone Excel pour qu'elle se lise mieux
+for (const n of NODES) if (n.old) { n.p.x = -820 + (n.p.x + 820) * 1.35; n.p.z *= 1.35; }
+const byId = Object.fromEntries(NODES.map(n => [n.id, n]));
+const OLD_EDGES = [['planning', 'summary'], ['verif', 'summary'], ['summary', 'eye'], ['minmax_b', 'eye'], ['summary', 'syscomp'], ['syscomp', 'eye'],
+  ['verif', 'weekly'], ['recu', 'weekly'], ['verif', 'comp'], ['prextra', 'comp'], ['chelsea', 'eye'], ['jmr', 'ivr'], ['verif', 'ivr'], ['orders', 'syscomp'], ['eye', 'notes']];
+const NEW_EDGES = [['cedule', 'A1'], ['A1', 'bes'], ['coupe', 'A3'], ['bes', 'A3'], ['A3', 'mvt'], ['count', 'A7'], ['A7', 'mvt'], ['recep', 'R2'], ['R2', 'mvt'],
+  ['mvt', 'minmax'], ['mvt', 'mat'], ['bes', 'mat'], ['minmax', 'mat'], ['lignes', 'mat'], ['mat', 'R1'], ['mat', 'A9'], ['R1', 'purch'], ['R1', 'lignes'],
+  ['purch', 'achats'], ['achats', 'recep'], ['mat', 'mail'], ['A9', 'mail']];
+
+// =====================================================================================
+//  LE FILM : un chapitre par changement. Tous les chiffres viennent de ton fichier
+//  ou des scripts testés (R1, R2) — rien d'inventé.
+// =====================================================================================
+const CH = [
+  { key: 'intro', title: 'Le système actuel', len: 10 },
+  { key: 'jobs', title: 'Les jobs', len: 13, old: ['planning'], neu: ['cedule'],
+    avant: 'La matrice Planning : chaque job retapé dans une colonne. 84 jobs pour 90 colonnes, donc 6 doublons. J6840-16 compté 3 fois et J6802-1 2 fois : environ 144 tôles déduites en trop.',
+    apres: 'La cédule Workstreams que la planif utilise déjà. Une ligne = un job, avec sa date Actual Start. Plus rien à retaper.',
+    logique: 'Date de besoin des tôles = Actual Start du job\n1 job = 1 ligne → un doublon est signalé tout de suite',
+    ex: ['Excel : J6840-16 en BS, CM et DE', '      → 48 × 3 = 144 tôles déduites au lieu de 48', '<ok>Airtable : J6840-16 = 1 ligne → 48 tôles</ok>'],
+    ok: 'Ta table Workstreams actuelle + une automatisation qui signale un n° de job en double (Airtable n’impose pas l’unicité tout seul).' },
+  { key: 'besoin', title: 'Le besoin en tôles', len: 13, old: ['chelsea', 'jmr'], neu: ['A1', 'bes'],
+    avant: 'Sam retape les tôles de chaque job dans une colonne du Planning, même quand le job est pareil au précédent. Chelsea multiplie avec un × 3 codé en dur.',
+    apres: 'Quand un job arrive dans la cédule, A1 copie les tôles du dernier job du même Code Item et avertit Sam : il vérifie et corrige. Pour un petit job ou un modèle nouveau, Sam entre les tôles lui-même.',
+    logique: 'Nouveau job → A1 cherche le dernier job du même Code Item\nTrouvé : copie ses tôles (à vérifier par Sam)\nPas trouvé : Sam entre les tôles\nDans les deux cas : avis à Sam',
+    ex: ['URBACON480 : J6795-6, J6796-1, -2, -3, -4, -5', 'mêmes tôles, job après job', '<ok>5 jobs sur 6 : copie exacte, rien à taper</ok>'],
+    ok: 'Automatisation « quand un job est créé » + script A1 + action « Send email » à Sam.' },
+  { key: 'sortie', title: 'La sortie du stock', len: 13, old: ['summary'], neu: ['coupe', 'A3'],
+    avant: 'Summary Total enlève seulement les jobs datés APRÈS le dernier comptage. Tout job daté avant est supposé coupé, même s’il est en retard.',
+    apres: 'Les tôles sortent quand la coupe du job passe à DONE, à Saint-Quentin, Bathurst ou Maritime : c’est AGB qui envoie l’acier.',
+    logique: 'Besoin ouvert tant que Statut coupe ≠ DONE\nÀ DONE : mouvement « Consommation » = − Restant',
+    ex: ['Comptage du 2 oct. :', '46 colonnes de jobs datées le 2 oct. ou avant', '<ko>→ supposées coupées, en retard ou non</ko>', '<ok>Airtable : sorties seulement à coupe DONE</ok>'],
+    ok: 'Champ « Statut coupe » dans la cédule + automatisation déclenchée à DONE (script A3).' },
+  { key: 'stock', title: 'Le stock', len: 13, old: ['weekly', 'ivr'], neu: ['mvt'],
+    avant: 'Weekly Usage a des signes inversés d’un bloc à l’autre, et l’onglet de réconciliation pointe sur des lignes vides : aucun des deux ne donne la vraie consommation.',
+    apres: 'Un seul journal : chaque sortie, réception ou ajustement est une ligne. Le stock est la somme du journal.',
+    logique: 'Stock = Σ mouvements\nConso de la semaine = ancien + reçu − nouveau',
+    ex: ['ancien 10 · reçu 5 · nouveau 12', '<ko>Excel bloc A : 10 − 12 − 5 = −7</ko>', '<ko>Excel bloc B : 12 − 10 − 5 = −3</ko>', '<ok>Airtable : 10 + 5 − 12 = 3 tôles</ok>'],
+    ok: 'Table « Mouvements de stock » + un champ rollup SUM dans Matériaux.' },
+  { key: 'comptage', title: 'Le comptage', len: 12, old: ['verif'], neu: ['count', 'A7'],
+    avant: 'Verification : une colonne par semaine dans une matrice de 100 colonnes, recopiée ensuite dans les autres onglets.',
+    apres: 'Le vendredi, la tablette affiche les 63 tôles avec le théorique déjà figé. On tape le compté, l’écart se corrige seul.',
+    logique: 'Ajustement = Compté − Théorique\nÉcart au-delà du seuil → alerte',
+    ex: ['Théorique 23 · compté 21', '<ok>Mouvement −2 → stock = 21</ok>'],
+    ok: 'Page d’interface tablette + automatisation A7.' },
+  { key: 'reception', title: 'Les réceptions', len: 12, old: ['recu', 'orders'], neu: ['recep', 'R2', 'lignes'],
+    avant: 'Les reçus sont retapés dans chaque bloc ; Orders & Receipts a des lignes « PENDING » marquées « Fully Received ».',
+    apres: 'Dans Purchases, on passe la commande à « Order received » : chaque ligne entre en stock, une seule fois.',
+    logique: 'Order received → + Qté de chaque ligne\nCase « Stock reçu » cochée → jamais deux fois',
+    ex: ['Commande : 30 + 13 tôles', '<ok>→ 2 mouvements : +30 et +13</ok>', '<ok>Statut rechangé → 0 mouvement de plus</ok>'],
+    ok: 'Ta table Purchases (statut Order received) + script R2, testé.' },
+  { key: 'minmax', title: 'MIN / MAX', len: 12, old: ['minmax_b'], neu: ['minmax'],
+    avant: 'MIN et MAX tapés une fois, jamais ajustés. La colonne « à commander » est vide.',
+    apres: 'MIN et MAX se recalculent chaque jour avec la consommation réelle des 12 dernières semaines. Sam peut forcer une valeur.',
+    logique: 'MIN = conso/sem × (délai fournisseur + sécurité)\nMAX = MIN + conso/sem × semaines entre commandes',
+    ex: ['Exemple : 6 tôles/sem · délai 2 sem · sécurité 1 sem', 'MIN = 6 × (2 + 1) = 18', '<ok>MAX = 18 + 6 × 2 = 30</ok>'],
+    ok: 'Champs formule + rollup filtré sur 12 semaines, dans Matériaux.' },
+  { key: 'calcul', title: 'Un seul calcul', len: 13, old: ['syscomp', 'comp', 'prextra'], neu: ['mat'],
+    avant: 'Ilyas et Sam calculent chacun le même solde, puis comparent ; SYSTEM COMPARISON est décalé d’une ligne à partir de la ligne 51.',
+    apres: 'Un seul calcul par tôle, visible par tout le monde, toujours à jour.',
+    logique: 'Projeté = Stock + En commande − Besoins 3 semaines\nÀ commander si Projeté < MIN',
+    ex: ['Stock 40 + en commande 20 − besoins 45', '= 15 · MIN 10', '<ok>15 ≥ 10 → rien à commander</ok>'],
+    ok: 'Formules dans la table Matériaux (aucun script).' },
+  { key: 'commande', title: 'La commande d’acier', len: 15, old: ['eye', 'notes'], neu: ['R1', 'A9', 'purch', 'achats', 'mail'],
+    avant: 'Aucune quantité calculée : Sam décide à l’œil, puis tape chaque ligne dans les notes de Purchases.',
+    apres: 'Chaque matin à 6 h, R1 crée la demande « New Request » au format de Sam. Sam approuve, A9 avertit d’un manque, un courriel résume tout.',
+    logique: '1. 1re date où stock + en commande − besoins < MIN\n2. Qté = MAX − (dispo − besoins), arrondie au multiple\n3. Poids = qté × pi² × lb/pi²',
+    ex: ['PLSTHA-01886009600 · stock 5 · MIN 4 · MAX 20', 'besoins : 3 (11 oct.) + 6 (13 oct.)', '5 − 3 = 2 < 4 → manque le 11 oct.', 'Qté = 20 − (5 − 9) = 24 → 25 (multiple 5)', '<ok>11 octobre · 25 PLSTHA-01886009600 · 7660 lb</ok>'],
+    ok: 'Automatisation planifiée 6 h + script R1 (testé) + action « Send email ».' },
+  { key: 'final', title: 'Le nouveau système', len: 14 }
+];
+let acc = 0; for (const c of CH) { c.start = acc; acc += c.len; }
+const TOTAL = acc;
+// Moments clés dans un chapitre (secondes depuis le début du chapitre)
+const K = { focusOld: 1.6, shatter: 4.2, travel: 4.8, focusNew: 6.9, build: 6.9, buildStep: 0.5, reveal: 8.2 };
+
+// Quand chaque bloc se brise / apparaît
+for (const n of NODES) { n.breakAt = Infinity; n.buildAt = Infinity; }
+for (const c of CH) {
+  (c.old || []).forEach((id, i) => { byId[id].breakAt = c.start + K.shatter + i * 0.28; byId[id].ch = c; });
+  (c.neu || []).forEach((id, i) => { byId[id].buildAt = c.start + K.build + i * K.buildStep; byId[id].ch = c; byId[id].from = c.old; });
+}
+
+
+// =====================================================================================
+//  MOTEUR 3D (canvas, sans dépendance)
+// =====================================================================================
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+let W, H, DPR, FOCAL;
+function resize() {
+  DPR = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR; g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  FOCAL = Math.min(W, H * 1.4) * 0.95;
+}
+addEventListener('resize', resize); resize();
+const narrow = () => W < 900;
+// sprites de lueur pré-calculés (beaucoup plus rapide que des dégradés à chaque image)
+const GLOW = {};
+function glow(rgb) {
+  if (GLOW[rgb]) return GLOW[rgb];
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+  const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, `rgba(${rgb},.85)`); gr.addColorStop(1, `rgba(${rgb},0)`);
+  x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return GLOW[rgb] = c;
+}
+const rgbOf = h => { const v = parseInt(h.slice(1), 16); return `${v >> 16},${(v >> 8) & 255},${v & 255}`; };
+const SMOKE = {};
+function smokeSprite(rgb) {
+  if (SMOKE[rgb]) return SMOKE[rgb];
+  const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d');
+  const gr = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, `rgba(${rgb},1)`); gr.addColorStop(0.6, `rgba(${rgb},.5)`); gr.addColorStop(1, `rgba(${rgb},0)`);
+  x.fillStyle = gr; x.fillRect(0, 0, 128, 128); return SMOKE[rgb] = c;
+}
+function sprite(rgb, x, y, r, a) { g.globalAlpha = a; g.drawImage(glow(rgb), x - r, y - r, r * 2, r * 2); g.globalAlpha = 1; }
+
+const lerp = (a, b, t) => a + (b - a) * t, clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const ease = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const eOut = x => 1 - Math.pow(1 - x, 3);
+function rnd(seed) { let s = (seed * 2654435761) >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+const hex = (h, a) => { const v = parseInt(h.slice(1), 16); return `rgba(${v >> 16},${(v >> 8) & 255},${v & 255},${a})`; };
+const centroid = ids => { const p = { x: 0, y: 0, z: 0 }; ids.forEach(id => { p.x += byId[id].p.x; p.y += byId[id].p.y; p.z += byId[id].p.z; }); return { x: p.x / ids.length, y: p.y / ids.length, z: p.z / ids.length }; };
+
+let cam = { x: -800, y: 0, z: 0, d: 2300, yaw: -0.6, pitch: 0.35 };
+let shake = { x: 0, y: 0 };
+function projectWith(c, p) {
+  const cy = Math.cos(c.yaw), sy = Math.sin(c.yaw), cp = Math.cos(c.pitch), sp = Math.sin(c.pitch);
+  const x = p.x - c.x, y = p.y - c.y, z = p.z - c.z;
+  const x1 = x * cy - z * sy, z1 = x * sy + z * cy;
+  const y2 = y * cp - z1 * sp, z2 = y * sp + z1 * cp + c.d;
+  if (z2 < 60) return null;
+  const f = FOCAL / z2;
+  const ox = (narrow() ? W / 2 : (W - 420) / 2 + 10) + shake.x, oy = (narrow() ? H * 0.34 : H / 2 + 10) + shake.y;
+  return { x: ox + x1 * f, y: oy + y2 * f, f, z: z2 };
+}
+const project = p => projectWith(cam, p);
+
+// ---- Trajectoire caméra : images clés calculées depuis les chapitres
+const KEYS = [];
+(function buildKeys() {
+  const oldC = centroid(NODES.filter(n => n.old).map(n => n.id)), newC = centroid(NODES.filter(n => !n.old).map(n => n.id));
+  KEYS.push({ t: 0, c: { ...oldC, d: 2100, yaw: -0.95, pitch: 0.55 } });
+  KEYS.push({ t: 8.5, c: { ...oldC, d: 1450, yaw: -0.3, pitch: 0.42 } });
+  CH.forEach((c, i) => {
+    if (!c.old) return;
+    const o = centroid(c.old), n = centroid(c.neu), v = (i % 2 ? 1 : -1) * 0.18;
+    const dOld = 820 + 140 * (c.old.length - 1), dNew = 900 + 170 * (c.neu.length - 1);
+    KEYS.push({ t: c.start + K.focusOld, c: { ...o, d: dOld, yaw: -0.32 + v, pitch: 0.52 } });
+    KEYS.push({ t: c.start + K.shatter - 0.05, c: { ...o, d: dOld * 0.82, yaw: -0.24 + v, pitch: 0.46 } });
+    KEYS.push({ t: c.start + K.shatter + 0.7, c: { ...o, d: dOld * 1.05, yaw: -0.18 + v, pitch: 0.42 } });   // recul sous le souffle
+    KEYS.push({ t: c.start + K.focusNew, c: { ...n, d: dNew, yaw: 0.28 - v, pitch: 0.24 } });
+    KEYS.push({ t: c.start + c.len - 0.2, c: { ...n, d: dNew * 0.92, yaw: 0.42 - v, pitch: 0.2 } });
+  });
+  const fin = CH[CH.length - 1];
+  KEYS.push({ t: fin.start + 2.4, c: { ...newC, d: 2300, yaw: 0.15, pitch: 0.3 } });
+  KEYS.push({ t: fin.start + fin.len, c: { ...newC, d: 2100, yaw: 0.95, pitch: 0.34 } });
+})();
+function camAt(t) {
+  if (t <= KEYS[0].t) return { ...KEYS[0].c };
+  for (let i = 1; i < KEYS.length; i++) {
+    if (t <= KEYS[i].t) {
+      const a = KEYS[i - 1], b = KEYS[i], u = ease((t - a.t) / (b.t - a.t));
+      const o = {}; for (const k in a.c) o[k] = lerp(a.c[k], b.c[k], u); return o;
+    }
+  }
+  return { ...KEYS[KEYS.length - 1].c };
+}
+
+// ---- Décor : étoiles (traînées en vol rapide), nébuleuse, sol holographique
+const R0 = rnd(7);
+const STARS = Array.from({ length: 1000 }, () => {
+  const th = R0() * Math.PI * 2, ph = Math.acos(2 * R0() - 1), r = 3000 + R0() * 4500;
+  return { x: r * Math.sin(ph) * Math.cos(th), y: r * Math.cos(ph) * 0.6, z: r * Math.sin(ph) * Math.sin(th), s: R0() * 1.5 + 0.3, tw: R0() * 6, hue: R0() };
+});
+function drawBackground(T, camPrev) {
+  g.fillStyle = '#02040a'; g.fillRect(0, 0, W, H);
+  const neb = [[0.25, 0.32, '#5a2bff', 0.13], [0.72, 0.62, '#00c2ff', 0.10], [0.5, 0.95, '#ff2d7a', 0.07], [0.9, 0.15, '#2b6bff', 0.06]];
+  for (const [x, y, c, a] of neb) {
+    const cx = W * x + Math.sin(T * 0.07 + x * 9) * 70 - cam.yaw * 120, cy = H * y + Math.cos(T * 0.05 + y * 7) * 40 + cam.pitch * 80;
+    const gr = g.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.6);
+    gr.addColorStop(0, hex(c, a)); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  }
+  g.lineCap = 'round';
+  for (const s of STARS) {
+    const q = project(s); if (!q) continue;
+    const a = 0.35 + 0.35 * Math.sin(T * 1.3 + s.tw);
+    const col = s.hue < 0.15 ? `rgba(255,210,170,${a})` : s.hue < 0.3 ? `rgba(170,200,255,${a})` : `rgba(220,235,255,${a})`;
+    const p = camPrev && projectWith(camPrev, s);
+    if (p) {
+      const dx = q.x - p.x, dy = q.y - p.y, L = Math.hypot(dx, dy);
+      if (L > 2.5) { g.strokeStyle = col; g.lineWidth = s.s; g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); g.stroke(); continue; }
+    }
+    g.fillStyle = col; g.fillRect(q.x, q.y, s.s, s.s);
+  }
+  const Y = 640, span = 2800, step = 200;
+  for (let i = -span; i <= span; i += step) {
+    for (const [a, b] of [[{ x: i, y: Y, z: -span }, { x: i, y: Y, z: span }], [{ x: -span, y: Y, z: i }, { x: span, y: Y, z: i }]]) {
+      const pa = project(a), pb = project(b); if (!pa || !pb) continue;
+      const fade = clamp(1 - Math.abs(i) / span, 0, 1);
+      g.strokeStyle = `rgba(62,240,255,${0.09 * fade})`; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(pa.x, pa.y); g.lineTo(pb.x, pb.y); g.stroke();
+    }
+  }
+}
+
+// ---- Cartes holographiques
+const CW = 200, CH_ = 54;
+function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function fit(text, max) { if (g.measureText(text).width <= max) return text; while (text.length > 1 && g.measureText(text + '…').width > max) text = text.slice(0, -1); return text + '…'; }
+const colorOf = n => n.bug ? COL.red : TYPE[n.t].c;
+
+// fissures : chemins qui partent des bords vers le centre
+const CRACKS = {};
+function cracksOf(n) {
+  if (CRACKS[n.id]) return CRACKS[n.id];
+  const r = rnd(n.id.length * 131 + 17), list = [];
+  for (let i = 0; i < 6; i++) {
+    const side = Math.floor(r() * 4);
+    let x = side === 0 ? -CW / 2 : side === 1 ? CW / 2 : (r() - 0.5) * CW, y = side === 2 ? -CH_ / 2 : side === 3 ? CH_ / 2 : (r() - 0.5) * CH_;
+    const pts = [[x, y]];
+    for (let k = 0; k < 6; k++) { x += (-x) * 0.22 + (r() - 0.5) * 26; y += (-y) * 0.22 + (r() - 0.5) * 12; pts.push([x, y]); }
+    list.push(pts);
+  }
+  return CRACKS[n.id] = list;
+}
+
+function drawCard(n, q, alpha, opt) {
+  alpha *= clamp((q.z - 260) / 420, 0, 1);   // ce qui frôle la caméra s'efface
+  if (alpha <= 0.01) return null;
+  const f = Math.min(q.f, 1.7), w = CW * f, h = CH_ * f;
+  let x = q.x - w / 2, y = q.y - h / 2;
+  const col = colorOf(n);
+  if (opt.charge > 0) {   // tremblement avant l'explosion
+    const r = rnd(Math.floor(opt.time * 60) + n.id.length);
+    const a = opt.charge * opt.charge * 5 * f; x += (r() - 0.5) * a; y += (r() - 0.5) * a;
+    const gl = g.createRadialGradient(q.x, q.y, 0, q.x, q.y, w * (0.6 + opt.charge * 0.6));
+    gl.addColorStop(0, `rgba(255,120,60,${0.35 * opt.charge * alpha})`); gl.addColorStop(1, 'rgba(0,0,0,0)');
+    g.globalCompositeOperation = 'lighter'; g.fillStyle = gl; g.fillRect(q.x - w * 1.3, q.y - w * 1.3, w * 2.6, w * 2.6); g.globalCompositeOperation = 'source-over';
+  }
+  g.save(); g.globalAlpha = alpha;
+  const b = opt.build;   // construction : 0 → 1
+  const frame = b < 1 ? clamp(b / 0.45, 0, 1) : 1, fill = b < 1 ? clamp((b - 0.3) / 0.45, 0, 1) : 1;
+  const flicker = b < 1 && b > 0.3 ? (rnd(Math.floor(opt.time * 30) + n.id.length)() > 0.25 ? 1 : 0.35) : 1;
+  g.globalAlpha = alpha * flicker;
+  if (fill > 0) {
+    g.shadowColor = hex(col, opt.focus ? 0.85 : 0.5); g.shadowBlur = (opt.focus ? 30 : 14) * f;
+    rr(x, y, w, h, 8 * f); g.fillStyle = n.old ? `rgba(30,10,18,${0.84 * fill})` : `rgba(6,18,36,${0.86 * fill})`; g.fill();
+    g.shadowBlur = 0;
+  }
+  // contour dessiné progressivement (fil de fer) puis plein
+  g.strokeStyle = hex(col, opt.focus ? 1 : 0.75); g.lineWidth = Math.max(1, 1.5 * f);
+  if (frame < 1) {
+    const per = 2 * (w + h); g.setLineDash([per * frame, per]); rr(x, y, w, h, 8 * f); g.stroke(); g.setLineDash([]);
+  } else { rr(x, y, w, h, 8 * f); g.stroke(); }
+  g.strokeStyle = hex(col, 0.95); g.lineWidth = Math.max(1, 2 * f); const k = 10 * f;
+  g.beginPath(); g.moveTo(x, y + k); g.lineTo(x, y); g.lineTo(x + k, y); g.moveTo(x + w - k, y + h); g.lineTo(x + w, y + h); g.lineTo(x + w, y + h - k); g.stroke();
+  const fs = 14 * f;
+  if (fs > 6 && fill > 0.2) {
+    g.globalAlpha = alpha * flicker * fill;
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+    g.font = `700 ${8.5 * f}px Consolas, monospace`; g.fillStyle = hex(col, 0.9);
+    g.fillText(n.bug ? 'ERREUR · ' + TYPE[n.t].tag : TYPE[n.t].tag, x + 12 * f, y + 14 * f);
+    g.font = `600 ${fs}px "Segoe UI", system-ui, sans-serif`; g.fillStyle = '#eef5ff';
+    g.fillText(fit(n.label, w - 24 * f), x + 12 * f, y + 32 * f);
+    g.font = `${11 * f}px "Segoe UI", system-ui, sans-serif`; g.fillStyle = n.bug ? '#ffb3c0' : '#9fb3d1';
+    g.fillText(fit(n.sub, w - 24 * f), x + 12 * f, y + 47 * f);
+  }
+  if (b < 1 && b > 0) {   // ligne de balayage
+    const sy = y + h * eOut(b);
+    g.globalAlpha = alpha;
+    g.fillStyle = hex(COL.cyan, 0.95); g.fillRect(x - 12 * f, sy, w + 24 * f, 1.5);
+    const gr = g.createLinearGradient(0, sy - 16 * f, 0, sy); gr.addColorStop(0, 'rgba(62,240,255,0)'); gr.addColorStop(1, 'rgba(62,240,255,.3)');
+    g.fillStyle = gr; g.fillRect(x - 12 * f, sy - 16 * f, w + 24 * f, 16 * f);
+  }
+  g.restore();
+  // fissures qui avancent avant l'explosion
+  if (opt.charge > 0.05) {
+    g.save(); g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+    for (const pts of cracksOf(n)) {
+      const nSeg = Math.floor(opt.charge * (pts.length - 1) * 1.15);
+      if (nSeg < 1) continue;
+      g.beginPath(); g.moveTo(q.x + pts[0][0] * f, q.y + pts[0][1] * f);
+      for (let i = 1; i <= Math.min(nSeg, pts.length - 1); i++) g.lineTo(q.x + pts[i][0] * f, q.y + pts[i][1] * f);
+      g.strokeStyle = `rgba(255,160,90,${0.5 * opt.charge * alpha})`; g.lineWidth = 4 * f; g.stroke();
+      g.strokeStyle = `rgba(255,245,220,${0.9 * opt.charge * alpha})`; g.lineWidth = 1.2 * f; g.stroke();
+    }
+    g.restore();
+  }
+  // glitch : tranches décalées rouge / cyan
+  if (opt.glitch > 0) {
+    const r = rnd(Math.floor(opt.time * 16) + (n.p.x | 0));
+    g.save(); g.globalAlpha = alpha * opt.glitch; g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 4; i++) {
+      const sy = y + r() * h, sh = (2 + r() * 8) * f, dx = (r() - 0.5) * 30 * f * opt.glitch;
+      g.fillStyle = i % 2 ? 'rgba(255,40,90,.45)' : 'rgba(40,240,255,.4)';
+      g.fillRect(x + dx, sy, w, sh);
+    }
+    g.restore();
+  }
+  // flash final de construction
+  if (b > 0.7 && b < 1) {
+    const a = 1 - Math.abs(b - 0.85) / 0.15;
+    g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = alpha * a * 0.6;
+    rr(x, y, w, h, 8 * f); g.fillStyle = hex(col, 0.6); g.fill(); g.restore();
+  }
+  return { x, y, w, h };
+}
+
+// =====================================================================================
+//  EXPLOSION RÉALISTE : morceaux de la carte (vrais polygones), étincelles, fumée,
+//  onde de choc, flash, lumière, secousse caméra. Tout est calculé depuis le temps.
+// =====================================================================================
+function polyArea(P) { let a = 0; for (let i = 0; i < P.length; i++) { const [x1, y1] = P[i], [x2, y2] = P[(i + 1) % P.length]; a += x1 * y2 - x2 * y1; } return Math.abs(a) / 2; }
+function polyCentroid(P) { let x = 0, y = 0; for (const p of P) { x += p[0]; y += p[1]; } return [x / P.length, y / P.length]; }
+function splitPoly(P, c, d) {   // coupe un polygone convexe par une droite (point c, direction d)
+  const side = p => d[0] * (p[1] - c[1]) - d[1] * (p[0] - c[0]);
+  const A = [], B = [];
+  for (let i = 0; i < P.length; i++) {
+    const p = P[i], q = P[(i + 1) % P.length], sp = side(p), sq = side(q);
+    (sp >= 0 ? A : B).push(p);
+    if ((sp >= 0) !== (sq >= 0)) { const u = sp / (sp - sq); const m = [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u]; A.push(m); B.push(m); }
+  }
+  return [A, B];
+}
+const EXPL = {};
+function explosionOf(n) {
+  if (EXPL[n.id]) return EXPL[n.id];
+  const r = rnd(n.id.length * 977 + Math.abs(n.p.x | 0));
+  let polys = [[[-CW / 2, -CH_ / 2], [CW / 2, -CH_ / 2], [CW / 2, CH_ / 2], [-CW / 2, CH_ / 2]]];
+  for (let guard = 0; polys.length < 18 && guard < 200; guard++) {
+    polys.sort((a, b) => polyArea(b) - polyArea(a));
+    const P = polys.shift(), c = polyCentroid(P), ang = r() * Math.PI, [A, B] = splitPoly(P, [c[0] + (r() - 0.5) * 10, c[1] + (r() - 0.5) * 6], [Math.cos(ang), Math.sin(ang)]);
+    if (A.length >= 3 && B.length >= 3 && polyArea(A) > 30 && polyArea(B) > 30) polys.push(A, B); else polys.push(P);
+  }
+  const ck = camAt(n.breakAt), cy = Math.cos(ck.yaw), sy = Math.sin(ck.yaw);
+  const right = [cy, 0, -sy], fwd = [sy, 0, cy];
+  const pieces = polys.map(P => {
+    const c = polyCentroid(P), L = Math.hypot(c[0], c[1]) || 1, sp = 260 + r() * 520;
+    const ax = [r() - 0.5, r() - 0.5, r() - 0.5], al = Math.hypot(...ax) || 1;
+    const toward = -(120 + r() * 520);   // certains éclats viennent vers la caméra
+    return {
+      c, pts: P.map(([x, y]) => [x - c[0], y - c[1]]),
+      v: [right[0] * c[0] / L * sp + fwd[0] * toward, c[1] / L * sp - 160 - r() * 160, right[2] * c[0] / L * sp + fwd[2] * toward],
+      axis: ax.map(a => a / al), spin: (r() - 0.5) * 14, hot: 0.5 + r() * 0.5
+    };
+  });
+  const sparks = Array.from({ length: 170 }, () => {
+    const th = r() * Math.PI * 2, ph = Math.acos(2 * r() - 1), sp = 350 + r() * 1300;
+    return { v: [Math.sin(ph) * Math.cos(th) * sp, Math.cos(ph) * sp * 0.8 - 200, Math.sin(ph) * Math.sin(th) * sp], life: 0.5 + r() * 1.3, w: 0.8 + r() * 1.6 };
+  });
+  const embers = Array.from({ length: 40 }, () => ({ v: [(r() - 0.5) * 260, -60 - r() * 160, (r() - 0.5) * 260], life: 1.8 + r() * 1.8, s: 1.5 + r() * 2.5, ph: r() * 6 }));
+  const smoke = Array.from({ length: 14 }, () => ({ v: [(r() - 0.5) * 220, -20 - r() * 70, (r() - 0.5) * 220], r0: 30 + r() * 30, r1: 120 + r() * 120, life: 2.4 + r() * 1.4, tone: r() }));
+  return EXPL[n.id] = { pieces, sparks, embers, smoke, right, fwd };
+}
+function rotate(v, a, ang) {   // Rodrigues
+  const c = Math.cos(ang), s = Math.sin(ang), d = a[0] * v[0] + a[1] * v[1] + a[2] * v[2];
+  return [v[0] * c + (a[1] * v[2] - a[2] * v[1]) * s + a[0] * d * (1 - c),
+          v[1] * c + (a[2] * v[0] - a[0] * v[2]) * s + a[1] * d * (1 - c),
+          v[2] * c + (a[0] * v[1] - a[1] * v[0]) * s + a[2] * d * (1 - c)];
+}
+const DRAG = 1.6, GRAV = 520;
+const travel = (v, dt, k = DRAG, gv = GRAV) => { const e = (1 - Math.exp(-k * dt)) / k; return [v[0] * e, v[1] * e + 0.5 * gv * dt * dt, v[2] * e]; };
+
+function drawExplosion(n, dt) {
+  if (dt < 0 || dt > 4) return;
+  const E = explosionOf(n), P0 = n.p, col = colorOf(n);
+  // fumée (sous le reste)
+  for (const s of E.smoke) {
+    if (dt > s.life) continue;
+    const u = dt / s.life, m = travel(s.v, dt, 1.2, -25);
+    const q = project({ x: P0.x + m[0], y: P0.y + m[1], z: P0.z + m[2] }); if (!q) continue;
+    const R = (s.r0 + (s.r1 - s.r0) * eOut(u)) * q.f, a = 0.28 * Math.sin(Math.PI * Math.min(1, u * 1.1)) * (1 - u * 0.4);
+    g.globalAlpha = clamp(a, 0, 1); g.drawImage(smokeSprite(s.tone < 0.5 ? '70,45,80' : '40,40,60'), q.x - R, q.y - R, R * 2, R * 2); g.globalAlpha = 1;
+  }
+  const q0 = project(P0);
+  // lumière de l'explosion
+  if (q0 && dt < 1.4) {
+    const a = Math.pow(1 - dt / 1.4, 2), R = 520 * Math.min(q0.f, 1.7);
+    const gr = g.createRadialGradient(q0.x, q0.y, 0, q0.x, q0.y, R);
+    gr.addColorStop(0, `rgba(255,230,200,${0.75 * a})`); gr.addColorStop(0.15, `rgba(255,140,60,${0.45 * a})`); gr.addColorStop(0.5, hex(col, 0.15 * a)); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.beginPath(); g.arc(q0.x, q0.y, R, 0, Math.PI * 2); g.fill(); g.globalCompositeOperation = 'source-over';
+  }
+  // morceaux de la carte qui tournoient
+  const f0 = q0 ? Math.min(q0.f, 1.7) : 1;
+  for (const pc of E.pieces) {
+    const m = travel(pc.v, dt), ang = pc.spin * dt;
+    const C = { x: P0.x + E.right[0] * pc.c[0] + m[0], y: P0.y + pc.c[1] + m[1], z: P0.z + E.right[2] * pc.c[0] + m[2] };
+    const a = clamp(1 - (dt - 1.4) / 1.8, 0, 1); if (a <= 0) continue;
+    const pts = [];
+    let nz = 0;
+    for (const [lx, ly] of pc.pts) {
+      const v = rotate([lx, ly, 0], pc.axis, ang);
+      const wpt = { x: C.x + E.right[0] * v[0] + E.fwd[0] * v[2], y: C.y + v[1], z: C.z + E.right[2] * v[0] + E.fwd[2] * v[2] };
+      const q = project(wpt); if (!q) { pts.length = 0; break; } pts.push(q);
+    }
+    if (pts.length < 3) continue;
+    nz = Math.abs(rotate([0, 0, 1], pc.axis, ang)[2]);   // face éclairée ou de tranche
+    const near = clamp((pts[0].z - 220) / 300, 0, 1);
+    g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.closePath();
+    const shade = 0.35 + 0.65 * nz;
+    g.fillStyle = n.old ? `rgba(${Math.round(60 * shade)},${Math.round(20 * shade)},${Math.round(34 * shade)},${0.92 * a * near})` : `rgba(10,30,60,${0.9 * a * near})`;
+    g.fill();
+    const heat = clamp(1 - dt / (1.2 * pc.hot), 0, 1);
+    g.strokeStyle = heat > 0 ? `rgba(255,${Math.round(150 + 90 * heat)},${Math.round(80 + 120 * heat)},${a * near})` : hex(col, 0.7 * a * near);
+    g.lineWidth = Math.max(1, 1.6 * f0 * (0.6 + heat)); g.stroke();
+    if (heat > 0) { g.globalCompositeOperation = 'lighter'; g.strokeStyle = `rgba(255,140,60,${0.35 * heat * a * near})`; g.lineWidth = 5 * f0; g.stroke(); g.globalCompositeOperation = 'source-over'; }
+  }
+  // étincelles (traînées, couleur selon la température)
+  g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+  for (const s of E.sparks) {
+    if (dt > s.life) continue;
+    const u = dt / s.life, m1 = travel(s.v, dt, 2.4, 700), m0 = travel(s.v, Math.max(0, dt - 0.045), 2.4, 700);
+    const a = project({ x: P0.x + m0[0], y: P0.y + m0[1], z: P0.z + m0[2] }), b = project({ x: P0.x + m1[0], y: P0.y + m1[1], z: P0.z + m1[2] });
+    if (!a || !b) continue;
+    const al = (1 - u) * (1 - u);
+    g.strokeStyle = u < 0.15 ? `rgba(255,252,235,${al})` : u < 0.4 ? `rgba(255,214,120,${al})` : u < 0.7 ? `rgba(255,140,55,${al})` : `rgba(230,70,40,${al})`;
+    g.lineWidth = s.w * Math.min(b.f, 1.6); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+  }
+  // braises qui flottent
+  for (const e of E.embers) {
+    if (dt > e.life) continue;
+    const u = dt / e.life, m = travel(e.v, dt, 0.9, -40);
+    const q = project({ x: P0.x + m[0] + Math.sin(dt * 3 + e.ph) * 20, y: P0.y + m[1], z: P0.z + m[2] }); if (!q) continue;
+    const R = e.s * Math.min(q.f, 1.6) * 1.7, al = (1 - u) * (0.6 + 0.4 * Math.sin(dt * 12 + e.ph));
+    sprite('255,140,60', q.x, q.y, R, clamp(al, 0, 1));
+  }
+  // ondes de choc
+  if (q0 && dt < 1.1) {
+    const f = Math.min(q0.f, 1.7);
+    for (const [spd, wdt, c] of [[1, 3, '255,235,210'], [0.62, 8, '255,120,80'], [1.35, 1.2, '120,230,255']]) {
+      const u = clamp(dt / (1.1 / spd), 0, 1); if (u >= 1) continue;
+      const R = 330 * f * eOut(u), a = Math.pow(1 - u, 1.6);
+      g.strokeStyle = `rgba(${c},${0.7 * a})`; g.lineWidth = wdt * f * (1 - u * 0.5);
+      g.beginPath(); g.ellipse(q0.x, q0.y, R, R * 0.62, 0, 0, Math.PI * 2); g.stroke();
+    }
+  }
+  g.globalCompositeOperation = 'source-over';
+}
+
+// ---- Matérialisation : colonne de lumière + anneau
+function drawMaterialize(n, dt) {
+  if (dt < -0.4 || dt > 1.4) return;
+  const q = project(n.p); if (!q) return;
+  const f = Math.min(q.f, 1.7), col = TYPE[n.t].c;
+  g.save(); g.globalCompositeOperation = 'lighter';
+  if (dt < 0.9) {   // colonne de lumière qui descend sur le bloc
+    const a = Math.sin(Math.PI * clamp((dt + 0.4) / 1.3, 0, 1));
+    const w = 120 * f, top = q.y - 900 * f;
+    const gr = g.createLinearGradient(0, top, 0, q.y); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, hex(col, 0.35 * a));
+    g.fillStyle = gr; g.fillRect(q.x - w / 2, top, w, q.y - top);
+    g.fillStyle = hex('#ffffff', 0.5 * a); g.fillRect(q.x - 1, top, 2, q.y - top);
+  }
+  if (dt > 0) {
+    const u = clamp(dt / 1.4, 0, 1), R = 260 * f * eOut(u);
+    g.strokeStyle = hex(col, 0.7 * (1 - u)); g.lineWidth = 2 * f;
+    g.beginPath(); g.ellipse(q.x, q.y, R, R * 0.35, 0, 0, Math.PI * 2); g.stroke();
+  }
+  g.restore();
+}
+
+// ---- Rayons d'énergie entre blocs
+function beam(a, b, col, alpha, T, dashed, speed) {
+  if (!a || !b || alpha <= 0.01) return;
+  g.save(); g.globalAlpha = alpha;
+  if (dashed) {
+    g.setLineDash([6, 7]); g.strokeStyle = hex(col, 0.45); g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); g.setLineDash([]);
+  } else {
+    g.globalCompositeOperation = 'lighter';
+    g.strokeStyle = hex(col, 0.16); g.lineWidth = 9 * Math.min(a.f, b.f, 1.6); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+    g.strokeStyle = hex(col, 0.75); g.lineWidth = 1.3; g.stroke();
+  }
+  const n = dashed ? 1 : 3;
+  g.globalCompositeOperation = 'lighter';
+  for (let k = 0; k < n; k++) {
+    const u = (T * speed + k / n + (a.x * 0.001)) % 1, x = lerp(a.x, b.x, u), y = lerp(a.y, b.y, u), r = (dashed ? 2 : 3.2) * Math.max(0.6, Math.min(a.f, b.f, 1.6));
+    sprite(rgbOf(col), x, y, r * 4, alpha);
+  }
+  g.restore();
+}
+// ---- Transfert : l'énergie du bloc Excel détruit voyage vers le bloc qui le remplace
+function transfer(from, to, t0, t1, t, seed) {
+  if (t < t0 || t > t1 + 0.6) return;
+  const r = rnd(seed), A = from.p, B = to.p;
+  const ctrl = { x: (A.x + B.x) / 2, y: Math.min(A.y, B.y) - 420, z: (A.z + B.z) / 2 + 220 };
+  g.save(); g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+  for (let i = 0; i < 36; i++) {
+    const delay = r() * 0.9, jitter = (r() - 0.5) * 70, u = clamp((t - t0 - delay) / (t1 - t0 - 0.4), 0, 1);
+    if (u <= 0 || u >= 1) continue;
+    const at = uu => { const e = ease(uu), m = 1 - e; return { x: m * m * A.x + 2 * m * e * ctrl.x + e * e * B.x + jitter * Math.sin(uu * 3.14), y: m * m * A.y + 2 * m * e * ctrl.y + e * e * B.y, z: m * m * A.z + 2 * m * e * ctrl.z + e * e * B.z + jitter * 0.5 }; };
+    const q = project(at(u)), p = project(at(Math.max(0, u - 0.035))); if (!q || !p) continue;
+    const c = u < 0.4 ? '255,90,110' : u < 0.7 ? '200,140,255' : '62,240,255';
+    g.strokeStyle = `rgba(${c},.75)`; g.lineWidth = 2.4 * Math.min(q.f, 1.6); g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); g.stroke();
+    sprite(c, q.x, q.y, 3 * Math.min(q.f, 1.6) * 6.6, 0.9);
+  }
+  g.restore();
+}
+
+// =====================================================================================
+//  LE FILM À L'INSTANT t (tout se recalcule depuis t : on peut avancer / reculer)
+// =====================================================================================
+let t = 0, playing = true, last = performance.now();
+const aliveOld = n => (t < n.breakAt + 0.05 ? 1 : 0);
+const chapterAt = x => { for (let i = CH.length - 1; i >= 0; i--) if (x >= CH[i].start) return CH[i]; return CH[0]; };
+
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (playing) { t += dt; if (t >= TOTAL) { t = TOTAL; playing = false; setPlay(); } }
+  const T = now / 1000;
+
+  // secousse caméra : somme des explosions récentes
+  let amp = 0; for (const n of NODES) { const e = t - n.breakAt; if (e >= 0 && e < 1.2) amp += 16 * Math.exp(-e * 4.5); }
+  shake.x = amp * Math.sin(T * 63) * Math.cos(T * 17); shake.y = amp * Math.cos(T * 71) * Math.sin(T * 13);
+
+  cam = camAt(t);
+  const camPrev = playing ? camAt(Math.max(0, t - 0.06)) : null;
+  drawBackground(T, camPrev);
+
+  const chap = chapterAt(t);
+  const focusIds = new Set([...(chap.old || []), ...(chap.neu || [])]);
+
+  for (const [a, b] of OLD_EDGES) {
+    const A = byId[a], B = byId[b], al = Math.min(aliveOld(A), aliveOld(B));
+    if (al > 0) beam(project(A.p), project(B.p), COL.amber, al * (chap.old ? 0.45 : 0.8), T, true, 0.12);
+  }
+  for (const [a, b] of NEW_EDGES) {
+    const A = byId[a], B = byId[b], on = clamp((t - Math.max(A.buildAt, B.buildAt) - 1.0) / 0.8, 0, 1);
+    if (on > 0) beam(project(A.p), project(B.p), TYPE[A.t].c, on, T, false, 0.45);
+  }
+  for (const c of CH) if (c.old) c.old.forEach((o, i) => c.neu.forEach((nn, j) =>
+    transfer(byId[o], byId[nn], c.start + K.shatter + 0.25, byId[nn].buildAt + 0.2, t, i * 31 + j * 7 + c.start)));
+
+  const list = NODES.map(n => ({ n, q: project(n.p) })).filter(o => o.q).sort((a, b) => b.q.z - a.q.z);
+  for (const { n, q } of list) {
+    if (n.old) {
+      if (aliveOld(n) > 0) {
+        const near = focusIds.has(n.id);
+        const charge = near ? clamp((t - (n.breakAt - 2.3)) / 2.3, 0, 1) : 0;
+        const glitch = n.bug ? 0.2 + 0.8 * charge : charge * 0.8;
+        const dim = chap.old && !near ? 0.28 : 1;
+        drawCard(n, q, dim, { build: 1, glitch, charge, time: T, focus: near, blur: chap.old && !near ? 1.6 : 0 });
+      }
+      drawExplosion(n, t - n.breakAt);
+    } else {
+      drawMaterialize(n, t - n.buildAt);
+      const b = clamp((t - n.buildAt) / 1.2, 0, 1);
+      if (b > 0) {
+        const near = focusIds.has(n.id);
+        drawCard(n, q, (chap.neu && !near ? 0.5 : 1), { build: b, glitch: 0, charge: 0, time: T, focus: near, blur: chap.neu && !near ? 1.2 : 0 });
+      }
+    }
+  }
+
+  // flash plein écran au moment des explosions
+  let flash = 0; for (const n of NODES) { const e = t - n.breakAt; if (e >= 0 && e < 0.35) flash = Math.max(flash, Math.pow(1 - e / 0.35, 2)); }
+  if (flash > 0) { g.globalCompositeOperation = 'lighter'; g.fillStyle = `rgba(255,236,220,${0.42 * flash})`; g.fillRect(0, 0, W, H); g.globalCompositeOperation = 'source-over'; }
+  // balayage lumineux à chaque changement de chapitre
+  const s = t - chap.start;
+  if (s >= 0 && s < 0.9 && chap !== CH[0]) {
+    const y = H * eOut(s / 0.9);
+    const gr = g.createLinearGradient(0, y - 60, 0, y + 4); gr.addColorStop(0, 'rgba(62,240,255,0)'); gr.addColorStop(1, `rgba(62,240,255,${0.22 * (1 - s / 0.9)})`);
+    g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.fillRect(0, y - 60, W, 64);
+    g.fillStyle = `rgba(200,250,255,${0.6 * (1 - s / 0.9)})`; g.fillRect(0, y, W, 1.5); g.globalCompositeOperation = 'source-over';
+  }
+  // aberration chromatique légère pendant les vols rapides
+  updateHud(chap, T);
+  requestAnimationFrame(frame);
+}
+
+// =====================================================================================
+//  TITRE (décodage lettre par lettre), CARTE D'EXPLICATION, LECTEUR
+// =====================================================================================
+const elTitle = document.getElementById('title'), card = document.getElementById('card');
+let shownChap = null, titleFrom = 0;
+const GLYPHS = '▓▒░█<>/\\|=+*#%&@01ABCDEFXZ';
+function phaseOf(c) { const s = t - c.start; if (!c.old) return 0; return s < K.shatter ? 1 : s < K.reveal ? 2 : 3; }
+const fmtEx = l => l.replace(/<ok>(.*?)<\/ok>/, '<span class="ok">✓ $1</span>').replace(/<ko>(.*?)<\/ko>/, '<span class="ko">✗ $1</span>');
+function cardHtml(c) {
+  if (c.key === 'intro') return `
+    <div class="sec"><span class="tag t-avant">ANALYSE · PLANNING_INVENTORY.XLSX</span>
+      <p>Le système actuel : des saisies à la main qui alimentent des milliers de formules, et une décision d’achat prise à l’œil.</p></div>
+    <div class="stats">
+      <div class="stat red"><b data-count="18">0</b><span>onglets à tenir</span></div>
+      <div class="stat red"><b data-count="7377">0</b><span>formules Excel</span></div>
+      <div class="stat red"><b data-count="13">0</b><span>erreurs de formule trouvées</span></div>
+      <div class="stat red"><b data-count="2">0</b><span>personnes calculent le même chiffre</span></div>
+    </div>`;
+  if (c.key === 'final') return `
+    <div class="sec"><span class="tag t-apres">RÉSULTAT</span><p>Tout le calcul tourne seul. Sam vérifie les tôles des nouveaux jobs, le plancher fait ses gestes (coupe DONE, comptage, réception), et Sam reçoit sa commande d’acier prête chaque matin.</p></div>
+    <table class="cmp">
+      <tr><td></td><td>Avant</td><td>Après</td></tr>
+      <tr><td>Pages</td><td>18 onglets</td><td>3 pages Airtable</td></tr>
+      <tr><td>Formules</td><td>7 377</td><td>14 champs calculés</td></tr>
+      <tr><td>Saisie</td><td>matrice 63 × 90 + comptages + reçus + MIN/MAX</td><td>tôles des nouveaux modèles (Sam), coupe DONE, comptage, réception</td></tr>
+      <tr><td>Sortie du stock</td><td>par date du job</td><td>quand la coupe est DONE</td></tr>
+      <tr><td>Calcul</td><td>Ilyas et Sam, chacun le sien</td><td>un seul, pour tout le monde</td></tr>
+      <tr><td>Commande</td><td>tapée dans les notes</td><td>New Request prête à 6 h</td></tr>
+    </table>
+    <div class="sec" style="margin-top:14px"><span class="tag t-ok">RÉALISABLE</span><p>Tout repose sur des fonctions standard d’Airtable : tables liées, rollups, formules, automatisations « Run script », interfaces, envoi de courriel.</p></div>`;
+  return `
+    <div class="sec" data-ph="1"><span class="tag t-avant">AVANT · CE QUI CASSE</span><p>${c.avant}</p></div>
+    <div class="sec" data-ph="2"><span class="tag t-apres">APRÈS · CE QUI LE REMPLACE</span><p>${c.apres}</p></div>
+    <div class="sec" data-ph="3"><span class="tag t-log">LA LOGIQUE</span><div class="formula">${c.logique}</div></div>
+    <div class="sec" data-ph="3"><span class="tag t-ex">EXEMPLE</span><div class="term">${c.ex.map(l => `<div>${fmtEx(l)}</div>`).join('')}</div></div>
+    <div class="sec" data-ph="3"><span class="tag t-ok">RÉALISABLE AVEC</span><p>${c.ok}</p></div>`;
+}
+function updateHud(c, T) {
+  if (shownChap !== c) {
+    shownChap = c; titleFrom = T;
+    card.classList.add('out');
+    setTimeout(() => { if (shownChap !== c) return; card.innerHTML = cardHtml(c); card.scrollTop = 0; card.classList.remove('out'); }, shownChap === CH[0] && t < 0.5 ? 0 : 350);
+  }
+  // titre qui se décode
+  const el = T - titleFrom, txt = c.title;
+  let out = '';
+  for (let i = 0; i < txt.length; i++) {
+    const ch = txt[i];
+    if (ch === ' ' || el > 0.15 + i * 0.035) out += ch;
+    else out += GLYPHS[Math.floor((T * 30 + i * 7) % GLYPHS.length)];
+  }
+  if (elTitle.textContent !== out) elTitle.textContent = out;
+  const ph = phaseOf(c);
+  card.querySelectorAll('.sec[data-ph]').forEach(s => s.classList.toggle('hide', +s.dataset.ph > ph));
+  const s = t - c.start - K.reveal - 0.6;
+  card.querySelectorAll('.term div').forEach((l, i) => l.classList.toggle('on', s > i * 0.9));
+  card.querySelectorAll('[data-count]').forEach(b => {
+    const v = +b.dataset.count, u = clamp((t - c.start - 0.8) / 3.5, 0, 1);
+    b.textContent = Math.round(v * eOut(u)).toLocaleString('fr-CA');
+  });
+  const p = (t / TOTAL * 100) + '%';
+  fill.style.width = p; knob.style.left = p;
+}
+
+// lecteur : un bouton + une ligne
+const fill = document.getElementById('fill'), knob = document.getElementById('knob'), track = document.getElementById('track'), bPlay = document.getElementById('bPlay');
+const ICON_PAUSE = '<svg viewBox="0 0 14 14"><rect x="2" y="1" width="3.5" height="12" rx="1"/><rect x="8.5" y="1" width="3.5" height="12" rx="1"/></svg>';
+const ICON_PLAY = '<svg viewBox="0 0 14 14"><path d="M3 1.2v11.6c0 .6.7 1 1.2.7l9-5.8c.5-.3.5-1 0-1.3l-9-5.8C3.7.2 3 .6 3 1.2z"/></svg>';
+function setPlay() { bPlay.innerHTML = playing ? ICON_PAUSE : ICON_PLAY; }
+bPlay.onclick = () => { if (t >= TOTAL) t = 0; playing = !playing; setPlay(); };
+let scrubbing = false, wasPlaying = false;
+const scrubTo = e => { const r = track.getBoundingClientRect(); t = clamp((e.clientX - r.left) / r.width, 0, 1) * TOTAL; };
+track.addEventListener('pointerdown', e => { scrubbing = true; wasPlaying = playing; playing = false; track.setPointerCapture(e.pointerId); scrubTo(e); });
+track.addEventListener('pointermove', e => { if (scrubbing) scrubTo(e); });
+track.addEventListener('pointerup', () => { scrubbing = false; playing = wasPlaying; setPlay(); });
+addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); bPlay.click(); }
+  const i = CH.indexOf(chapterAt(t));
+  if (e.code === 'ArrowRight') t = CH[Math.min(i + 1, CH.length - 1)].start + 0.01;
+  if (e.code === 'ArrowLeft') t = CH[Math.max(t - CH[i].start > 1.5 ? i : i - 1, 0)].start + 0.01;
+});
+window.__film = { seek: x => { t = clamp(x, 0, TOTAL); playing = false; setPlay(); } };
+setPlay();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
