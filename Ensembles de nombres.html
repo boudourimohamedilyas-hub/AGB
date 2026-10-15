@@ -1,0 +1,1176 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Ensembles de nombres</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Noto+Sans+Math&display=swap">
+<style>
+/* Layout: plein écran, une slide à la fois sur une scène 3D ; chaque ensemble garde sa couleur partout, chaque rôle (règle, piège, exercice) aussi. */
+:root{
+  color-scheme: dark;
+  --bg:#0c1120; --bg2:#111a2f; --panel:#172039; --panel2:#1d2848; --line:#2b3860;
+  --fg:#eef2fb; --muted:#a3aecb;
+  --cN:#ffd23f; --cZ:#ff8a3d; --cD:#ff5c8d; --cQ:#a98bff; --cR:#3fb8ff;
+  --rule:#2ee6b6; --trap:#ff5468; --exo:#ffb020;
+  --f-display:"Bricolage Grotesque","Noto Sans Math",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Noto Sans Math",system-ui,sans-serif;
+  --f-math:"Noto Sans Math","Atkinson Hyperlegible",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{height:100%}
+body{
+  height:100%; margin:0; overflow:hidden;
+  display:grid; grid-template-rows:1fr auto;
+  background:
+    radial-gradient(900px 520px at 85% -10%, color-mix(in srgb,var(--cR) 12%,transparent), transparent 70%),
+    radial-gradient(800px 500px at -10% 110%, color-mix(in srgb,var(--cD) 10%,transparent), transparent 70%),
+    var(--bg);
+  color:var(--fg); font-family:var(--f-body); font-size:clamp(1rem,0.9rem + 0.45vw,1.22rem); line-height:1.55;
+}
+sup{font-size:.62em; line-height:0}
+b,strong{font-weight:700}
+.m{font-family:var(--f-math)}
+
+/* ---------- décor 3D flottant ---------- */
+.bg{position:fixed; inset:0; pointer-events:none; perspective:900px; overflow:hidden; z-index:0}
+.bg span{position:absolute; font-family:var(--f-math); font-size:clamp(7rem,16vw,15rem); opacity:.07; animation:drift 26s ease-in-out infinite alternate}
+.bg span:nth-child(1){left:4%; top:8%; color:var(--cN)}
+.bg span:nth-child(2){right:6%; top:14%; color:var(--cZ); animation-duration:31s}
+.bg span:nth-child(3){left:42%; top:52%; color:var(--cD); animation-duration:23s}
+.bg span:nth-child(4){left:10%; bottom:6%; color:var(--cQ); animation-duration:34s}
+.bg span:nth-child(5){right:12%; bottom:10%; color:var(--cR); animation-duration:28s}
+@keyframes drift{from{transform:translate3d(0,0,0) rotateY(-25deg) rotateX(10deg)} to{transform:translate3d(30px,-40px,120px) rotateY(25deg) rotateX(-10deg)}}
+
+/* ---------- scène & slides ---------- */
+.stage{position:relative; z-index:1; perspective:1500px; perspective-origin:50% 40%; overflow:hidden; min-height:0}
+.slide{
+  position:absolute; inset:0; overflow-y:auto; overflow-x:hidden;
+  padding-block:clamp(20px,4vh,48px);
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
+  opacity:0; visibility:hidden;
+  transform:translate3d(45%,0,-260px) rotateY(-38deg);
+  transform-origin:50% 50%;
+  transition:transform .75s cubic-bezier(.2,.75,.2,1), opacity .5s ease, visibility 0s linear .75s;
+}
+.slide.past{transform:translate3d(-45%,0,-260px) rotateY(38deg)}
+.slide.active{opacity:1; visibility:visible; transform:none; transition:transform .75s cubic-bezier(.2,.75,.2,1), opacity .5s ease .1s, visibility 0s}
+.sheet{max-width:1060px; min-height:100%; margin:0 auto; display:flex; flex-direction:column; justify-content:center; gap:clamp(14px,2.4vh,24px)}
+.sheet > *{min-width:0}
+
+.eyebrow{margin:0; font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:700; display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.eyebrow .dot{width:8px; height:8px; border-radius:50%; background:currentColor}
+h1,h2,h3{font-family:var(--f-display); margin:0; text-wrap:balance; line-height:1.08}
+h2{font-size:clamp(1.8rem,1.2rem + 2.6vw,3.1rem); font-weight:800; letter-spacing:-.01em}
+h3{font-size:clamp(1.15rem,1rem + .6vw,1.45rem); font-weight:700}
+p{margin:0}
+.lead{font-size:1.12em; color:var(--muted); max-width:62ch}
+.lead b{color:var(--fg)}
+
+/* ---------- boîtes par rôle ---------- */
+.box{border-radius:18px; padding:clamp(14px,2vw,22px); background:var(--panel); border:1px solid var(--line); display:flex; flex-direction:column; gap:10px}
+.box.rule{background:color-mix(in srgb,var(--rule) 10%,var(--panel)); border-color:color-mix(in srgb,var(--rule) 50%,var(--line))}
+.box.trap{background:color-mix(in srgb,var(--trap) 11%,var(--panel)); border-color:color-mix(in srgb,var(--trap) 55%,var(--line))}
+.box.exo{background:color-mix(in srgb,var(--exo) 9%,var(--panel)); border-color:color-mix(in srgb,var(--exo) 50%,var(--line))}
+.tag{align-self:flex-start; font-size:.72rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; padding:4px 10px; border-radius:999px; color:var(--bg)}
+.tag.rule{background:var(--rule)} .tag.trap{background:var(--trap)} .tag.exo{background:var(--exo)} .tag.ex{background:var(--muted)}
+.ok{color:var(--rule); font-weight:700}
+.no{color:var(--trap); font-weight:700}
+.hl{color:var(--exo); font-weight:700}
+.cN{color:var(--cN)} .cZ{color:var(--cZ)} .cD{color:var(--cD)} .cQ{color:var(--cQ)} .cR{color:var(--cR)}
+
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:clamp(12px,1.8vw,20px)}
+.grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); gap:clamp(12px,1.6vw,18px)}
+
+.formula{font-family:var(--f-math); font-size:clamp(1.3rem,1rem + 1.6vw,2.1rem); text-align:center; padding:clamp(14px,2.2vw,22px); border-radius:16px; background:var(--panel2); border:1px solid var(--line); overflow-x:auto; white-space:nowrap}
+.formula .eq{color:var(--rule)}
+
+ul.clean{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px}
+ul.clean li{display:flex; gap:10px; align-items:baseline}
+ul.clean li::before{content:"›"; color:var(--muted); font-weight:700}
+ol.steps{list-style:none; margin:0; padding:0; counter-reset:st; display:flex; flex-direction:column; gap:12px}
+ol.steps li{counter-increment:st; display:grid; grid-template-columns:2.2em 1fr; gap:12px; align-items:start}
+ol.steps li::before{content:counter(st); width:2.2em; height:2.2em; border-radius:50%; display:grid; place-items:center; font-weight:700; font-family:var(--f-display); background:var(--panel2); border:2px solid var(--rule); color:var(--rule)}
+
+.tw{overflow-x:auto; border-radius:16px; border:1px solid var(--line)}
+table{border-collapse:collapse; width:100%; min-width:520px; font-variant-numeric:tabular-nums}
+th,td{padding:10px 14px; text-align:left; border-bottom:1px solid var(--line)}
+th{font-size:.74rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); background:var(--panel2)}
+td{background:var(--panel)}
+tr:last-child td{border-bottom:0}
+
+/* ---------- glyphes 3D ---------- */
+.g3d{font-family:var(--f-math); line-height:1; font-weight:400; display:inline-block; transform:perspective(600px) rotateY(-14deg) rotateX(6deg)}
+.g3d{text-shadow:1px 1px 0 color-mix(in srgb,currentColor 70%,#000),2px 2px 0 color-mix(in srgb,currentColor 62%,#000),3px 3px 0 color-mix(in srgb,currentColor 54%,#000),4px 4px 0 color-mix(in srgb,currentColor 46%,#000),5px 5px 0 color-mix(in srgb,currentColor 38%,#000),6px 6px 0 color-mix(in srgb,currentColor 30%,#000),10px 14px 22px rgb(0 0 0 / .45)}
+
+/* ---------- accueil ---------- */
+.hero h1{font-size:clamp(2.6rem,1.4rem + 6vw,6rem); font-weight:800; letter-spacing:-.02em; line-height:.98}
+.hero h1 .l2{display:block; background:linear-gradient(90deg,var(--cN),var(--cZ) 25%,var(--cD) 50%,var(--cQ) 75%,var(--cR)); -webkit-background-clip:text; background-clip:text; color:transparent}
+.setrow{display:flex; flex-wrap:wrap; gap:clamp(10px,2vw,22px); align-items:center}
+.setrow .g3d{font-size:clamp(2.6rem,1.6rem + 4vw,4.6rem)}
+.setrow .sub{font-family:var(--f-math); color:var(--muted); font-size:1.4rem}
+.legend{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr)); gap:12px}
+.legend .box{gap:6px; padding:14px 16px}
+.legend p{font-size:.92rem; color:var(--muted)}
+.hint{color:var(--muted); font-size:.9rem}
+.kbd{display:inline-block; padding:1px 8px; border-radius:6px; border:1px solid var(--line); background:var(--panel2); font-size:.85em}
+
+/* ---------- sommaire ---------- */
+.toc{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:12px}
+.toc button{all:unset; cursor:pointer; display:grid; grid-template-columns:auto 1fr; gap:14px; align-items:center; padding:16px 18px; border-radius:16px; background:var(--panel); border:1px solid var(--line); transition:transform .25s, border-color .25s, background .25s; transform-style:preserve-3d}
+.toc button:hover{transform:perspective(700px) rotateX(8deg) translateY(-3px); border-color:var(--cR); background:var(--panel2)}
+.toc button:focus-visible{outline:3px solid var(--cR); outline-offset:3px}
+.toc .num{font-family:var(--f-display); font-weight:800; font-size:1.6rem; color:var(--cR); width:1.6em; text-align:center}
+.toc .t{font-weight:700} .toc .s{display:block; font-size:.86rem; color:var(--muted)}
+
+/* ---------- pile 3D des ensembles ---------- */
+.stackwrap{--u:1px; display:grid; place-items:center; perspective:1100px; min-height:calc(var(--u)*380)}
+.stack{position:relative; width:calc(var(--u)*320); height:calc(var(--u)*320); transform-style:preserve-3d; transform:rotateX(56deg) rotateZ(-36deg); animation:bob 7s ease-in-out infinite alternate}
+@keyframes bob{from{transform:rotateX(56deg) rotateZ(-36deg) translateZ(0)} to{transform:rotateX(52deg) rotateZ(-30deg) translateZ(14px)}}
+.layer{position:absolute; border-radius:calc(var(--u)*20); border:2px solid var(--c); background:color-mix(in srgb,var(--c) 16%,transparent); box-shadow:0 0 30px color-mix(in srgb,var(--c) 30%,transparent)}
+.layer b{position:absolute; left:calc(var(--u)*7); top:calc(var(--u)*2); font-family:var(--f-math); font-weight:400; font-size:calc(var(--u)*26); color:var(--c)}
+.L1{--c:var(--cR); inset:0; transform:translateZ(0)}
+.L2{--c:var(--cQ); inset:calc(var(--u)*34); transform:translateZ(calc(var(--u)*34))}
+.L3{--c:var(--cD); inset:calc(var(--u)*68); transform:translateZ(calc(var(--u)*68))}
+.L4{--c:var(--cZ); inset:calc(var(--u)*102); transform:translateZ(calc(var(--u)*102))}
+.L5{--c:var(--cN); inset:calc(var(--u)*130); transform:translateZ(calc(var(--u)*136))}
+.L5 b{left:50%; top:50%; transform:translate(-50%,-50%)}
+.chain{font-family:var(--f-math); font-size:clamp(1.5rem,1rem + 2.2vw,2.5rem); display:flex; flex-wrap:wrap; gap:.35em; align-items:center}
+.chain i{font-style:normal; color:var(--muted); font-size:.8em}
+
+/* ---------- slides d'ensemble ---------- */
+.setslide{display:grid; grid-template-columns:minmax(0,auto) minmax(0,1fr); gap:clamp(18px,4vw,56px); align-items:center}
+.setslide .big{font-size:clamp(6rem,4rem + 10vw,13rem); color:var(--c)}
+.setslide h2 .nm{color:var(--c)}
+.chips{display:flex; flex-wrap:wrap; gap:8px}
+.chip{font-family:var(--f-math); padding:6px 12px; border-radius:999px; background:var(--panel2); border:1px solid var(--line); white-space:nowrap}
+.chip.in{border-color:color-mix(in srgb,var(--rule) 60%,var(--line)); background:color-mix(in srgb,var(--rule) 10%,var(--panel2))}
+.chip.out{border-color:color-mix(in srgb,var(--trap) 60%,var(--line)); background:color-mix(in srgb,var(--trap) 10%,var(--panel2)); text-decoration:line-through; text-decoration-color:color-mix(in srgb,var(--trap) 80%,transparent)}
+.chip small{color:var(--muted); font-family:var(--f-body); text-decoration:none}
+.lbl{font-size:.78rem; letter-spacing:.12em; text-transform:uppercase; font-weight:700}
+
+/* ---------- cartes d'exercice qui se retournent ---------- */
+.card{perspective:1800px}
+.card-inner{display:grid; transform-style:preserve-3d; transition:transform .85s cubic-bezier(.2,.75,.2,1)}
+.card.flipped .card-inner{transform:rotateY(180deg)}
+.face{grid-area:1/1; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:22px; padding:clamp(16px,2.6vw,30px); display:flex; flex-direction:column; gap:14px; min-width:0}
+.face.front{background:color-mix(in srgb,var(--exo) 8%,var(--panel)); border:2px solid color-mix(in srgb,var(--exo) 60%,var(--line)); box-shadow:0 24px 50px rgb(0 0 0 / .35)}
+.face.back{transform:rotateY(180deg); background:color-mix(in srgb,var(--rule) 8%,var(--panel)); border:2px solid color-mix(in srgb,var(--rule) 60%,var(--line)); box-shadow:0 24px 50px rgb(0 0 0 / .35)}
+.facehead{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap}
+.lvl{display:flex; gap:5px; align-items:center; font-size:.85rem; color:var(--muted)}
+.lvl i{width:10px; height:10px; border-radius:50%; border:2px solid var(--exo)}
+.lvl i.on{background:var(--exo)}
+.items{display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,170px),1fr)); gap:10px}
+.item{font-family:var(--f-math); font-size:1.15em; padding:10px 14px; border-radius:12px; background:var(--panel2); border:1px solid var(--line); text-align:center}
+.ans{display:flex; flex-direction:column; gap:8px}
+.ans li{list-style:none}
+.ans ul{margin:0; padding:0; display:flex; flex-direction:column; gap:8px}
+.ans .r{color:var(--rule); font-weight:700}
+.ans .why{color:var(--muted)}
+.flip{all:unset; cursor:pointer; align-self:flex-start; padding:12px 20px; border-radius:999px; font-weight:700; font-family:var(--f-display); letter-spacing:.01em; transition:transform .2s, box-shadow .2s}
+.flip:focus-visible{outline:3px solid var(--fg); outline-offset:3px}
+.front .flip{background:var(--exo); color:var(--bg); box-shadow:0 6px 0 color-mix(in srgb,var(--exo) 55%,#000)}
+.back .flip{background:var(--panel2); color:var(--fg); border:1px solid var(--line)}
+.flip:hover{transform:translateY(-2px)}
+.front .flip:active{transform:translateY(4px); box-shadow:0 2px 0 color-mix(in srgb,var(--exo) 55%,#000)}
+.think{color:var(--muted); font-size:.92rem}
+
+/* ---------- fin ---------- */
+.end h2{font-size:clamp(2.4rem,1.4rem + 5vw,5rem)}
+
+/* ---------- barre de navigation ---------- */
+.bar{position:relative; z-index:2; display:flex; align-items:center; gap:12px; padding-block:10px 12px;
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:color-mix(in srgb,var(--bg) 82%,transparent); border-top:1px solid var(--line); backdrop-filter:blur(10px)}
+.navbtn{all:unset; cursor:pointer; width:46px; height:46px; border-radius:50%; display:grid; place-items:center; background:var(--panel2); border:1px solid var(--line); font-size:1.2rem; flex:none; transition:background .2s, transform .2s}
+.navbtn:hover:not(:disabled){background:var(--cR); color:var(--bg); transform:scale(1.06)}
+.navbtn:focus-visible{outline:3px solid var(--cR); outline-offset:2px}
+.navbtn:disabled{opacity:.35; cursor:default}
+.prog{flex:1; min-width:0; display:flex; flex-direction:column; gap:6px}
+.prog-top{display:flex; justify-content:space-between; gap:10px; font-size:.82rem; color:var(--muted)}
+.prog-top .chap{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.prog-top .count{font-variant-numeric:tabular-nums; flex:none}
+.track{height:6px; border-radius:99px; background:var(--panel2); overflow:hidden}
+.fill{height:100%; width:0; background:linear-gradient(90deg,var(--cN),var(--cZ),var(--cD),var(--cQ),var(--cR)); border-radius:99px; transition:width .5s ease}
+.jump{flex:none; max-width:42vw; padding:10px 12px; border-radius:12px; background:var(--panel2); color:var(--fg); border:1px solid var(--line); font:inherit; font-size:.9rem}
+.jump:focus-visible{outline:3px solid var(--cR); outline-offset:2px}
+
+@media (max-width:640px){
+  .setslide{grid-template-columns:1fr; text-align:left}
+  .setslide .big{font-size:6.5rem}
+  .stackwrap{--u:.78px}
+  .jump{max-width:34vw}
+}
+@media (prefers-reduced-motion:reduce){
+  .slide,.slide.active,.slide.past{transform:none; transition:opacity .2s ease, visibility 0s}
+  .card-inner{transition:none}
+  .bg span,.stack{animation:none}
+}
+</style>
+
+<div class="bg" aria-hidden="true"><span>ℕ</span><span>ℤ</span><span>𝔻</span><span>ℚ</span><span>ℝ</span></div>
+
+<main class="stage" id="stage" aria-live="polite">
+
+<!-- ===================== ACCUEIL ===================== -->
+<section class="slide" data-ch="Accueil">
+  <div class="sheet hero">
+    <p class="eyebrow">Mathématiques · Tronc commun</p>
+    <h1>Les ensembles<span class="l2">de nombres</span></h1>
+    <div class="setrow" aria-label="Les cinq ensembles">
+      <span class="g3d cN">ℕ</span><span class="sub">⊂</span>
+      <span class="g3d cZ">ℤ</span><span class="sub">⊂</span>
+      <span class="g3d cD">𝔻</span><span class="sub">⊂</span>
+      <span class="g3d cQ">ℚ</span><span class="sub">⊂</span>
+      <span class="g3d cR">ℝ</span>
+    </div>
+    <div class="legend">
+      <div class="box rule"><span class="tag rule">À retenir</span><p>La règle à apprendre par cœur.</p></div>
+      <div class="box trap"><span class="tag trap">Piège</span><p>L'erreur que presque tout le monde fait.</p></div>
+      <div class="box"><span class="tag ex">Exemple</span><p>La règle appliquée sur un vrai nombre.</p></div>
+      <div class="box exo"><span class="tag exo">Exercice</span><p>À toi de jouer. Retourne la carte pour la correction.</p></div>
+    </div>
+    <p class="hint">Avance avec <span class="kbd">→</span> et recule avec <span class="kbd">←</span>, ou utilise les boutons en bas. Sur téléphone, glisse avec le doigt.</p>
+  </div>
+</section>
+
+<section class="slide" data-ch="Accueil">
+  <div class="sheet">
+    <p class="eyebrow">Sommaire</p>
+    <h2>Le plan du cours</h2>
+    <p class="lead">Touche un chapitre pour y aller directement.</p>
+    <div class="toc">
+      <button type="button" data-goto="Les 5 ensembles"><span class="num">1</span><span><span class="t">Les 5 ensembles</span><span class="s">ℕ, ℤ, 𝔻, ℚ, ℝ</span></span></button>
+      <button type="button" data-goto="Les symboles"><span class="num">2</span><span><span class="t">Les symboles</span><span class="s">∈, ∉, ⊂, ⊄</span></span></button>
+      <button type="button" data-goto="Méthodes"><span class="num">3</span><span><span class="t">Méthodes</span><span class="s">Reconnaître un nombre</span></span></button>
+      <button type="button" data-goto="Puissances"><span class="num">4</span><span><span class="t">Puissances</span><span class="s">Règles et écriture scientifique</span></span></button>
+      <button type="button" data-goto="Racines carrées"><span class="num">5</span><span><span class="t">Racines carrées</span><span class="s">Règles et simplification</span></span></button>
+      <button type="button" data-goto="Identités remarquables"><span class="num">6</span><span><span class="t">Identités remarquables</span><span class="s">Développer et factoriser</span></span></button>
+      <button type="button" data-goto="Exercices"><span class="num">7</span><span><span class="t">Exercices</span><span class="s">12 cartes avec correction</span></span></button>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 1. LES 5 ENSEMBLES ===================== -->
+<section class="slide" data-ch="Les 5 ensembles">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot cR"></span>Chapitre 1 · Les 5 ensembles</p>
+    <h2>5 boîtes rangées l'une dans l'autre</h2>
+    <div class="grid2" style="align-items:center">
+      <div class="stackwrap" aria-hidden="true">
+        <div class="stack">
+          <div class="layer L1"><b>ℝ</b></div>
+          <div class="layer L2"><b>ℚ</b></div>
+          <div class="layer L3"><b>𝔻</b></div>
+          <div class="layer L4"><b>ℤ</b></div>
+          <div class="layer L5"><b>ℕ</b></div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:16px; min-width:0">
+        <p class="lead">Chaque boîte contient <b>toutes les boîtes plus petites</b>. La plus petite est ℕ, la plus grande est ℝ.</p>
+        <div class="chain"><span class="cN">ℕ</span><i>⊂</i><span class="cZ">ℤ</span><i>⊂</i><span class="cD">𝔻</span><i>⊂</i><span class="cQ">ℚ</span><i>⊂</i><span class="cR">ℝ</span></div>
+        <div class="box"><span class="tag ex">Exemple</span><p>Le nombre <b>4</b> est dans ℕ. Donc il est aussi dans <span class="cZ">ℤ</span>, <span class="cD">𝔻</span>, <span class="cQ">ℚ</span> et <span class="cR">ℝ</span>.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Les 5 ensembles" style="--c:var(--cN)">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot cN"></span>Chapitre 1 · Boîte 1 sur 5</p>
+    <div class="setslide">
+      <span class="g3d big" aria-hidden="true">ℕ</span>
+      <div style="display:flex; flex-direction:column; gap:16px; min-width:0">
+        <h2><span class="nm">ℕ</span> · Les entiers naturels</h2>
+        <p class="lead">Les nombres pour <b>compter</b> : positifs et <b>sans virgule</b>.</p>
+        <div><p class="lbl ok">✓ Dedans</p><div class="chips"><span class="chip in">0</span><span class="chip in">1</span><span class="chip in">2</span><span class="chip in">15</span><span class="chip in">2026</span><span class="chip in">√16 <small>= 4</small></span></div></div>
+        <div><p class="lbl no">✗ Pas dedans</p><div class="chips"><span class="chip out">−3</span><span class="chip out">2,5</span><span class="chip out">1/3</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Les 5 ensembles" style="--c:var(--cZ)">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot cZ"></span>Chapitre 1 · Boîte 2 sur 5</p>
+    <div class="setslide">
+      <span class="g3d big" aria-hidden="true">ℤ</span>
+      <div style="display:flex; flex-direction:column; gap:16px; min-width:0">
+        <h2><span class="nm">ℤ</span> · Les entiers relatifs</h2>
+        <p class="lead">Les entiers <b>avec un signe</b> + ou −. C'est ℕ plus les nombres négatifs.</p>
+        <div><p class="lbl ok">✓ Dedans</p><div class="chips"><span class="chip in">−7</span><span class="chip in">−1</span><span class="chip in">0</span><span class="chip in">4</span><span class="chip in">−18/6 <small>= −3</small></span></div></div>
+        <div><p class="lbl no">✗ Pas dedans</p><div class="chips"><span class="chip out">2,5</span><span class="chip out">−0,75</span><span class="chip out">1/3</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Les 5 ensembles" style="--c:var(--cD)">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot cD"></span>Chapitre 1 · Boîte 3 sur 5</p>
+    <div class="setslide">
+      <span class="g3d big" aria-hidden="true">𝔻</span>
+      <div style="display:flex; flex-direction:column; gap:16px; min-width:0">
+        <h2><span class="nm">𝔻</span> · Les nombres décimaux</h2>
+        <p class="lead">Les nombres avec un nombre <b>FINI</b> de chiffres après la virgule. La virgule <b>s'arrête</b>.</p>
+        <div><p class="lbl ok">✓ Dedans</p><div class="chips"><span class="chip in">2,5</span><span class="chip in">−0,75</span><span class="chip in">3,14</span><span class="chip in">8</span><span class="chip in">7/20 <small>= 0,35</small></span></div></div>
+        <div><p class="lbl no">✗ Pas dedans</p><div class="chips"><span class="chip out">1/3 <small>= 0,333…</small></span><span class="chip out">√2</span><span class="chip out">π</span></div></div>
+        <div class="box rule"><span class="tag rule">À retenir</span><p>Un décimal s'écrit <span class="m">a / 10<sup>n</sup></span> avec <span class="m">a ∈ ℤ</span> et <span class="m">n ∈ ℕ</span>. Exemple : <span class="m">2,35 = 235 / 100</span>.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Les 5 ensembles" style="--c:var(--cQ)">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot cQ"></span>Chapitre 1 · Boîte 4 sur 5</p>
+    <div class="setslide">
+      <span class="g3d big" aria-hidden="true">ℚ</span>
+      <div style="display:flex; flex-direction:column; gap:16px; min-width:0">
+        <h2><span class="nm">ℚ</span> · Les nombres rationnels</h2>
+        <p class="lead">Les nombres qui s'écrivent comme <b>une fraction</b> <span class="m">a/b</span> (avec <span class="m">b ≠ 0</span>). Q comme <b>Quotient</b>.</p>
+        <div><p class="lbl ok">✓ Dedans</p><div class="chips"><span class="chip in">1/3</span><span class="chip in">−2/7</span><span class="chip in">0,333…</span><span class="chip in">2,5 <small>= 5/2</small></span></div></div>
+        <div><p class="lbl no">✗ Pas dedans</p><div class="chips"><span class="chip out">√2</span><span class="chip out">√3</span><span class="chip out">π</span></div></div>
+        <div class="box"><span class="tag ex">Exemple</span><p>0,333… ne s'arrête jamais, mais les chiffres <b>se répètent</b>. Il est donc rationnel : c'est 1/3.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Les 5 ensembles" style="--c:var(--cR)">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot cR"></span>Chapitre 1 · Boîte 5 sur 5</p>
+    <div class="setslide">
+      <span class="g3d big" aria-hidden="true">ℝ</span>
+      <div style="display:flex; flex-direction:column; gap:16px; min-width:0">
+        <h2><span class="nm">ℝ</span> · Les nombres réels</h2>
+        <p class="lead"><b>Tous</b> les nombres qu'on peut placer sur une droite graduée. C'est la plus grande boîte.</p>
+        <div><p class="lbl ok">✓ Dedans</p><div class="chips"><span class="chip in">√2</span><span class="chip in">π</span><span class="chip in">√3</span><span class="chip in">−7</span><span class="chip in">1/3</span><span class="chip in">2,5</span></div></div>
+        <div class="box rule"><span class="tag rule">À retenir</span><p>Les <b>irrationnels</b> sont dans ℝ mais <b>pas</b> dans ℚ : √2, √3, √5, π… Leurs chiffres continuent à l'infini <b>sans jamais se répéter</b> (√2 = 1,41421356…).</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Les 5 ensembles">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot cR"></span>Chapitre 1 · Astuces</p>
+    <h2>Retenir les lettres facilement</h2>
+    <div class="tw"><table>
+      <thead><tr><th>Lettre</th><th>Vient de</th><th>Pense à</th></tr></thead>
+      <tbody>
+        <tr><td class="m cN" style="font-size:1.4em">ℕ</td><td><b>N</b>aturel</td><td>Compter des objets : 0, 1, 2, 3…</td></tr>
+        <tr><td class="m cZ" style="font-size:1.4em">ℤ</td><td><b>Z</b>ahl (« nombre » en allemand)</td><td>La température : −5 °C, 0 °C, 12 °C</td></tr>
+        <tr><td class="m cD" style="font-size:1.4em">𝔻</td><td><b>D</b>écimal</td><td>Un prix : 12,50 DH</td></tr>
+        <tr><td class="m cQ" style="font-size:1.4em">ℚ</td><td><b>Q</b>uotient (une division)</td><td>Une part de gâteau : 1/3</td></tr>
+        <tr><td class="m cR" style="font-size:1.4em">ℝ</td><td><b>R</b>éel</td><td>Tous les points de la droite</td></tr>
+      </tbody>
+    </table></div>
+    <div class="box rule"><span class="tag rule">À retenir</span><p>L'étoile <b>*</b> veut dire « <b>sans le 0</b> ». ℕ* = {1 ; 2 ; 3 ; …} et ℤ* = tous les entiers relatifs sauf 0.</p></div>
+  </div>
+</section>
+
+<!-- ===================== 2. SYMBOLES ===================== -->
+<section class="slide" data-ch="Les symboles">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 2 · Les symboles</p>
+    <h2>∈ pour un nombre, ⊂ pour une boîte</h2>
+    <div class="grid2">
+      <div class="box">
+        <h3>Un nombre et une boîte</h3>
+        <div class="formula">5 <span class="eq">∈</span> ℕ</div>
+        <p><b>∈</b> se lit « appartient à ». <b>∉</b> se lit « n'appartient pas à ».</p>
+        <p class="ans"><span><span class="m">−3 ∉ ℕ</span> <span class="why">car −3 est négatif.</span></span></p>
+      </div>
+      <div class="box">
+        <h3>Deux boîtes</h3>
+        <div class="formula">ℕ <span class="eq">⊂</span> ℤ</div>
+        <p><b>⊂</b> se lit « est inclus dans ». <b>⊄</b> se lit « n'est pas inclus dans ».</p>
+        <p class="ans"><span><span class="m">ℚ ⊄ 𝔻</span> <span class="why">car 1/3 est dans ℚ mais pas dans 𝔻.</span></span></p>
+      </div>
+    </div>
+    <div class="box trap"><span class="tag trap">Piège</span><p>On n'écrit <b>JAMAIS</b> « 5 ⊂ ℕ ». 5 est un nombre, pas une boîte : on écrit <span class="ok">5 ∈ ℕ</span>.</p></div>
+  </div>
+</section>
+
+<!-- ===================== 3. MÉTHODES ===================== -->
+<section class="slide" data-ch="Méthodes">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 3 · Méthode A</p>
+    <h2>Est-ce un entier ? Calcule d'abord !</h2>
+    <p class="lead">Un nombre qui a l'air compliqué peut cacher un entier. On cherche toujours <b>la plus petite boîte</b>.</p>
+    <div class="grid3">
+      <div class="box"><span class="tag ex">Exemple</span><div class="formula">12/4 = <span class="eq">3</span></div><p>Donc <span class="m cN">12/4 ∈ ℕ</span></p></div>
+      <div class="box"><span class="tag ex">Exemple</span><div class="formula">√16 = <span class="eq">4</span></div><p>Donc <span class="m cN">√16 ∈ ℕ</span></p></div>
+      <div class="box"><span class="tag ex">Exemple</span><div class="formula">−18/6 = <span class="eq">−3</span></div><p>Donc <span class="m cZ">−18/6 ∈ ℤ</span>, mais pas dans ℕ (il est négatif).</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Méthodes">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 3 · Méthode B</p>
+    <h2>Est-ce un <span class="cD">décimal</span> ? 3 étapes</h2>
+    <div class="box rule"><span class="tag rule">À retenir</span>
+      <ol class="steps">
+        <li><span>On <b>simplifie</b> la fraction au maximum (fraction irréductible).</span></li>
+        <li><span>On décompose le <b>dénominateur</b> (le nombre du bas) en facteurs premiers.</span></li>
+        <li><span>S'il n'y a <b>que des 2 et des 5</b> : <span class="ok">décimal</span>. S'il y a un 3, un 7, un 11… : <span class="no">pas décimal</span>.</span></li>
+      </ol>
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>Fraction</th><th>Simplifiée</th><th>Dénominateur</th><th>Décimal ?</th></tr></thead>
+      <tbody>
+        <tr><td class="m">7/20</td><td class="m">7/20</td><td class="m">20 = 2<sup>2</sup> × 5</td><td class="ok">Oui : 0,35</td></tr>
+        <tr><td class="m">5/12</td><td class="m">5/12</td><td class="m">12 = 2<sup>2</sup> × <b class="no">3</b></td><td class="no">Non (il y a un 3)</td></tr>
+        <tr><td class="m">9/12</td><td class="m">3/4</td><td class="m">4 = 2<sup>2</sup></td><td class="ok">Oui : 0,75</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Méthodes">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--trap)"></span>Chapitre 3 · Méthode B</p>
+    <h2>Le piège : toujours simplifier avant</h2>
+    <div class="box trap"><span class="tag trap">Piège</span>
+      <p>Regarde <span class="m">6/15</span>. Le dénominateur 15 = 3 × 5 contient un 3. On dirait que ce n'est pas un décimal…</p>
+    </div>
+    <div class="grid3">
+      <div class="box"><span class="lbl" style="color:var(--muted)">On simplifie par 3</span><div class="formula">6/15 = <span class="eq">2/5</span></div></div>
+      <div class="box"><span class="lbl" style="color:var(--muted)">Nouveau dénominateur</span><div class="formula">5</div></div>
+      <div class="box rule"><span class="lbl ok">Résultat</span><div class="formula">2/5 = <span class="eq">0,4</span></div></div>
+    </div>
+    <p class="lead">Le 3 a <b>disparu</b>. 6/15 <b>est</b> donc un décimal.</p>
+  </div>
+</section>
+
+<section class="slide" data-ch="Méthodes">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 3 · Méthode C</p>
+    <h2><span class="cQ">Rationnel</span> ou <span class="cR">irrationnel</span> ?</h2>
+    <div class="grid2">
+      <div class="box" style="border-color:color-mix(in srgb,var(--cQ) 55%,var(--line))">
+        <h3 class="cQ">Rationnel (dans ℚ)</h3>
+        <ul class="clean">
+          <li><span>Toute fraction <span class="m">a/b</span></span></li>
+          <li><span>Tout décimal : <span class="m">2,5 = 5/2</span></span></li>
+          <li><span>Les chiffres qui <b>se répètent</b> : 0,333… ou 0,272727…</span></li>
+        </ul>
+      </div>
+      <div class="box" style="border-color:color-mix(in srgb,var(--cR) 55%,var(--line))">
+        <h3 class="cR">Irrationnel (seulement dans ℝ)</h3>
+        <ul class="clean">
+          <li><span>La racine d'un nombre qui <b>n'est pas un carré parfait</b> : √2, √3, √5, √7…</span></li>
+          <li><span>Le nombre <span class="m">π</span></span></li>
+          <li><span>Les chiffres <b>ne se répètent jamais</b></span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Méthodes">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 3 · Méthode D</p>
+    <h2>Transformer 0,333… en fraction</h2>
+    <div class="box rule"><span class="tag rule">À retenir</span>
+      <ol class="steps">
+        <li><span>On appelle le nombre <b>x</b> : <span class="m">x = 0,333…</span></span></li>
+        <li><span>On multiplie par 10 : <span class="m">10x = 3,333…</span></span></li>
+        <li><span>On soustrait : <span class="m">10x − x = 3,333… − 0,333… = 3</span>. Les « 333… » s'annulent !</span></li>
+        <li><span>Donc <span class="m">9x = 3</span>, et <span class="m ok">x = 3/9 = 1/3</span></span></li>
+      </ol>
+    </div>
+    <div class="box"><span class="tag ex">Astuce</span><p>Si <b>deux</b> chiffres se répètent (0,2727…), on multiplie par <b>100</b> au lieu de 10.</p></div>
+  </div>
+</section>
+
+<!-- ===================== 4. PUISSANCES ===================== -->
+<section class="slide" data-ch="Puissances">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 4 · Puissances</p>
+    <h2>Une puissance = une multiplication répétée</h2>
+    <div class="formula">2<sup>4</sup> = 2 × 2 × 2 × 2 = <span class="eq">16</span></div>
+    <p class="lead">Le petit nombre en haut (l'<b>exposant</b>) dit <b>combien de fois</b> on multiplie.</p>
+    <div class="box rule"><span class="tag rule">À retenir (a ≠ 0)</span>
+      <div class="grid3">
+        <div class="formula">a<sup>0</sup> = <span class="eq">1</span></div>
+        <div class="formula">a<sup>1</sup> = <span class="eq">a</span></div>
+        <div class="formula">a<sup>−n</sup> = <span class="eq">1 / a<sup>n</sup></span></div>
+      </div>
+      <p>Exemples : <span class="m">7<sup>0</sup> = 1</span> · <span class="m">7<sup>1</sup> = 7</span> · <span class="m">2<sup>−3</sup> = 1/2<sup>3</sup> = 1/8</span></p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Puissances">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 4 · Puissances</p>
+    <h2>Les 5 règles de calcul</h2>
+    <div class="tw"><table>
+      <thead><tr><th>Situation</th><th>Règle</th><th>Exemple</th></tr></thead>
+      <tbody>
+        <tr><td>Même base, on <b>multiplie</b></td><td class="m">a<sup>n</sup> × a<sup>m</sup> = a<sup>n+m</sup> <span class="ok">(on additionne)</span></td><td class="m">2<sup>3</sup> × 2<sup>4</sup> = 2<sup>7</sup></td></tr>
+        <tr><td>Même base, on <b>divise</b></td><td class="m">a<sup>n</sup> / a<sup>m</sup> = a<sup>n−m</sup> <span class="ok">(on soustrait)</span></td><td class="m">5<sup>6</sup> / 5<sup>2</sup> = 5<sup>4</sup></td></tr>
+        <tr><td>Puissance d'une puissance</td><td class="m">(a<sup>n</sup>)<sup>m</sup> = a<sup>n×m</sup> <span class="ok">(on multiplie)</span></td><td class="m">(3<sup>2</sup>)<sup>3</sup> = 3<sup>6</sup></td></tr>
+        <tr><td>Même exposant</td><td class="m">a<sup>n</sup> × b<sup>n</sup> = (a × b)<sup>n</sup></td><td class="m">2<sup>3</sup> × 5<sup>3</sup> = 10<sup>3</sup></td></tr>
+        <tr><td>Une fraction</td><td class="m">(a/b)<sup>n</sup> = a<sup>n</sup> / b<sup>n</sup></td><td class="m">(2/3)<sup>2</sup> = 4/9</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Puissances">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--trap)"></span>Chapitre 4 · Puissances</p>
+    <h2>Le signe : pair ou impair ?</h2>
+    <div class="grid2">
+      <div class="box rule"><span class="tag rule">Exposant pair</span><div class="formula">(−2)<sup>4</sup> = <span class="eq">16</span></div><p>Résultat <b>positif</b> (les signes moins s'annulent deux par deux).</p></div>
+      <div class="box rule"><span class="tag rule">Exposant impair</span><div class="formula">(−2)<sup>3</sup> = <span class="eq">−8</span></div><p>Résultat <b>négatif</b> (il reste un signe moins).</p></div>
+    </div>
+    <div class="box trap"><span class="tag trap">Piège très fréquent</span>
+      <div class="grid2">
+        <div class="formula">(−3)<sup>2</sup> = (−3) × (−3) = <span class="ok">9</span></div>
+        <div class="formula">−3<sup>2</sup> = −(3 × 3) = <span class="no">−9</span></div>
+      </div>
+      <p>Sans parenthèses, le carré touche <b>seulement le 3</b>, pas le signe moins.</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Puissances">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 4 · Puissances</p>
+    <h2>L'écriture scientifique</h2>
+    <div class="box rule"><span class="tag rule">À retenir</span><p>On écrit le nombre sous la forme <span class="m">a × 10<sup>n</sup></span> avec <b>un seul chiffre non nul avant la virgule</b> (1 ≤ a &lt; 10).</p></div>
+    <div class="grid2">
+      <div class="box"><span class="tag ex">Grand nombre</span><div class="formula">45 000 = <span class="eq">4,5 × 10<sup>4</sup></span></div><p>La virgule bouge de <b>4 rangs vers la gauche</b> : exposant <b>positif</b>.</p></div>
+      <div class="box"><span class="tag ex">Petit nombre</span><div class="formula">0,0032 = <span class="eq">3,2 × 10<sup>−3</sup></span></div><p>La virgule bouge de <b>3 rangs vers la droite</b> : exposant <b>négatif</b>.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 5. RACINES ===================== -->
+<section class="slide" data-ch="Racines carrées">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 5 · Racines carrées</p>
+    <h2>√a, c'est le nombre positif qui, au carré, donne a</h2>
+    <div class="formula">√9 = <span class="eq">3</span> &nbsp;car&nbsp; 3 × 3 = 9</div>
+    <div class="box rule"><span class="tag rule">Les carrés parfaits à connaître</span>
+      <div class="chips">
+        <span class="chip in">√1 = 1</span><span class="chip in">√4 = 2</span><span class="chip in">√9 = 3</span><span class="chip in">√16 = 4</span><span class="chip in">√25 = 5</span><span class="chip in">√36 = 6</span><span class="chip in">√49 = 7</span><span class="chip in">√64 = 8</span><span class="chip in">√81 = 9</span><span class="chip in">√100 = 10</span><span class="chip in">√121 = 11</span><span class="chip in">√144 = 12</span>
+      </div>
+    </div>
+    <div class="box trap"><span class="tag trap">Attention</span><p><span class="m">√(−4)</span> n'existe pas dans ℝ. On ne prend <b>jamais</b> la racine d'un nombre négatif.</p></div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Racines carrées">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 5 · Racines carrées</p>
+    <h2>Les règles de calcul</h2>
+    <div class="tw"><table>
+      <thead><tr><th>Règle (a ≥ 0, b &gt; 0)</th><th>Exemple</th></tr></thead>
+      <tbody>
+        <tr><td class="m">√(a × b) = √a × √b</td><td class="m">√(4 × 9) = 2 × 3 = 6</td></tr>
+        <tr><td class="m">√(a / b) = √a / √b</td><td class="m">√(9/25) = 3/5</td></tr>
+        <tr><td class="m">(√a)<sup>2</sup> = a</td><td class="m">(√7)<sup>2</sup> = 7</td></tr>
+        <tr><td class="m">√(a<sup>2</sup>) = a si a ≥ 0, et −a si a &lt; 0</td><td class="m">√((−3)<sup>2</sup>) = √9 = 3</td></tr>
+      </tbody>
+    </table></div>
+    <div class="box trap"><span class="tag trap">Piège</span>
+      <p><span class="m">√(a + b)</span> n'est <b>PAS</b> égal à <span class="m">√a + √b</span>. La preuve :</p>
+      <div class="grid2">
+        <div class="formula">√(9 + 16) = √25 = <span class="ok">5</span></div>
+        <div class="formula">√9 + √16 = 3 + 4 = <span class="no">7</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Racines carrées">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 5 · Racines carrées</p>
+    <h2>Simplifier et additionner</h2>
+    <div class="grid2">
+      <div class="box rule"><span class="tag rule">Simplifier</span>
+        <p>On cherche le <b>plus grand carré parfait</b> qui divise le nombre.</p>
+        <div class="formula">√50 = √(25 × 2) = <span class="eq">5√2</span></div>
+        <div class="formula">√72 = √(36 × 2) = <span class="eq">6√2</span></div>
+      </div>
+      <div class="box rule"><span class="tag rule">Additionner</span>
+        <p>On additionne seulement les racines <b>identiques</b>, comme des pommes : 3 pommes + 5 pommes = 8 pommes.</p>
+        <div class="formula">3√2 + 5√2 = <span class="eq">8√2</span></div>
+        <p class="why" style="color:var(--muted)"><span class="m">√2 + √3</span> ne se simplifie pas : ce ne sont pas les mêmes « pommes ».</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Racines carrées">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 5 · Racines carrées</p>
+    <h2>Enlever la racine du dénominateur</h2>
+    <div class="grid2">
+      <div class="box"><span class="tag ex">Racine seule en bas</span>
+        <p>On multiplie <b>en haut et en bas</b> par cette racine.</p>
+        <div class="formula">1/√2 = (1 × √2)/(√2 × √2) = <span class="eq">√2 / 2</span></div>
+      </div>
+      <div class="box"><span class="tag ex">Somme ou différence en bas</span>
+        <p>On multiplie par le <b>conjugué</b> : on change le signe du milieu.</p>
+        <div class="formula" style="font-size:clamp(1.05rem,.9rem + 1vw,1.5rem)">1/(√3 − 1) = (√3 + 1)/(3 − 1) = <span class="eq">(√3 + 1)/2</span></div>
+      </div>
+    </div>
+    <div class="box rule"><span class="tag rule">Pourquoi ça marche</span><p><span class="m">(√3 − 1)(√3 + 1) = (√3)<sup>2</sup> − 1<sup>2</sup> = 3 − 1 = 2</span>. La racine disparaît grâce à l'identité <span class="m">(a − b)(a + b) = a<sup>2</sup> − b<sup>2</sup></span>.</p></div>
+  </div>
+</section>
+
+<!-- ===================== 6. IDENTITÉS ===================== -->
+<section class="slide" data-ch="Identités remarquables">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 6 · Identités remarquables</p>
+    <h2>3 formules à connaître par cœur</h2>
+    <div class="box rule"><span class="tag rule">À retenir</span>
+      <div class="formula">(a + b)<sup>2</sup> = a<sup>2</sup> <span class="eq">+ 2ab</span> + b<sup>2</sup></div>
+      <div class="formula">(a − b)<sup>2</sup> = a<sup>2</sup> <span class="eq">− 2ab</span> + b<sup>2</sup></div>
+      <div class="formula">(a + b)(a − b) = a<sup>2</sup> <span class="eq">−</span> b<sup>2</sup></div>
+    </div>
+    <div class="grid2">
+      <div class="box"><span class="lbl ok">→ Développer</span><p>De gauche à droite : on <b>enlève</b> les parenthèses.</p></div>
+      <div class="box"><span class="lbl ok">← Factoriser</span><p>De droite à gauche : on <b>remet</b> les parenthèses.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Identités remarquables">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 6 · Identités remarquables</p>
+    <h2>Développer et factoriser</h2>
+    <div class="grid2">
+      <div class="box"><span class="tag ex">Développer</span>
+        <ul class="clean">
+          <li><span class="m">(x + 3)<sup>2</sup> = x<sup>2</sup> + 2 × x × 3 + 3<sup>2</sup> = <b class="ok">x<sup>2</sup> + 6x + 9</b></span></li>
+          <li><span class="m">(2x − 1)<sup>2</sup> = 4x<sup>2</sup> − 4x + 1</span></li>
+          <li><span class="m">(x + 5)(x − 5) = x<sup>2</sup> − 25</span></li>
+        </ul>
+      </div>
+      <div class="box"><span class="tag ex">Factoriser</span>
+        <ul class="clean">
+          <li><span class="m">x<sup>2</sup> + 10x + 25 = <b class="ok">(x + 5)<sup>2</sup></b></span></li>
+          <li><span class="m">x<sup>2</sup> − 49 = (x − 7)(x + 7)</span></li>
+          <li><span class="m">9x<sup>2</sup> − 12x + 4 = (3x − 2)<sup>2</sup></span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="box trap"><span class="tag trap">Piège</span><p><span class="m">(x + 3)<sup>2</sup></span> n'est <b>PAS</b> égal à <span class="m">x<sup>2</sup> + 9</span>. N'oublie jamais le terme du milieu <span class="m hl">2ab</span>.</p></div>
+  </div>
+</section>
+
+<section class="slide" data-ch="Identités remarquables">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--rule)"></span>Chapitre 6 · Identités remarquables</p>
+    <h2>Avec des racines, et au cube</h2>
+    <div class="grid2">
+      <div class="box"><span class="tag ex">Avec des racines</span>
+        <div class="formula" style="font-size:clamp(1.05rem,.9rem + 1vw,1.45rem)">(√3 + 1)<sup>2</sup> = 3 + 2√3 + 1 = <span class="eq">4 + 2√3</span></div>
+        <div class="formula" style="font-size:clamp(1.05rem,.9rem + 1vw,1.45rem)">(√5 − √2)(√5 + √2) = 5 − 2 = <span class="eq">3</span></div>
+      </div>
+      <div class="box rule"><span class="tag rule">Pour aller plus loin : au cube</span>
+        <ul class="clean m">
+          <li><span>(a + b)<sup>3</sup> = a<sup>3</sup> + 3a<sup>2</sup>b + 3ab<sup>2</sup> + b<sup>3</sup></span></li>
+          <li><span>(a − b)<sup>3</sup> = a<sup>3</sup> − 3a<sup>2</sup>b + 3ab<sup>2</sup> − b<sup>3</sup></span></li>
+          <li><span>a<sup>3</sup> − b<sup>3</sup> = (a − b)(a<sup>2</sup> + ab + b<sup>2</sup>)</span></li>
+          <li><span>a<sup>3</sup> + b<sup>3</sup> = (a + b)(a<sup>2</sup> − ab + b<sup>2</sup>)</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 7. EXERCICES ===================== -->
+<section class="slide" data-ch="Exercices">
+  <div class="sheet">
+    <p class="eyebrow"><span class="dot" style="color:var(--exo)"></span>Chapitre 7 · Exercices</p>
+    <h2>À toi de jouer : 12 cartes</h2>
+    <p class="lead">Chaque carte a <b class="hl">l'énoncé</b> devant et <b class="ok">la correction</b> derrière. Cherche d'abord sur ton cahier, <b>puis</b> retourne la carte.</p>
+    <div class="grid3">
+      <div class="box exo"><div class="lvl"><i class="on"></i><i></i><i></i><span>Niveau 1 · facile</span></div><p>Exercices 1 à 3 : les ensembles et les symboles.</p></div>
+      <div class="box exo"><div class="lvl"><i class="on"></i><i class="on"></i><i></i><span>Niveau 2 · moyen</span></div><p>Exercices 4 à 8 : décimaux, puissances, racines.</p></div>
+      <div class="box exo"><div class="lvl"><i class="on"></i><i class="on"></i><i class="on"></i><span>Niveau 3 · plus dur</span></div><p>Exercices 9 à 12 : conjugué, identités, fractions.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- Ex 1 -->
+<section class="slide" data-ch="Exercices">
+  <div class="sheet">
+    <div class="card">
+      <div class="card-inner">
+        <div class="face front">
+          <div class="facehead"><span class="tag exo">Exercice 1</span><div class="lvl"><i class="on"></i><i></i><i></i><span>Facile</span></div></div>
+          <h3>Compléter avec ∈ ou ∉</h3>
+          <div class="items">
+            <div class="item">7 … ℕ</div><div class="item">−3 … ℕ</div><div class="item">−3 … ℤ</div><div class="item">2,5 … ℤ</div><div class="item">2,5 … 𝔻</div>
+            <div class="item">1/3 … 𝔻</div><div class="item">1/3 … ℚ</div><div class="item">√2 … ℚ</div><div class="item">√2 … ℝ</div><div class="item">√25 … ℕ</div>
+          </div>
+          <p class="think">Réfléchis d'abord, puis retourne la carte.</p>
+          <button type="button" class="flip">Voir la correction ↻</button>
+        </div>
+        <div class="face back">
+          <div class="facehead"><span class="tag rule">Correction 1</span></div>
+          <div class="ans"><ul>
+            <li><span class="r">7 ∈ ℕ</span> <span class="why">entier positif</span></li>
+            <li><span class="r">−3 ∉ ℕ</span> <span class="why">il est négatif</span> · mais <span class="r">−3 ∈ ℤ</span></li>
+            <li><span class="r">2,5 ∉ ℤ</span> <span class="why">il a une virgule</span> · mais <span class="r">2,5 ∈ 𝔻</span></li>
+            <li><span class="r">1/3 ∉ 𝔻</span> <span class="why">0,333… ne s'arrête jamais</span> · mais <span class="r">1/3 ∈ ℚ</span> <span class="why">c'est une fraction</span></li>
+            <li><span class="r">√2 ∉ ℚ</span> <span class="why">√2 est irrationnel</span> · mais <span class="r">√2 ∈ ℝ</span></li>
+            <li><span class="r">√25 ∈ ℕ</span> <span class="why">car √25 = 5</span></li>
+          </ul></div>
+          <button type="button" class="flip">↺ Revoir l'énoncé</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ex 2 -->
+<section class="slide" data-ch="Exercices">
+  <div class="sheet">
+    <div class="card">
+      <div class="card-inner">
+        <div class="face front">
+          <div class="facehead"><span class="tag exo">Exercice 2</span><div class="lvl"><i class="on"></i><i></i><i></i><span>Facile</span></div></div>
+          <h3>Compléter avec ⊂ ou ⊄</h3>
+          <div class="items"><div class="item">ℕ … ℤ</div><div class="item">ℚ … 𝔻</div><div class="item">𝔻 … ℚ</div><div class="item">ℝ … ℚ</div></div>
+          <p class="think">Astuce : pense aux 5 boîtes rangées l'une dans l'autre.</p>
+          <button type="button" class="flip">Voir la correction ↻</button>
+        </div>
+        <div class="face back">
+          <div class="facehead"><span class="tag rule">Correction 2</span></div>
+          <div class="ans"><ul>
+            <li><span class="r">ℕ ⊂ ℤ</span> <span class="why">tout entier naturel est un entier relatif</span></li>
+            <li><span class="r">ℚ ⊄ 𝔻</span> <span class="why">1/3 est dans ℚ mais pas dans 𝔻</span></li>
+            <li><span class="r">𝔻 ⊂ ℚ</span> <span class="why">tout décimal s'écrit en fraction : 2,5 = 25/10</span></li>
+            <li><span class="r">ℝ ⊄ ℚ</span> <span class="why">√2 est dans ℝ mais pas dans ℚ</span></li>
+          </ul></div>
+          <button type="button" class="flip">↺ Revoir l'énoncé</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ex 3 -->
+<section class="slide" data-ch="Exercices">
+  <div class="sheet">
+    <div class="card">
+      <div class="card-inner">
+        <div class="face front">
+          <div class="facehead"><span class="tag exo">Exercice 3</span><div class="lvl"><i class="on"></i><i></i><i></i><span>Facile</span></div></div>
+          <h3>Donner la plus petite boîte qui contient chaque nombre</h3>
+          <div class="items"><div class="item">12/3</div><div class="item">−20/5</div><div class="item">7/4</div><div class="item">2/3</div><div class="item">√49</div><div class="item">√3</div><div class="item">−0,6</div><div class="item">π</div></div>
+          <p class="think">Calcule d'abord quand c'est possible (méthode A).</p>
+          <button type="button" class="flip">Voir la correction ↻</button>
+        </div>
+        <div class="face back">
+          <div class="facehead"><span class="tag rule">Correction 3</span></div>
+          <div class="tw"><table>
+            <thead><tr><th>Nombre</th><th>Calcul</th><th>Plus petite boîte</th></tr></thead>
+            <tbody>
+              <tr><td class="m">12/3</td><td class="m">= 4</td><td class="m cN">ℕ</td></tr>
+              <tr><td class="m">−20/5</td><td class="m">= −4</td><td class="m cZ">ℤ</td></tr>
+              <tr><td class="m">7/4</td><td class="m">= 1,75</td><td class="m cD">𝔻</td></tr>
+              <tr><td class="m">2/3</td><td>= 0,666… ne s'arrête pas</td><td class="m cQ">ℚ</td></tr>
+              <tr><td class="m">√49</td><td class="m">= 7</td><td class="m cN">ℕ</td></tr>
+              <tr><td class="m">√3</td><td>3 n'est pas un carré parfait</td><td class="m cR">ℝ</td></tr>
+              <tr><td class="m">−0,6</td><td>virgule qui s'arrête</td><td class="m cD">𝔻</td></tr>
+              <tr><td class="m">π</td><td>irrationnel</td><td class="m cR">ℝ</td></tr>
+            </tbody>
+          </table></div>
+          <button type="button" class="flip">↺ Revoir l'énoncé</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ex 4 -->
+<section class="slide" data-ch="Exercices">
+  <div class="sheet">
+    <div class="card">
+      <div class="card-inner">
+        <div class="face front">
+          <div class="facehead"><span class="tag exo">Exercice 4</span><div class="lvl"><i class="on"></i><i class="on"></i><i></i><span>Moyen</span></div></div>
+          <h3>Ces fractions sont-elles des décimaux ? Justifier.</h3>
+          <div class="items"><div class="item">3/8</div><div class="item">7/30</div><div class="item">21/35</div><div class="item">11/12</div><div class="item">18/24</div></div>
+          <p class="think">Utilise les 3 étapes de la méthode B. N'oublie pas de simplifier !</p>
+          <button type="button" class="flip">Voir la correction ↻</button>
+        </div>
+        <div class="face back">
+          <div class="facehead"><span class="tag rule">Correction 4</span></div>
+          <div class="tw"><table>
+            <thead><tr><th>Fraction</th><th>Simplifiée</th><th>Dénominateur</th><th>Décimal ?</th></tr></thead>
+            <tbody>
+              <tr><td class="m">3/8</td><td class="m">3/8</td><td class="m">8 = 2<sup>3</sup></td><td class="ok">Oui : 0,375</td></tr>
+              <tr><td class="m">7/30</td><td class="m">7/30</td><td class="m">30 = 2 × <b class="no">3</b> × 5</td><td class="no">Non</td></tr>
+              <tr><td class="m">21/35</td><td class="m">3/5 <span class="why" style="color:var(--muted)">(÷ 7)</span></td><td class="m">5</td><td class="ok">Oui : 0,6</td></tr>
+              <tr><td class="m">11/12</td><td class="m">11/12</td><td class="m">12 = 2<sup>2</sup> × <b class="no">3</b></td><td class="no">Non</td></tr>
+              <tr><td class="m">18/24</td><td class="m">3/4 <span class="why" style="color:var(--muted)">(÷ 6)</span></td><td class="m">4 = 2<sup>2</sup></td><td class="ok">Oui : 0,75</td></tr>
+            </tbody>
+          </table></div>
+          <button type="button" class="flip">↺ Revoir l'énoncé</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ex 5 -->
+<section class="slide" data-ch="Exercices">
+  <div class="sheet">
+    <div class="card">
+      <div class="card-inner">
+        <div class="face front">
+          <div class="facehead"><span class="tag exo">Exercice 5</span><div class="lvl"><i class="on"></i><i class="on"></i><i></i><span>Moyen</span></div></div>
+          <h3>Écrire sous la forme d'une seule puissance</h3>
+          <div class="items"><div class="item">3<sup>4</sup> × 3<sup>5</sup></div><div class="item">7<sup>8</sup> / 7<sup>3</sup></div><div class="item">(2<sup>3</sup>)<sup>4</sup></div><div class="item">5<sup>−2</sup> × 5<sup>6</sup></div><div class="item">2<sup>5</sup> × 5<sup>5</sup></div></div>
+          <p class="think">Regarde le tableau des 5 règles.</p>
+          <button type="button" class="flip">Voir la correction ↻</button>
+        </div>
+        <div class="face back">
+          <div class="facehead"><span class="tag rule">Correction 5</span></div>
+          <div class="ans m"><ul>
+            <li>3<sup>4</sup> × 3<sup>5</sup> = 3<sup>4+5</sup> = <span class="r">3<sup>9</sup></span></li>
+            <li>7<sup>8</sup> / 7<sup>3</sup> = 7<sup>8−3</sup> = <span class="r">7<sup>5</sup></span></li>
+            <li>(2<sup>3</sup>)<sup>4</sup> = 2<sup>3×4</sup> = <span class="r">2<sup>12</sup></span></li>
+            <li>5<sup>−2</sup> × 5<sup>6</sup> = 5<sup>−2+6</sup> = <span class="r">5<sup>4</sup></span></li>
+            <li>2<sup>5</sup> × 5<sup>5</sup> = (2 × 5)<sup>5</sup> = <span class="r">10<sup>5</sup></span></li>
+          </ul></div>
+          <button type="button" class="flip">↺ Revoir l'énoncé</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ex 6 -->
+<section class="slide" data-ch="Exercices">
+  <div class="sheet">
+    <div class="card">
+      <div class="card-inner">
+        <div class="face front">
+          <div class="facehead"><span class="tag exo">Exercice 6</span><div class="lvl"><i class="on"></i><i class="on"></i><i></i><span>Moyen</span></div></div>
+          <h3>Calculer</h3>
+          <div class="items"><div class="item">(−1)<sup>2026</sup></div><div class="item">(−1)<sup>2027</sup></div><div class="item">−3<sup>2</sup></div><div class="item">(−3)<sup>2</sup></div><div class="item">2<sup>−3</sup></div></div>
+          <p class="think">Attention aux parenthèses et au pair / impair.</p>
+          <button type="button" class="flip">Voir la correction ↻</button>
+        </div>
+        <div class="face back">
+          <div class="facehead"><span class="tag rule">Correction 6</span></div>
+          <div class="ans"><ul>
+            <li><span class="m">(−1)<sup>2026</sup> = </span><span class="r">1</span> <span class="why">2026 est pair</span></li>
+            <li><span class="m">(−1)<sup>2027</sup> = </span><span class="r">−1</span> <span class="why">2027 est impair</span></li>
+            <li><span class="m">−3<sup>2</sup> = −(3 × 3) = </span><span class="r">−9</span> <span class="why">le carré touche seulement le 3</span></li>
+            <li><span class="m">(−3)<sup>2</sup> = (−3) × (−3) = </span><span class="r">9</span></li>
+            <li><span class="m">2<sup>−3</sup> = 1/2<sup>3</sup> = </span><span class="r">1/8 = 0,125</span></li>
+          </ul></div>
+          <button type="button" class="flip">↺ Revoir l'énoncé</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ex 7 -->
+<section class="slide" data-ch="Exercices">
+  <div class="sheet">
+    <div class="card">
+      <div class="card-inner">
+        <div class="face front">
+          <div class="facehead"><span class="tag exo">Exercice 7</span><div class="lvl"><i class="on"></i><i class="on"></i><i></i><span>Moyen</span></div></div>
+          <h3>Donner l'écriture scientifique</h3>
+          <div class="items"><div class="item">320 000</div><div class="item">0,00071</div><div class="item">15 × 10<sup>3</sup></div></div>
+          <p class="think">Un seul chiffre non nul avant la virgule.</p>
+          <button type="button" class="flip">Voir la correction ↻</button>
+        </div>
+        <div class="face back">
+          <div class="facehead"><span class="tag rule">Correction 7</span></div>
+          <div class="ans"><ul>
+            <li><span class="m">320 000 = </span><span class="r">3,2 × 10<sup>5</sup></span> <span class="why">la virgule bouge de 5 rangs à gauche</span></li>
+            <li><span class="m">0,00071 = </span><span class="r">7,1 × 10<sup>−4</sup></span> <span class="why">la virgule bouge de 4 rangs à droite</span></li>
+            <li><span class="m">15 × 10<sup>3</sup> = 1,5 × 10 × 10<sup>3</sup> = </span><span class="r">1,5 × 10<sup>4</sup></span> <span class="why">15 a deux chiffres avant la virgule, il faut corriger</span></li>
+          </ul></div>
+          <button type="button" class="flip">↺ Revoir l'énoncé</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ex 8 -->
+<section class="slide" data-ch="Exercices">
+  <div class="sheet">
+    <div class="card">
+      <div class="card-inner">
+        <div class="face front">
+          <div class="facehead"><span class="tag exo">Exercice 8</span><div class="lvl"><i class="on"></i><i class="on"></i><i></i><span>Moyen</span></div></div>
+          <h3>Simplifier</h3>
+          <div class="items"><div class="item">√18</div><div class="item">√75</div><div class="item">√200</div><div class="item">2√3 + 5√3 − √3</div><div class="item">√12 + √27</div></div>
+          <p class="think">Cherche le plus grand carré parfait caché sous la racine.</p>
+          <button type="button" class="flip">Voir la correction ↻</button>
+        </div>
+        <div class="face back">
+          <div class="facehead"><span class="tag rule">Correction 8</span></div>
+          <div class="ans m"><ul>
+            <li>√18 = √(9 × 2) = <span class="r">3√2</span></li>
+            <li>√75 = √(25 × 3) = <span class="r">5√3</span></li>
+            <li>√200 = √(100 × 2) = <span class="r">10√2</span></li>
+            <li>2√3 + 5√3 − √3 = (2 + 5 − 1)√3 = <span class="r">6√3</span></li>
+            <li>√12 + √27 = √(4 × 3) + √(9 × 3) = 2√3 + 3√3 = <span class="r">5√3</span></li>
+          </ul></div>
+          <button type="button" class="flip">↺ Revoir l'énoncé</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ex 9 -->
+<section class="slide" data-ch="Exercices">
+  <div class="sheet">
+    <div class="card">
+      <div class="card-inner">
+        <div class="face front">
+          <div class="facehead"><span class="tag exo">Exercice 9</span><div class="lvl"><i class="on"></i><i class="on"></i><i class="on"></i><span>Plus dur</span></div></div>
+          <h3>Écrire sans racine au dénominateur</h3>
+          <div class="items"><div class="item">3/√3</div><div class="item">1/(√5 − 2)</div></div>
+          <p class="think">Racine seule : multiplie par elle-même. Différence : multiplie par le conjugué.</p>
+          <button type="button" class="flip">Voir la correction ↻</button>
+        </div>
+        <div class="face back">
+          <div class="facehead"><span class="tag rule">Correction 9</span></div>
+          <div class="ans"><ul>
+            <li><span class="m">3/√3 = (3 × √3)/(√3 × √3) = 3√3/3 = </span><span class="r">√3</span></li>
+            <li><span class="m">1/(√5 − 2)</span> : on multiplie par le conjugué <span class="m">(√5 + 2)</span>.</li>
+            <li><span class="why">En bas :</span> <span class="m">(√5 − 2)(√5 + 2) = (√5)<sup>2</sup> − 2<sup>2</sup> = 5 − 4 = 1</span></li>
+            <li><span class="why">Donc :</span> <span class="m">1/(√5 − 2) = (√5 + 2)/1 = </span><span class="r">√5 + 2</span></li>
+          </ul></div>
+          <button type="button" class="flip">↺ Revoir l'énoncé</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ex 10 -->
+<section class="slide" data-ch="Exercices">
+  <div class="sheet">
+    <div class="card">
+      <div class="card-inner">
+        <div class="face front">
+          <div class="facehead"><span class="tag exo">Exercice 10</span><div class="lvl"><i class="on"></i><i class="on"></i><i class="on"></i><span>Plus dur</span></div></div>
+          <h3>Développer</h3>
+          <div class="items"><div class="item">(x + 4)<sup>2</sup></div><div class="item">(3x − 2)<sup>2</sup></div><div class="item">(2x + 5)(2x − 5)</div><div class="item">(√2 + 1)<sup>2</sup></div></div>
+          <p class="think">Repère d'abord quelle identité utiliser.</p>
+          <button type="button" class="flip">Voir la correction ↻</button>
+        </div>
+        <div class="face back">
+          <div class="facehead"><span class="tag rule">Correction 10</span></div>
+          <div class="ans m"><ul>
+            <li>(x + 4)<sup>2</sup> = x<sup>2</sup> + 2 × x × 4 + 4<sup>2</sup> = <span class="r">x<sup>2</sup> + 8x + 16</span></li>
+            <li>(3x − 2)<sup>2</sup> = (3x)<sup>2</sup> − 2 × 3x × 2 + 2<sup>2</sup> = <span class="r">9x<sup>2</sup> − 12x + 4</span></li>
+            <li>(2x + 5)(2x − 5) = (2x)<sup>2</sup> − 5<sup>2</sup> = <span class="r">4x<sup>2</sup> − 25</span></li>
+            <li>(√2 + 1)<sup>2</sup> = 2 + 2√2 + 1 = <span class="r">3 + 2√2</span></li>
+          </ul></div>
+          <button type="button" class="flip">↺ Revoir l'énoncé</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ex 11 -->
+<section class="slide" data-ch="Exercices">
+  <div class="sheet">
+    <div class="card">
+      <div class="card-inner">
+        <div class="face front">
+          <div class="facehead"><span class="tag exo">Exercice 11</span><div class="lvl"><i class="on"></i><i class="on"></i><i class="on"></i><span>Plus dur</span></div></div>
+          <h3>Factoriser</h3>
+          <div class="items"><div class="item">x<sup>2</sup> − 6x + 9</div><div class="item">4x<sup>2</sup> − 25</div><div class="item">x<sup>2</sup> + 14x + 49</div></div>
+          <p class="think">Lis les identités de droite à gauche.</p>
+          <button type="button" class="flip">Voir la correction ↻</button>
+        </div>
+        <div class="face back">
+          <div class="facehead"><span class="tag rule">Correction 11</span></div>
+          <div class="ans m"><ul>
+            <li>x<sup>2</sup> − 6x + 9 = x<sup>2</sup> − 2 × x × 3 + 3<sup>2</sup> = <span class="r">(x − 3)<sup>2</sup></span></li>
+            <li>4x<sup>2</sup> − 25 = (2x)<sup>2</sup> − 5<sup>2</sup> = <span class="r">(2x − 5)(2x + 5)</span></li>
+            <li>x<sup>2</sup> + 14x + 49 = x<sup>2</sup> + 2 × x × 7 + 7<sup>2</sup> = <span class="r">(x + 7)<sup>2</sup></span></li>
+          </ul></div>
+          <button type="button" class="flip">↺ Revoir l'énoncé</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ex 12 -->
+<section class="slide" data-ch="Exercices">
+  <div class="sheet">
+    <div class="card">
+      <div class="card-inner">
+        <div class="face front">
+          <div class="facehead"><span class="tag exo">Exercice 12</span><div class="lvl"><i class="on"></i><i class="on"></i><i class="on"></i><span>Plus dur</span></div></div>
+          <h3>Deux questions</h3>
+          <ol class="steps">
+            <li><span>Écrire <span class="m">x = 0,444…</span> sous forme de fraction.</span></li>
+            <li><span>Montrer que <span class="m">A = (√7 − √3)(√7 + √3)</span> est un entier naturel.</span></li>
+          </ol>
+          <p class="think">Question 1 : méthode D. Question 2 : identité (a − b)(a + b).</p>
+          <button type="button" class="flip">Voir la correction ↻</button>
+        </div>
+        <div class="face back">
+          <div class="facehead"><span class="tag rule">Correction 12</span></div>
+          <div class="ans"><ul>
+            <li><b>1.</b> <span class="m">x = 0,444…</span> donc <span class="m">10x = 4,444…</span></li>
+            <li><span class="m">10x − x = 4,444… − 0,444… = 4</span>, donc <span class="m">9x = 4</span> et <span class="r">x = 4/9</span></li>
+            <li><b>2.</b> <span class="m">A = (√7)<sup>2</sup> − (√3)<sup>2</sup> = 7 − 3 = </span><span class="r">4</span></li>
+            <li>Et <span class="m">4 ∈ ℕ</span>, donc A est bien un entier naturel.</li>
+          </ul></div>
+          <button type="button" class="flip">↺ Revoir l'énoncé</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FIN ===================== -->
+<section class="slide" data-ch="Fin">
+  <div class="sheet end">
+    <p class="eyebrow">Fin du cours</p>
+    <h2>Bravo, tu as tout vu !</h2>
+    <div class="setrow" aria-hidden="true">
+      <span class="g3d cN">ℕ</span><span class="sub">⊂</span><span class="g3d cZ">ℤ</span><span class="sub">⊂</span><span class="g3d cD">𝔻</span><span class="sub">⊂</span><span class="g3d cQ">ℚ</span><span class="sub">⊂</span><span class="g3d cR">ℝ</span>
+    </div>
+    <div class="box rule"><span class="tag rule">Les 5 idées à garder</span>
+      <ol class="steps">
+        <li><span>Les 5 boîtes : <span class="m">ℕ ⊂ ℤ ⊂ 𝔻 ⊂ ℚ ⊂ ℝ</span>.</span></li>
+        <li><span><b>∈</b> pour un nombre, <b>⊂</b> pour une boîte.</span></li>
+        <li><span>Décimal : on simplifie, puis seulement des 2 et des 5 en bas.</span></li>
+        <li><span><span class="m">√(a + b) ≠ √a + √b</span> et <span class="m">−3<sup>2</sup> ≠ (−3)<sup>2</sup></span>.</span></li>
+        <li><span>Dans <span class="m">(a + b)<sup>2</sup></span>, n'oublie jamais <span class="m hl">2ab</span>.</span></li>
+      </ol>
+    </div>
+    <div><button type="button" class="flip" id="restart" style="background:var(--cR); color:var(--bg)">↺ Recommencer depuis le début</button></div>
+  </div>
+</section>
+
+</main>
+
+<nav class="bar" aria-label="Navigation des slides">
+  <button type="button" class="navbtn" id="prev" aria-label="Slide précédente">←</button>
+  <div class="prog">
+    <div class="prog-top"><span class="chap" id="chap">Accueil</span><span class="count" id="count">1 / 1</span></div>
+    <div class="track"><div class="fill" id="fill"></div></div>
+  </div>
+  <label for="jump" style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)">Aller au chapitre</label>
+  <select class="jump" id="jump"></select>
+  <button type="button" class="navbtn" id="next" aria-label="Slide suivante">→</button>
+</nav>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var n = slides.length, cur = 0;
+  var fill = document.getElementById('fill'), count = document.getElementById('count'), chap = document.getElementById('chap');
+  var prev = document.getElementById('prev'), next = document.getElementById('next'), jump = document.getElementById('jump');
+
+  // chapitres dans l'ordre
+  var chapters = [];
+  slides.forEach(function(s, k){
+    var c = s.getAttribute('data-ch');
+    if (!chapters.some(function(x){ return x.name === c; })) chapters.push({ name: c, first: k });
+  });
+  chapters.forEach(function(c){
+    var o = document.createElement('option'); o.value = c.first; o.textContent = c.name; jump.appendChild(o);
+  });
+  function firstOf(name){ for (var i=0;i<chapters.length;i++) if (chapters[i].name===name) return chapters[i].first; return 0; }
+
+  function syncFaces(card){
+    var f = card.classList.contains('flipped');
+    var front = card.querySelector('.front'), back = card.querySelector('.back');
+    front.inert = f; back.inert = !f;
+    front.setAttribute('aria-hidden', f); back.setAttribute('aria-hidden', !f);
+  }
+  document.querySelectorAll('.card').forEach(syncFaces);
+
+  function go(k, focus){
+    k = Math.max(0, Math.min(n - 1, k));
+    cur = k;
+    slides.forEach(function(s, i){
+      s.classList.toggle('active', i === k);
+      s.classList.toggle('past', i < k);
+      s.inert = i !== k;
+      s.setAttribute('aria-hidden', i !== k);
+      if (i === k) s.scrollTop = 0;
+    });
+    fill.style.width = ((k + 1) / n * 100) + '%';
+    count.textContent = (k + 1) + ' / ' + n;
+    var c = slides[k].getAttribute('data-ch');
+    chap.textContent = c;
+    jump.value = String(firstOf(c));
+    prev.disabled = k === 0; next.disabled = k === n - 1;
+    try { history.replaceState(null, '', '#s' + (k + 1)); } catch(e) {}
+    try { localStorage.setItem('ens-slide', String(k)); } catch(e) {}
+  }
+
+  prev.addEventListener('click', function(){ go(cur - 1); });
+  next.addEventListener('click', function(){ go(cur + 1); });
+  jump.addEventListener('change', function(){ go(parseInt(jump.value, 10)); });
+  document.getElementById('restart').addEventListener('click', function(){
+    document.querySelectorAll('.card.flipped').forEach(function(c){ c.classList.remove('flipped'); syncFaces(c); });
+    go(0);
+  });
+
+  document.addEventListener('click', function(e){
+    var t = e.target.closest('[data-goto]');
+    if (t) { go(firstOf(t.getAttribute('data-goto'))); return; }
+    var f = e.target.closest('.flip');
+    if (f && f.id !== 'restart') {
+      var card = f.closest('.card');
+      card.classList.toggle('flipped');
+      syncFaces(card);
+      var target = card.querySelector(card.classList.contains('flipped') ? '.back .flip' : '.front .flip');
+      if (target) setTimeout(function(){ target.focus({preventScroll:true}); }, 50);
+    }
+  });
+
+  document.addEventListener('keydown', function(e){
+    var tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'select' || tag === 'input' || tag === 'textarea') return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); go(0); }
+    else if (e.key === 'End') { e.preventDefault(); go(n - 1); }
+  });
+
+  var sx = null, sy = null;
+  var stage = document.getElementById('stage');
+  stage.addEventListener('touchstart', function(e){ sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, {passive:true});
+  stage.addEventListener('touchend', function(e){
+    if (sx === null) return;
+    var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.4) go(cur + (dx < 0 ? 1 : -1));
+    sx = sy = null;
+  }, {passive:true});
+
+  var start = 0;
+  var m = /^#s(\d+)$/.exec(location.hash || '');
+  if (m) start = parseInt(m[1], 10) - 1;
+  else { try { var v = localStorage.getItem('ens-slide'); if (v !== null) start = parseInt(v, 10) || 0; } catch(e) {} }
+  go(start);
+})();
+</script>
+
+</body></html>
